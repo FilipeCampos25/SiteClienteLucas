@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Bem-vindo — Cantoneira Fácil</h1>
+<div class="grid">
+  {% for p in produtos %}
+  <div class="card card-produto">
+    <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="thumb" onerror="this.src='/static/images/placeholder.png'">
+    <div class="card-body">
+      <h3>{{ p.nome }}</h3>
+      <div class="preco">R$ {{ '%.2f' % p.valor }}</div>
+      <button class="btn-laranja" onclick="adicionarCarrinho({{ p.id }})">Adicionar</button>
+      <a href="/produto/{{ p.id }}">Detalhes</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
