@@ -7,7 +7,7 @@ from database import SessionLocal, init_db
 import crud, schemas, models
 from config import ADMIN_USER, ADMIN_PASSWORD, WHATSAPP_NUMERO, CORS_ORIGINS
 from utils import gerar_link_whatsapp
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.security import HTTPBasic, HTTPBasicCredentials\n\n# Função para ser chamada pelo start.sh\ndef init_db_and_admin():\n    init_db()
 import secrets, os
 
 
@@ -29,7 +29,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # DB init
-init_db()
+# init_db() # Removido para ser chamado via start.sh ou gunicorn pre-start
 
 security = HTTPBasic()
 
