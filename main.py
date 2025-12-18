@@ -3,17 +3,19 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from database import SessionLocal, init_db
+from database import SessionLocal  # Remova o ", init_db"
 import crud, schemas, models
 from config import ADMIN_USER, ADMIN_PASSWORD, WHATSAPP_NUMERO, CORS_ORIGINS
 from utils import gerar_link_whatsapp
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-# Função para ser chamada pelo start.sh
+# Função para ser chamada pelo start.sh (cria tabelas se não existirem)
 def init_db_and_admin():
-    init_db()
-    # Aqui você pode adicionar lógica de admin inicial se quiser (ex: criar usuário admin)
-    # Por enquanto, deixamos vazio
+    from database import Base
+    from sqlalchemy import create_engine
+    from config import DATABASE_URL
+    engine = create_engine(DATABASE_URL)
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Cantoneira Fácil")
 
