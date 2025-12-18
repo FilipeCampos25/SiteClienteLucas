@@ -7,14 +7,17 @@ from database import SessionLocal, init_db
 import crud, schemas, models
 from config import ADMIN_USER, ADMIN_PASSWORD, WHATSAPP_NUMERO, CORS_ORIGINS
 from utils import gerar_link_whatsapp
-from fastapi.security import HTTPBasic, HTTPBasicCredentials\n\n# Função para ser chamada pelo start.sh\ndef init_db_and_admin():\n    init_db()
-import secrets, os
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
+# Função para ser chamada pelo start.sh
+def init_db_and_admin():
+    init_db()
+    # Aqui você pode adicionar lógica de admin inicial se quiser (ex: criar usuário admin)
+    # Por enquanto, deixamos vazio
 
 app = FastAPI(title="Cantoneira Fácil")
 
 from fastapi.middleware.cors import CORSMiddleware
-from config import CORS_ORIGINS
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,11 +31,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# DB init
-# init_db() # Removido para ser chamado via start.sh ou gunicorn pre-start
-
-security = HTTPBasic()
-
+# DB dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -41,63 +40,75 @@ def get_db():
         db.close()
 
 # Public pages
-@app.get('/', response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse)
 def index(request: Request, db: Session = Depends(get_db)):
     produtos = crud.get_produtos_ativos(db)
     return templates.TemplateResponse("index.html", {"request": request, "produtos": produtos})
 
-@app.get('/produto/{produto_id}', response_class=HTMLResponse)
+@app.get("/produto/{produto_id}", response_class=HTMLResponse)
 def produto_detail(request: Request, produto_id: int, db: Session = Depends(get_db)):
     produto = crud.get_produto(db, produto_id)
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
     return templates.TemplateResponse("produto.html", {"request": request, "p": produto})
 
-@app.get('/api/produtos')
+@app.get("/api/produtos")
 def api_produtos(db: Session = Depends(get_db)):
     produtos = crud.get_produtos_ativos(db)
     return produtos
 
-@app.post('/api/whatsapp')
+@app.post("/api/whatsapp")
 def api_whatsapp(itens: list[schemas.ItemCarrinho]):
     url = gerar_link_whatsapp([it.dict() for it in itens])
     return {"url": url}
 
-# Admin routes (HTTP Basic)
+# Admin routes (HTTP Basic Auth)
+security = HTTPBasic()
+
 def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
     correct_user = secrets.compare_digest(credentials.username, ADMIN_USER)
     correct_pass = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
     if not (correct_user and correct_pass):
-        raise HTTPException(status_code=401, detail="Unauthorized", headers={"WWW-Authenticate":"Basic"})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
+            headers={"WWW-Authenticate": "Basic"},
+        )
     return True
 
-@app.get('/admin/', response_class=HTMLResponse)
+@app.get("/admin/", response_class=HTMLResponse)
 def admin_dashboard(request: Request, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
     produtos = db.query(models.Produto).all()
-    return templates.TemplateResponse("admin/dashboard.html", {"request": request, "produtos": produtos})
+    return templates.TemplateResponse("dashboard.html", {"request": request, "produtos": produtos})
 
-@app.post('/admin/produto')
-def admin_create(nome: str = Form(...), descricao: str = Form(""), valor: float = Form(...), imagem_url: str = Form(""), db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
+@app.post("/admin/produto")
+def admin_create(
+    nome: str = Form(...),
+    descricao: str = Form(""),
+    valor: float = Form(...),
+    imagem_url: str = Form(""),
+    db: Session = Depends(get_db),
+    ok: bool = Depends(verify_admin)
+):
     novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor, imagem_url=imagem_url)
     p = crud.create_produto(db, novo)
     return RedirectResponse(url="/admin/", status_code=status.HTTP_303_SEE_OTHER)
 
-@app.post('/admin/upload')
+@app.post("/admin/upload")
 def admin_upload(file: UploadFile = File(...), ok: bool = Depends(verify_admin)):
-    # O upload de arquivos requer um serviço de armazenamento externo (como S3, Cloudinary, etc.).
-    # Como as dependências da AWS foram removidas, esta funcionalidade está desativada.
-    # Para reativar, configure um serviço de armazenamento de arquivos.
-    return JSONResponse({"error":"Upload de arquivos desativado. Configure um serviço de armazenamento externo."}, status_code=400)
+    return JSONResponse(
+        {"error": "Upload de arquivos desativado. Configure um serviço de armazenamento externo."},
+        status_code=400
+    )
 
-@app.put('/admin/produto/{produto_id}')
+@app.put("/admin/produto/{produto_id}")
 def admin_update(produto_id: int, payload: schemas.ProdutoUpdate, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
     p = crud.update_produto(db, produto_id, payload)
     if not p:
         raise HTTPException(404, "Produto não encontrado")
     return p
 
-@app.delete('/admin/produto/{produto_id}')
+@app.delete("/admin/produto/{produto_id}")
 def admin_delete(produto_id: int, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
     p = crud.delete_produto(db, produto_id)
     return {"deleted": bool(p)}
-
