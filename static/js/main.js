@@ -41,7 +41,8 @@ function adicionarCarrinho(id) {
 
 function abrirCarrinho() {
   let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-  let html = '<span class="close-modal" onclick="fecharCarrinho()">&times;</span>'; // Adicionado close
+  let html = '<div class="modal-content">';
+  html += '<span class="close-modal" onclick="fecharCarrinho()">&times;</span>';
   html += '<h3>Seu Carrinho</h3><ul>';
   let total = 0;
   const itensParaWhats = [];
@@ -60,9 +61,10 @@ function abrirCarrinho() {
   } else {
     html += '<p>Carrinho vazio.</p>';
   }
+  html += '</div>';
   const modal = document.getElementById('carrinhoModal');
   modal.innerHTML = html;
-  modal.style.display = 'block';
+  modal.style.display = 'flex';
 }
 
 function remover(id) {
