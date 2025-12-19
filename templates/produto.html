@@ -1,14 +1,10 @@
-<!DOCTYPE html>
-<html>
-<body>
-<h1>{{ produto[1] }}</h1>
-<p>{{ produto[2] }}</p>
-<p>R$ {{ produto[3] }}</p>
-
-<form action="/carrinho/add/{{ produto[0] }}" method="post">
-  <button type="submit">Adicionar ao carrinho</button>
-</form>
-
-<a href="/">Voltar</a>
-</body>
-</html>
+{% extends "base.html" %}
+{% block content %}
+<div class="produto-detalhe">
+  <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" onerror="this.src='/static/images/placeholder.png'">
+  <h2>{{ p.nome }}</h2>
+  <p>{{ p.descricao }}</p>
+  <div class="preco">R$ {{ '%.2f' % p.valor }}</div>
+  <button class="btn-laranja" onclick="adicionarCarrinho({{ p.id }})">Adicionar ao carrinho</button>
+</div>
+{% endblock %}

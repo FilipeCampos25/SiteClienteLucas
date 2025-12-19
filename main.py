@@ -1,124 +1,116 @@
-from fastapi import FastAPI, Request, Depends, Form
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi import FastAPI, Request, Depends, HTTPException, Form, UploadFile, File, status
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette.middleware.sessions import SessionMiddleware
-import os
-import psycopg2
+from sqlalchemy.orm import Session
+from database import SessionLocal  # Remova o ", init_db"
+import crud, schemas, models
+from config import ADMIN_USER, ADMIN_PASSWORD, WHATSAPP_NUMERO, CORS_ORIGINS
+from utils import gerar_link_whatsapp
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-app = FastAPI()
+# Função para ser chamada pelo start.sh (cria tabelas se não existirem)
+def init_db_and_admin():
+    from database import Base
+    from sqlalchemy import create_engine
+    from config import DATABASE_URL
+    engine = create_engine(DATABASE_URL)
+    Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="Cantoneira Fácil")
+
+from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
-    SessionMiddleware,
-    secret_key=os.getenv("SESSION_SECRET", "secret_render")
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+# static & templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
+# DB dependency
 def get_db():
-    return psycopg2.connect(DATABASE_URL)
-
-# ---------------- HOME ----------------
-@app.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("SELECT id, nome, preco, imagem FROM produtos")
-    produtos = cur.fetchall()
-    cur.close()
-    db.close()
-
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "produtos": produtos
-    })
-
-# ---------------- PRODUTO ----------------
-@app.get("/produto/{produto_id}", response_class=HTMLResponse)
-def produto(request: Request, produto_id: int):
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("SELECT id, nome, descricao, preco, imagem FROM produtos WHERE id=%s", (produto_id,))
-    produto = cur.fetchone()
-    cur.close()
-    db.close()
-
-    return templates.TemplateResponse("produto.html", {
-        "request": request,
-        "produto": produto
-    })
-
-# ---------------- CARRINHO ----------------
-@app.post("/carrinho/add/{produto_id}")
-def add_carrinho(request: Request, produto_id: int):
-    carrinho = request.session.get("carrinho", {})
-    carrinho[str(produto_id)] = carrinho.get(str(produto_id), 0) + 1
-    request.session["carrinho"] = carrinho
-    return RedirectResponse("/carrinho", status_code=303)
-
-@app.get("/carrinho", response_class=HTMLResponse)
-def carrinho(request: Request):
-    carrinho = request.session.get("carrinho", {})
-    itens = []
-
-    if carrinho:
-        db = get_db()
-        cur = db.cursor()
-        for pid, qtd in carrinho.items():
-            cur.execute("SELECT id, nome, preco FROM produtos WHERE id=%s", (pid,))
-            produto = cur.fetchone()
-            itens.append({
-                "id": produto[0],
-                "nome": produto[1],
-                "preco": produto[2],
-                "qtd": qtd,
-                "total": produto[2] * qtd
-            })
-        cur.close()
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
         db.close()
 
-    return templates.TemplateResponse("carrinho.html", {
-        "request": request,
-        "itens": itens
-    })
+# Public pages
+@app.get("/", response_class=HTMLResponse)
+def index(request: Request, db: Session = Depends(get_db)):
+    produtos = crud.get_produtos_ativos(db)
+    return templates.TemplateResponse("index.html", {"request": request, "produtos": produtos})
 
-# ---------------- ADMIN AUTH ----------------
-def admin_required(request: Request):
-    if not request.session.get("admin"):
-        return RedirectResponse("/admin/login", status_code=303)
+@app.get("/produto/{produto_id}", response_class=HTMLResponse)
+def produto_detail(request: Request, produto_id: int, db: Session = Depends(get_db)):
+    produto = crud.get_produto(db, produto_id)
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+    return templates.TemplateResponse("produto.html", {"request": request, "p": produto})
 
-@app.get("/admin/login", response_class=HTMLResponse)
-def admin_login(request: Request):
-    return templates.TemplateResponse("admin/login.html", {"request": request})
+@app.get("/api/produtos")
+def api_produtos(db: Session = Depends(get_db)):
+    produtos = crud.get_produtos_ativos(db)
+    return produtos
 
-@app.post("/admin/login")
-def admin_login_post(
-    request: Request,
-    usuario: str = Form(...),
-    senha: str = Form(...)
+@app.post("/api/whatsapp")
+def api_whatsapp(itens: list[schemas.ItemCarrinho]):
+    url = gerar_link_whatsapp([it.dict() for it in itens])
+    return {"url": url}
+
+# Admin routes (HTTP Basic Auth)
+security = HTTPBasic()
+
+def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_user = secrets.compare_digest(credentials.username, ADMIN_USER)
+    correct_pass = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+    if not (correct_user and correct_pass):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return True
+
+@app.get("/admin/", response_class=HTMLResponse)
+def admin_dashboard(request: Request, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
+    produtos = db.query(models.Produto).all()
+    return templates.TemplateResponse("dashboard.html", {"request": request, "produtos": produtos})
+
+@app.post("/admin/produto")
+def admin_create(
+    nome: str = Form(...),
+    descricao: str = Form(""),
+    valor: float = Form(...),
+    imagem_url: str = Form(""),
+    db: Session = Depends(get_db),
+    ok: bool = Depends(verify_admin)
 ):
-    if usuario == os.getenv("ADMIN_USER") and senha == os.getenv("ADMIN_PASS"):
-        request.session["admin"] = True
-        return RedirectResponse("/admin/dashboard", status_code=303)
+    novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor, imagem_url=imagem_url)
+    p = crud.create_produto(db, novo)
+    return RedirectResponse(url="/admin/", status_code=status.HTTP_303_SEE_OTHER)
 
-    return RedirectResponse("/admin/login", status_code=303)
+@app.post("/admin/upload")
+def admin_upload(file: UploadFile = File(...), ok: bool = Depends(verify_admin)):
+    return JSONResponse(
+        {"error": "Upload de arquivos desativado. Configure um serviço de armazenamento externo."},
+        status_code=400
+    )
 
-@app.get("/admin/dashboard", response_class=HTMLResponse)
-def admin_dashboard(request: Request):
-    if not request.session.get("admin"):
-        return RedirectResponse("/admin/login", status_code=303)
+@app.put("/admin/produto/{produto_id}")
+def admin_update(produto_id: int, payload: schemas.ProdutoUpdate, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
+    p = crud.update_produto(db, produto_id, payload)
+    if not p:
+        raise HTTPException(404, "Produto não encontrado")
+    return p
 
-    db = get_db()
-    cur = db.cursor()
-    cur.execute("SELECT id, nome, preco FROM produtos")
-    produtos = cur.fetchall()
-    cur.close()
-    db.close()
-
-    return templates.TemplateResponse("admin/dashboard.html", {
-        "request": request,
-        "produtos": produtos
-    })
+@app.delete("/admin/produto/{produto_id}")
+def admin_delete(produto_id: int, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
+    p = crud.delete_produto(db, produto_id)
+    return {"deleted": bool(p)}
