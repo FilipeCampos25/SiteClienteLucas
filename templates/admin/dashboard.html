@@ -1,34 +1,46 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- ===== CABEÇALHO DO PAINEL ADMIN ===== -->
+<!-- ===== CABEÇALHO DO PAINEL ===== -->
 <section class="admin-header">
-  <h1 class="admin-title">Painel Administrativo</h1>
-  <p class="admin-subtitle">Gerencie seus produtos e configurações</p>
+  <div class="admin-header-content">
+    <div>
+      <h1 class="admin-title">Painel Administrativo</h1>
+      <p class="admin-subtitle">Gerencie seus produtos e configurações</p>
+    </div>
+    <div class="admin-stats">
+      <div class="stat-badge">
+        <span class="stat-number">{{ produtos|length }}</span>
+        <span class="stat-text">Produtos</span>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- ===== SEÇÃO DE CRIAÇÃO DE PRODUTO ===== -->
+<!-- ===== SEÇÃO DE CRIAR PRODUTO ===== -->
 <section class="admin-section">
   <div class="admin-card">
-    <h2 class="admin-card-title">➕ Criar Novo Produto</h2>
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-icon">➕</span>
+        Criar Novo Produto
+      </h2>
+    </div>
     
     <form method="post" action="/admin/produto" class="admin-form">
-      <!-- IMPORTANTE: Não altere os nomes dos campos (name="...") pois eles devem corresponder ao backend -->
-      
-      <div class="form-group">
-        <label for="nome" class="form-label">Nome do Produto *</label>
-        <input 
-          type="text" 
-          id="nome" 
-          name="nome" 
-          class="form-input" 
-          placeholder="Ex: Cantoneira de Aço 20x20" 
-          required
-          aria-label="Nome do produto"
-        >
-      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="nome" class="form-label">Nome do Produto *</label>
+          <input 
+            type="text" 
+            id="nome" 
+            name="nome" 
+            class="form-input" 
+            placeholder="Ex: Cantoneira de Aço 20x20" 
+            required
+          >
+        </div>
 
-      <div class="form-row">
         <div class="form-group">
           <label for="valor" class="form-label">Valor (R$) *</label>
           <input 
@@ -39,7 +51,6 @@
             placeholder="0.00" 
             step="0.01" 
             required
-            aria-label="Valor do produto"
           >
         </div>
 
@@ -52,25 +63,23 @@
             class="form-input" 
             placeholder="https://exemplo.com/imagem.jpg" 
             required
-            aria-label="URL da imagem do produto"
           >
+        </div>
+
+        <div class="form-group form-group-full">
+          <label for="descricao" class="form-label">Descrição</label>
+          <textarea 
+            id="descricao" 
+            name="descricao" 
+            class="form-textarea" 
+            placeholder="Descreva as características do produto..."
+            rows="4"
+          ></textarea>
         </div>
       </div>
 
-      <div class="form-group">
-        <label for="descricao" class="form-label">Descrição</label>
-        <textarea 
-          id="descricao" 
-          name="descricao" 
-          class="form-textarea" 
-          placeholder="Descreva as características do produto..."
-          rows="4"
-          aria-label="Descrição do produto"
-        ></textarea>
-      </div>
-
       <button type="submit" class="btn-submit">
-        ✓ Criar Produto
+        <span>✓</span> Criar Produto
       </button>
     </form>
   </div>
@@ -79,7 +88,15 @@
 <!-- ===== SEÇÃO DE PRODUTOS EXISTENTES ===== -->
 <section class="admin-section">
   <div class="admin-card">
-    <h2 class="admin-card-title">📋 Produtos Existentes</h2>
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-icon">📋</span>
+        Produtos Cadastrados
+      </h2>
+      {% if produtos %}
+      <span class="card-badge">{{ produtos|length }} produtos</span>
+      {% endif %}
+    </div>
 
     {% if produtos %}
     <div class="products-table-wrapper">
@@ -95,21 +112,17 @@
         <tbody>
           {% for p in produtos %}
           <tr class="product-row" id="row-{{ p.id }}">
-            <td class="table-cell-id">{{ p.id }}</td>
-            <td class="table-cell-name">{{ p.nome }}</td>
-            <td class="table-cell-price">R$ {{ '%.2f' % p.valor }}</td>
-            <td class="table-cell-actions">
-              <!-- Botão Editar -->
+            <td class="cell-id">{{ p.id }}</td>
+            <td class="cell-name">{{ p.nome }}</td>
+            <td class="cell-price">R$ {{ '%.2f' % p.valor }}</td>
+            <td class="cell-actions">
               <button 
                 type="button" 
                 class="btn-edit" 
                 onclick="toggleEditForm({{ p.id }})"
-                aria-label="Editar produto {{ p.nome }}"
               >
                 ✏️ Editar
               </button>
-
-              <!-- Botão Deletar -->
               <form 
                 style="display:inline;" 
                 method="post" 
@@ -117,74 +130,71 @@
                 onsubmit="return confirm('Tem certeza que deseja deletar este produto?');"
               >
                 <input type="hidden" name="_method" value="DELETE">
-                <button type="submit" class="btn-delete" aria-label="Deletar produto {{ p.nome }}">
+                <button type="submit" class="btn-delete">
                   🗑️ Deletar
                 </button>
               </form>
             </td>
           </tr>
 
-          <!-- ===== FORMULÁRIO DE EDIÇÃO (ESCONDIDO) ===== -->
+          <!-- ===== FORMULÁRIO DE EDIÇÃO ===== -->
           <tr class="edit-form-row" id="edit-row-{{ p.id }}" style="display:none;">
             <td colspan="4">
               <form 
                 id="edit-form-{{ p.id }}" 
                 method="post" 
                 action="/admin/produto/{{ p.id }}" 
-                class="admin-form-edit"
+                class="edit-form"
               >
-                <!-- IMPORTANTE: Não altere os nomes dos campos (name="...") pois eles devem corresponder ao backend -->
                 <input type="hidden" name="_method" value="PUT">
 
-                <div class="edit-form-group">
-                  <label for="edit-nome-{{ p.id }}" class="form-label">Nome</label>
-                  <input 
-                    type="text" 
-                    id="edit-nome-{{ p.id }}" 
-                    name="nome" 
-                    value="{{ p.nome }}" 
-                    class="form-input-edit" 
-                    placeholder="Nome"
-                    required
-                  >
-                </div>
+                <div class="edit-form-grid">
+                  <div class="form-group">
+                    <label for="edit-nome-{{ p.id }}" class="form-label">Nome</label>
+                    <input 
+                      type="text" 
+                      id="edit-nome-{{ p.id }}" 
+                      name="nome" 
+                      value="{{ p.nome }}" 
+                      class="form-input" 
+                      required
+                    >
+                  </div>
 
-                <div class="edit-form-group">
-                  <label for="edit-valor-{{ p.id }}" class="form-label">Valor</label>
-                  <input 
-                    type="number" 
-                    id="edit-valor-{{ p.id }}" 
-                    name="valor" 
-                    value="{{ p.valor }}" 
-                    class="form-input-edit" 
-                    placeholder="Valor" 
-                    step="0.01"
-                    required
-                  >
-                </div>
+                  <div class="form-group">
+                    <label for="edit-valor-{{ p.id }}" class="form-label">Valor</label>
+                    <input 
+                      type="number" 
+                      id="edit-valor-{{ p.id }}" 
+                      name="valor" 
+                      value="{{ p.valor }}" 
+                      class="form-input" 
+                      step="0.01"
+                      required
+                    >
+                  </div>
 
-                <div class="edit-form-group">
-                  <label for="edit-imagem-{{ p.id }}" class="form-label">URL da Imagem</label>
-                  <input 
-                    type="url" 
-                    id="edit-imagem-{{ p.id }}" 
-                    name="imagem_url" 
-                    value="{{ p.imagem_url }}" 
-                    class="form-input-edit" 
-                    placeholder="URL imagem"
-                    required
-                  >
-                </div>
+                  <div class="form-group">
+                    <label for="edit-imagem-{{ p.id }}" class="form-label">URL da Imagem</label>
+                    <input 
+                      type="url" 
+                      id="edit-imagem-{{ p.id }}" 
+                      name="imagem_url" 
+                      value="{{ p.imagem_url }}" 
+                      class="form-input" 
+                      required
+                    >
+                  </div>
 
-                <div class="edit-form-group">
-                  <label for="edit-descricao-{{ p.id }}" class="form-label">Descrição</label>
-                  <textarea 
-                    id="edit-descricao-{{ p.id }}" 
-                    name="descricao" 
-                    class="form-textarea-edit" 
-                    placeholder="Descrição"
-                    rows="3"
-                  >{{ p.descricao }}</textarea>
+                  <div class="form-group form-group-full">
+                    <label for="edit-descricao-{{ p.id }}" class="form-label">Descrição</label>
+                    <textarea 
+                      id="edit-descricao-{{ p.id }}" 
+                      name="descricao" 
+                      class="form-textarea" 
+                      rows="3"
+                    >{{ p.descricao }}</textarea>
+                  </div>
                 </div>
 
                 <div class="edit-form-actions">
@@ -208,19 +218,16 @@
     </div>
     {% else %}
     <div class="empty-state-admin">
-      <p class="empty-state-text">Nenhum produto cadastrado ainda.</p>
-      <p class="empty-state-hint">Crie seu primeiro produto usando o formulário acima.</p>
+      <div class="empty-icon">📦</div>
+      <p class="empty-title">Nenhum produto cadastrado</p>
+      <p class="empty-text">Crie seu primeiro produto usando o formulário acima</p>
     </div>
     {% endif %}
   </div>
 </section>
 
-<!-- ===== SCRIPT DE CONTROLE DO FORMULÁRIO DE EDIÇÃO ===== -->
+<!-- ===== SCRIPT ===== -->
 <script>
-/**
- * IMPORTANTE: Não altere esta função pois ela controla a exibição/ocultação do formulário de edição
- * Ela é essencial para o funcionamento do painel admin
- */
 function toggleEditForm(id) {
   const editRow = document.getElementById('edit-row-' + id);
   const productRow = document.getElementById('row-' + id);

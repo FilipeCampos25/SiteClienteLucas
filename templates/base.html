@@ -6,51 +6,67 @@
   <!-- IMPORTANTE: Altere o título abaixo para o nome do seu projeto -->
   <title>Cantoneira Fácil - Sua Loja de Cantoneiras e Perfis Metálicos</title>
   <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Google Fonts para tipografia premium -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- ===== CABEÇALHO ===== -->
-  <!-- IMPORTANTE: Substitua "Cantoneira Fácil" pelo nome do seu projeto e adicione sua logo em /static/images/logo.png -->
+  <!-- ===== CABEÇALHO PREMIUM ===== -->
   <header class="site-header">
     <div class="container-header">
-      <div class="header-content">
+      <div class="header-top">
         <!-- Logo e nome da loja -->
         <div class="logo-section">
-          <img src="/static/images/logo.png" alt="Logo" class="logo-img" onerror="this.style.display='none'">
+          <div class="logo-wrapper">
+            <img src="/static/images/logo.png" alt="Logo" class="logo-img" onerror="this.style.display='none'">
+          </div>
           <div class="logo-text">
             <h1 class="logo-title">Cantoneira Fácil</h1>
-            <p class="logo-subtitle">Perfis Metálicos de Qualidade</p>
+            <p class="logo-subtitle">Qualidade em Perfis Metálicos</p>
           </div>
         </div>
 
-        <!-- Barra de busca (centro) -->
-        <div class="search-bar">
-          <input type="text" id="searchInput" class="search-input" placeholder="Buscar produtos..." aria-label="Buscar produtos">
-          <button class="search-btn" onclick="buscarProdutos()" aria-label="Botão de busca">
-            <span>🔍</span>
-          </button>
+        <!-- Barra de busca premium -->
+        <div class="search-container">
+          <div class="search-wrapper">
+            <input 
+              type="text" 
+              id="searchInput" 
+              class="search-input" 
+              placeholder="Buscar produtos..." 
+              aria-label="Buscar produtos"
+            >
+            <button class="search-btn" onclick="buscarProdutos()" aria-label="Botão de busca">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <!-- Carrinho (direita) -->
+        <!-- Carrinho premium -->
         <div class="header-actions">
           <button class="cart-btn" onclick="abrirCarrinho()" aria-label="Abrir carrinho">
-            <span class="cart-icon">🛒</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
             <span class="cart-count" id="cartCount">0</span>
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- Navegação secundária -->
-    <nav class="nav-secondary">
-      <div class="container-header">
+      <!-- Navegação principal -->
+      <nav class="nav-primary">
         <ul class="nav-links">
           <li><a href="/" class="nav-link">Início</a></li>
           <li><a href="/#produtos" class="nav-link">Produtos</a></li>
           <li><a href="#contato" class="nav-link">Contato</a></li>
-          <li><a href="/admin/" class="nav-link nav-admin">Painel Admin</a></li>
+          <li><a href="/admin/" class="nav-link nav-admin">Admin</a></li>
         </ul>
-      </div>
-    </nav>
+      </nav>
+    </div>
   </header>
 
   <!-- ===== CONTEÚDO PRINCIPAL ===== -->
@@ -65,45 +81,66 @@
     <!-- Conteúdo gerado dinamicamente por main.js -->
   </div>
 
-  <!-- ===== RODAPÉ ===== -->
-  <!-- IMPORTANTE: Atualize as informações de contato abaixo com os dados do seu projeto -->
+  <!-- ===== RODAPÉ PREMIUM ===== -->
   <footer class="footer">
     <div class="container-footer">
+      <!-- Conteúdo do rodapé -->
       <div class="footer-content">
-        <!-- Seção de contato -->
-        <div class="footer-section">
-          <h3 class="footer-title">Contato</h3>
-          <ul class="footer-list">
-            <li><strong>Telefone:</strong> <a href="tel:+5541999999999">(55) 41 99999-9999</a></li>
-            <li><strong>Email:</strong> <a href="mailto:contato@cantoneirafacil.com">contato@cantoneirafacil.com</a></li>
-            <li><strong>Horário:</strong> Seg-Sex: 08h-18h</li>
-          </ul>
+        <!-- Coluna 1: Sobre -->
+        <div class="footer-column">
+          <h3 class="footer-title">Cantoneira Fácil</h3>
+          <p class="footer-description">Sua loja de confiança para cantoneiras e perfis metálicos de qualidade superior.</p>
+          <div class="social-links">
+            <a href="#" class="social-link" aria-label="Facebook" title="Facebook">f</a>
+            <a href="#" class="social-link" aria-label="Instagram" title="Instagram">📷</a>
+            <a href="#" class="social-link" aria-label="WhatsApp" title="WhatsApp">💬</a>
+          </div>
         </div>
 
-        <!-- Seção de informações -->
-        <div class="footer-section">
-          <h3 class="footer-title">Informações</h3>
-          <ul class="footer-list">
+        <!-- Coluna 2: Links úteis -->
+        <div class="footer-column">
+          <h3 class="footer-title">Links Úteis</h3>
+          <ul class="footer-links">
+            <li><a href="/#produtos">Produtos</a></li>
             <li><a href="#sobre">Sobre Nós</a></li>
             <li><a href="#politica">Política de Privacidade</a></li>
             <li><a href="#termos">Termos de Uso</a></li>
           </ul>
         </div>
 
-        <!-- Seção de redes sociais -->
-        <div class="footer-section">
-          <h3 class="footer-title">Siga-nos</h3>
-          <div class="social-links">
-            <a href="#" class="social-link" aria-label="Facebook">f</a>
-            <a href="#" class="social-link" aria-label="Instagram">📷</a>
-            <a href="#" class="social-link" aria-label="WhatsApp">💬</a>
-          </div>
+        <!-- Coluna 3: Contato -->
+        <div class="footer-column">
+          <h3 class="footer-title">Contato</h3>
+          <ul class="footer-contact">
+            <li>
+              <strong>Telefone:</strong><br>
+              <a href="tel:+5541999999999">(55) 41 99999-9999</a>
+            </li>
+            <li>
+              <strong>Email:</strong><br>
+              <a href="mailto:contato@cantoneirafacil.com">contato@cantoneirafacil.com</a>
+            </li>
+            <li>
+              <strong>Horário:</strong><br>
+              Seg-Sex: 08h-18h
+            </li>
+          </ul>
+        </div>
+
+        <!-- Coluna 4: Newsletter -->
+        <div class="footer-column">
+          <h3 class="footer-title">Newsletter</h3>
+          <p class="footer-description-small">Receba nossas ofertas exclusivas</p>
+          <form class="newsletter-form" onsubmit="return false;">
+            <input type="email" placeholder="Seu email" class="newsletter-input" required>
+            <button type="submit" class="newsletter-btn">Inscrever</button>
+          </form>
         </div>
       </div>
 
       <!-- Linha de copyright -->
       <div class="footer-bottom">
-        <p>&copy; 2024 Cantoneira Fácil. Todos os direitos reservados.</p>
+        <p>&copy; 2024 Cantoneira Fácil. Todos os direitos reservados. | <a href="#privacidade">Privacidade</a> | <a href="#termos">Termos</a></p>
       </div>
     </div>
   </footer>
