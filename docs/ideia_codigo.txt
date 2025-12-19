@@ -1,0 +1,296 @@
+Nome do projeto: Cantoneira Fácil – E-commerce de cantoneiras com carrinho no WhatsApp  
+
+```
+cantoneira-facil/
+├── main.py                      # FastAPI + Jinja2
+├── database.py
+├── models.py
+├── crud.py
+├── schemas.py
+├── config.py
+├── requirements.txt
+├── templates/
+│   ├── base.html
+│   ├── index.html
+│   ├── produto.html
+│   └── admin/
+│       ├── dashboard.html
+│       └── editar.html
+├── static/
+│   ├── css/style.css
+│   ├── js/main.js
+│   └── img/logo.png (você coloca a sua)
+└── deploy/
+    ├── deploy-frontend.sh       # sobe site estático no S3 + CloudFront
+    └── deploy-backend.yml       # AWS SAM para Lambda + API Gateway (grátis)
+```
+
+### 1. requirements.txt
+```txt
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+jinja2==3.1.4
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.35
+python-dotenv==1.0.1
+boto3==1.35.24
+```
+
+### 2.env (crie na raiz)
+```env
+DATABASE_URL=postgresql://USUARIO:SENHA@ep-cool-name.neon.tech/neondb?sslmode=require
+ADMIN_USER=admin
+ADMIN_PASSWORD=sua_senha_forte_aqui
+AWS_DEFAULT_REGION=us-east-1
+S3_BUCKET_IMAGENS=cantoneira-facil-imagens-2025
+WHATSAPP_NUMERO=5541999999999
+```
+
+### 3. config.py
+```python
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+ADMIN_USER = os.getenv("ADMIN_USER")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+S3_BUCKET = os.getenv("S3_BUCKET_IMAGENS")
+WHATSAPP_NUMERO = os.getenv("WHATSAPP_NUMERO")
+```
+
+### 4. models.py + database.py
+```python
+# database.py
+from sqlalchemy import create_engine, MetaData
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from .config import DATABASE_URL
+
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = MetaData()
+Base = declarative_base()
+
+# models.py
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, func
+from .database import Base
+
+class Produto(Base):
+    __tablename__ = "produtos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(100), nullable=False)
+    descricao = Column(String, nullable=True)
+    valor = Column(Numeric(10,2), nullable=False)
+    imagem_url = Column(String, nullable=False)
+    ativo = Column(Boolean, default=True)
+    criado_em = Column(DateTime(timezone=True), server_default=func.now())
+```
+
+### 5. crud.py
+```python
+from sqlalchemy.orm import Session
+from .models import Produto
+from .schemas import ProdutoCreate, ProdutoUpdate
+
+def get_produtos_ativos(db: Session):
+    return db.query(Produto).filter(Produto.ativo == True).all()
+
+def get_produto(db: Session, produto_id: int):
+    return db.query(Produto).filter(Produto.id == produto_id, Produto.ativo == True).first()
+
+def create_produto(db: Session, produto: ProdutoCreate):
+    db_produto = Produto(**produto.dict())
+    db.add(db_produto)
+    db.commit()
+    db.refresh(db_produto)
+    return db_produto
+
+def update_produto(db: Session, produto_id: int, produto: ProdutoUpdate):
+    db_produto = db.query(Produto).filter(Produto.id == produto_id).first()
+    if db_produto:
+        for key, value in produto.dict(exclude_unset=True).items():
+            setattr(db_produto, key, value)
+        db.commit()
+        db.refresh(db_produto)
+    return db_produto
+
+def delete_produto(db: Session, produto_id: int):
+    db_produto = db.query(Produto).filter(Produto.id == produto_id).first()
+    if db_produto:
+        db_produto.ativo = False
+        db.commit()
+    return db_produto
+```
+
+### 6. main.py (o coração do projeto)
+```python
+from fastapi import FastAPI, Request, Depends, HTTPException, Form, File, UploadFile, status
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+from .database import SessionLocal, engine, Base
+from . import crud, schemas
+from .config import ADMIN_USER, ADMIN_PASSWORD, S3_BUCKET, WHATSAPP_NUMERO
+import boto3
+import os
+import secrets
+
+app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+Base.metadata.create_all(bind=engine)
+
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# ==================== ROTA PÚBLICA ====================
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request, db: Session = Depends(get_db)):
+    produtos = crud.get_produtos_ativos(db)
+    return templates.TemplateResponse("index.html", {"request": request, "produtos": produtos})
+
+@app.get("/produto/{produto_id}", response_class=HTMLResponse)
+async def produto_detalhe(request: Request, produto_id: int, db: Session = Depends(get_db)):
+    produto = crud.get_produto(db, produto_id)
+    if not produto:
+        raise HTTPException(status_code=404)
+    return templates.TemplateResponse("produto.html", {"request": request, "p": produto})
+
+@app.get("/api/produtos")
+async def api_produtos(db: Session = Depends(get_db)):
+    return crud.get_produtos_ativos(db)
+
+# Gera link do WhatsApp
+@app.post("/api/whatsapp")
+async def gerar_whatsapp(itens: list[schemas.ItemCarrinho]):
+    if not itens:
+        return {"url": f"https://wa.me/{WHATSAPP_NUMERO}"}
+
+    texto = "Olá! Tenho interesse nos seguintes itens:\n\n"
+    total = 0
+    for item in itens:
+        valor_item = item.quantidade * item.valor_unitario
+        total += valor_item
+        texto += f"• {item.quantidade}x {item.nome} - R$ {item.valor_unitario:.2f}/un → R$ {valor_item:.2f}\n"
+    texto += f"\n*Total estimado: R$ {total:.2f}*\n\nPode me passar orçamento com frete?"
+
+    mensagem = url.quote(texto)
+    url = f"https://wa.me/{WHATSAPP_NUMERO}?text={mensagem}"
+    return {"url": url}
+
+# ==================== ADMIN (protegido) ====================
+def verificar_admin(request: Request):
+    auth = request.headers.get("Authorization")
+    if not auth or auth != f"Basic {secrets.token_hex(16)}":  # você troca por seu hash
+        raise HTTPException(
+            status_code=401,
+            headers={"WWW-Authenticate": "Basic"},
+            detail="Acesso negado"
+        )
+
+@app.get("/admin/", response_class=HTMLResponse)
+async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
+    # HTTP Basic Auth simples + IP (adicione seu IP se quiser)
+    produtos = db.query(Produto).all()
+    return templates.TemplateResponse("admin/dashboard.html", {"request": request, "produtos": produtos})
+
+# ... rotas POST/PUT/DELETE semelhantes (posso mandar se quiser, mas para não ficar gigante, resumo):
+# Elas usam Form + File para upload direto pro S3 com presigned URL ou boto3
+```
+
+### 7. static/css/style.css (laranja + cinza limpo)
+```css
+:root {
+  --laranja: #FF6200;
+  --cinza: #2d2d2d;
+  --cinza-claro: #f8f8f8;
+}
+
+body { font-family: 'Segoe UI', sans-serif; background: var(--cinza-claro); color: var(--cinza); }
+header { background: var(--cinza); padding: 1rem; color: white; }
+.logo { font-size: 2rem; font-weight: bold; color: var(--laranja); }
+.btn-laranja { background: var(--laranja); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; }
+.card-produto { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.3s; }
+.card-produto:hover { transform: translateY(-10px); }
+.preco { font-size: 1.5rem; color: var(--laranja); font-weight: bold; }
+```
+
+### 8. static/js/main.js (carrinho 100% client-side)
+```javascript
+let todosProdutos = [];
+
+async function carregarProdutos() {
+  const res = await fetch('/api/produtos');
+  todosProdutos = await res.json();
+  // opcional: renderizar grid aqui se quiser
+}
+
+function adicionarCarrinho(id) {
+  let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+  const existente = carrinho.find(item => item.id === id);
+  if (existente) existente.qtd++;
+  else carrinho.push({id, qtd: 1});
+  localStorage.setItem('carrinho', JSON.stringify(carrinho));
+  atualizarIconeCarrinho();
+}
+
+function mostrarCarrinho() {
+  let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+  let html = '<h3>Seu Carrinho</h3><ul>';
+  let total = 0;
+  const itensParaWhats = [];
+
+  carrinho.forEach(item => {
+    const prod = todosProdutos.find(p => p.id === item.id);
+    if (prod) {
+      const subtotal = prod.valor * item.qtd;
+      total += subtotal;
+      html += `<li>${item.qtd}x ${prod.nome} - R$ ${subtotal.toFixed(2)} <button onclick="removerDoCarrinho(${item.id})">X</button></li>`;
+      itensParaWhats.push({
+        nome: prod.nome,
+        quantidade: item.qtd,
+        valor_unitario: Number(prod.valor)
+      });
+    });
+  });
+
+  html += `</ul><h3>Total: R$ ${total.toFixed(2)}</h3>`;
+  html += `<button class="btn-laranja" onclick="enviarWhatsApp(${JSON.stringify(itensParaWhats)})">Entrar em Contato</button>`;
+
+  document.getElementById('carrinhoModal').innerHTML = html;
+  document.getElementById('carrinhoModal').style.display = 'block';
+}
+
+async function enviarWhatsApp(itens) {
+  const res = await fetch('/api/whatsapp', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(itens)
+  });
+  const data = await res.json();
+  window.open(data.url, '_blank');
+}
+```
+
+### Como subir em 10 minutos (passo a passo)
+
+```bash
+# 1. Frontend (site estático)
+aws s3 sync ./templates s3://seu-bucket-site --delete
+aws s3 sync ./static s3://seu-bucket-site --delete
+aws cloudfront create-invalidation --distribution-id XXX --paths "/*"
+
+# 2. Backend (Lambda + API Gateway grátis)
+sam build
+sam deploy --guided
+```

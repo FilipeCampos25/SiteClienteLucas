@@ -1,18 +1,5 @@
-{% extends "base.html" %}
-{% block content %}
-<h2>Painel Admin</h2>
-<form method="post" action="/admin/produto">
-  <input name="nome" placeholder="Nome" required>
-  <input name="valor" placeholder="Valor" required type="number" step="0.01">
-  <input name="imagem_url" placeholder="URL imagem" required>
-  <textarea name="descricao" placeholder="Descrição"></textarea>
-  <button type="submit">Criar</button>
-</form>
+<h1>Admin</h1>
 
-<h3>Produtos</h3>
-<ul>
 {% for p in produtos %}
-  <li>{{ p.id }} - {{ p.nome }} — R$ {{ '%.2f' % p.valor }} — <form style="display:inline" method="post" action="/admin/produto/{{ p.id }}?_method=DELETE"><button formaction="/admin/produto/{{ p.id }}" formmethod="delete">Deletar</button></form></li>
+  <p>{{ p[1] }} - R$ {{ p[2] }}</p>
 {% endfor %}
-</ul>
-{% endblock %}
