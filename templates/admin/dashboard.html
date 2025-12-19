@@ -1,43 +1,240 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h2>Painel Admin</h2>
+<!-- ===== CABEÇALHO DO PAINEL ADMIN ===== -->
+<section class="admin-header">
+  <h1 class="admin-title">Painel Administrativo</h1>
+  <p class="admin-subtitle">Gerencie seus produtos e configurações</p>
+</section>
 
-<h3>Criar Novo Produto</h3>
-<form method="post" action="/admin/produto">
-  <input name="nome" placeholder="Nome" required>
-  <input name="valor" placeholder="Valor" required type="number" step="0.01">
-  <input name="imagem_url" placeholder="URL imagem" required>
-  <textarea name="descricao" placeholder="Descrição"></textarea>
-  <button type="submit">Criar</button>
-</form>
+<!-- ===== SEÇÃO DE CRIAÇÃO DE PRODUTO ===== -->
+<section class="admin-section">
+  <div class="admin-card">
+    <h2 class="admin-card-title">➕ Criar Novo Produto</h2>
+    
+    <form method="post" action="/admin/produto" class="admin-form">
+      <!-- IMPORTANTE: Não altere os nomes dos campos (name="...") pois eles devem corresponder ao backend -->
+      
+      <div class="form-group">
+        <label for="nome" class="form-label">Nome do Produto *</label>
+        <input 
+          type="text" 
+          id="nome" 
+          name="nome" 
+          class="form-input" 
+          placeholder="Ex: Cantoneira de Aço 20x20" 
+          required
+          aria-label="Nome do produto"
+        >
+      </div>
 
-<h3>Produtos Existentes</h3>
-<ul>
-{% for p in produtos %}
-  <li>
-    {{ p.id }} - {{ p.nome }} — R$ {{ '%.2f' % p.valor }} — 
-    <button onclick="toggleEditForm({{ p.id }})">Editar</button>
-    <form style="display:inline" method="post" action="/admin/produto/{{ p.id }}">
-      <input type="hidden" name="_method" value="DELETE"> <!-- Para compatibilidade HTML -->
-      <button type="submit">Deletar</button>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="valor" class="form-label">Valor (R$) *</label>
+          <input 
+            type="number" 
+            id="valor" 
+            name="valor" 
+            class="form-input" 
+            placeholder="0.00" 
+            step="0.01" 
+            required
+            aria-label="Valor do produto"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="imagem_url" class="form-label">URL da Imagem *</label>
+          <input 
+            type="url" 
+            id="imagem_url" 
+            name="imagem_url" 
+            class="form-input" 
+            placeholder="https://exemplo.com/imagem.jpg" 
+            required
+            aria-label="URL da imagem do produto"
+          >
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="descricao" class="form-label">Descrição</label>
+        <textarea 
+          id="descricao" 
+          name="descricao" 
+          class="form-textarea" 
+          placeholder="Descreva as características do produto..."
+          rows="4"
+          aria-label="Descrição do produto"
+        ></textarea>
+      </div>
+
+      <button type="submit" class="btn-submit">
+        ✓ Criar Produto
+      </button>
     </form>
-    <!-- Form de Edit (escondido inicialmente) -->
-    <form id="edit-form-{{ p.id }}" style="display:none;" method="post" action="/admin/produto/{{ p.id }}">
-      <input type="hidden" name="_method" value="PUT"> <!-- Para compatibilidade -->
-      <input name="nome" value="{{ p.nome }}" placeholder="Nome">
-      <input name="valor" value="{{ p.valor }}" placeholder="Valor" type="number" step="0.01">
-      <input name="imagem_url" value="{{ p.imagem_url }}" placeholder="URL imagem">
-      <textarea name="descricao">{{ p.descricao }}</textarea>
-      <button type="submit">Salvar</button>
-    </form>
-  </li>
-{% endfor %}
-</ul>
+  </div>
+</section>
 
+<!-- ===== SEÇÃO DE PRODUTOS EXISTENTES ===== -->
+<section class="admin-section">
+  <div class="admin-card">
+    <h2 class="admin-card-title">📋 Produtos Existentes</h2>
+
+    {% if produtos %}
+    <div class="products-table-wrapper">
+      <table class="products-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Valor</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in produtos %}
+          <tr class="product-row" id="row-{{ p.id }}">
+            <td class="table-cell-id">{{ p.id }}</td>
+            <td class="table-cell-name">{{ p.nome }}</td>
+            <td class="table-cell-price">R$ {{ '%.2f' % p.valor }}</td>
+            <td class="table-cell-actions">
+              <!-- Botão Editar -->
+              <button 
+                type="button" 
+                class="btn-edit" 
+                onclick="toggleEditForm({{ p.id }})"
+                aria-label="Editar produto {{ p.nome }}"
+              >
+                ✏️ Editar
+              </button>
+
+              <!-- Botão Deletar -->
+              <form 
+                style="display:inline;" 
+                method="post" 
+                action="/admin/produto/{{ p.id }}" 
+                onsubmit="return confirm('Tem certeza que deseja deletar este produto?');"
+              >
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="btn-delete" aria-label="Deletar produto {{ p.nome }}">
+                  🗑️ Deletar
+                </button>
+              </form>
+            </td>
+          </tr>
+
+          <!-- ===== FORMULÁRIO DE EDIÇÃO (ESCONDIDO) ===== -->
+          <tr class="edit-form-row" id="edit-row-{{ p.id }}" style="display:none;">
+            <td colspan="4">
+              <form 
+                id="edit-form-{{ p.id }}" 
+                method="post" 
+                action="/admin/produto/{{ p.id }}" 
+                class="admin-form-edit"
+              >
+                <!-- IMPORTANTE: Não altere os nomes dos campos (name="...") pois eles devem corresponder ao backend -->
+                <input type="hidden" name="_method" value="PUT">
+
+                <div class="edit-form-group">
+                  <label for="edit-nome-{{ p.id }}" class="form-label">Nome</label>
+                  <input 
+                    type="text" 
+                    id="edit-nome-{{ p.id }}" 
+                    name="nome" 
+                    value="{{ p.nome }}" 
+                    class="form-input-edit" 
+                    placeholder="Nome"
+                    required
+                  >
+                </div>
+
+                <div class="edit-form-group">
+                  <label for="edit-valor-{{ p.id }}" class="form-label">Valor</label>
+                  <input 
+                    type="number" 
+                    id="edit-valor-{{ p.id }}" 
+                    name="valor" 
+                    value="{{ p.valor }}" 
+                    class="form-input-edit" 
+                    placeholder="Valor" 
+                    step="0.01"
+                    required
+                  >
+                </div>
+
+                <div class="edit-form-group">
+                  <label for="edit-imagem-{{ p.id }}" class="form-label">URL da Imagem</label>
+                  <input 
+                    type="url" 
+                    id="edit-imagem-{{ p.id }}" 
+                    name="imagem_url" 
+                    value="{{ p.imagem_url }}" 
+                    class="form-input-edit" 
+                    placeholder="URL imagem"
+                    required
+                  >
+                </div>
+
+                <div class="edit-form-group">
+                  <label for="edit-descricao-{{ p.id }}" class="form-label">Descrição</label>
+                  <textarea 
+                    id="edit-descricao-{{ p.id }}" 
+                    name="descricao" 
+                    class="form-textarea-edit" 
+                    placeholder="Descrição"
+                    rows="3"
+                  >{{ p.descricao }}</textarea>
+                </div>
+
+                <div class="edit-form-actions">
+                  <button type="submit" class="btn-save">
+                    ✓ Salvar Alterações
+                  </button>
+                  <button 
+                    type="button" 
+                    class="btn-cancel" 
+                    onclick="toggleEditForm({{ p.id }})"
+                  >
+                    ✕ Cancelar
+                  </button>
+                </div>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state-admin">
+      <p class="empty-state-text">Nenhum produto cadastrado ainda.</p>
+      <p class="empty-state-hint">Crie seu primeiro produto usando o formulário acima.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ===== SCRIPT DE CONTROLE DO FORMULÁRIO DE EDIÇÃO ===== -->
 <script>
+/**
+ * IMPORTANTE: Não altere esta função pois ela controla a exibição/ocultação do formulário de edição
+ * Ela é essencial para o funcionamento do painel admin
+ */
 function toggleEditForm(id) {
-  const form = document.getElementById('edit-form-' + id);
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  const editRow = document.getElementById('edit-row-' + id);
+  const productRow = document.getElementById('row-' + id);
+  
+  if (editRow.style.display === 'none') {
+    editRow.style.display = 'table-row';
+    productRow.style.opacity = '0.5';
+    productRow.style.pointerEvents = 'none';
+  } else {
+    editRow.style.display = 'none';
+    productRow.style.opacity = '1';
+    productRow.style.pointerEvents = 'auto';
+  }
 }
 </script>
+
 {% endblock %}

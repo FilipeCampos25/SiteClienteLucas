@@ -1,20 +1,129 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="banner"> <!-- Adicionado banner -->
-  <h1>Bem-vindo à Cantoneira Fácil — Sua Loja de Cantoneiras e Perfis Metálicos!</h1>
-  <p>Produtos de qualidade com entrega rápida. Adicione ao carrinho e entre em contato via WhatsApp.</p>
-</div>
-<div class="grid">
-  {% for p in produtos %}
-  <div class="card card-produto">
-    <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="thumb" onerror="this.src='/static/images/placeholder.png'">
-    <div class="card-body">
-      <h3>{{ p.nome }}</h3>
-      <div class="preco">R$ {{ '%.2f' % p.valor }}</div>
-      <button class="btn-laranja" onclick="adicionarCarrinho({{ p.id }})">Adicionar</button>
-      <a href="/produto/{{ p.id }}">Detalhes</a>
+<!-- ===== BANNER PRINCIPAL ===== -->
+<!-- IMPORTANTE: Customize o texto e cores conforme necessário -->
+<section class="banner-principal">
+  <div class="banner-content">
+    <h1 class="banner-title">Bem-vindo à Cantoneira Fácil</h1>
+    <p class="banner-subtitle">Sua Loja de Cantoneiras e Perfis Metálicos</p>
+    <p class="banner-description">Produtos de qualidade com entrega rápida. Adicione ao carrinho e entre em contato via WhatsApp.</p>
+    <button class="banner-cta" onclick="document.getElementById('produtos').scrollIntoView({behavior: 'smooth'})">
+      Ver Produtos
+    </button>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO DE BENEFÍCIOS ===== -->
+<section class="benefits-section">
+  <div class="benefits-grid">
+    <!-- Benefício 1 -->
+    <div class="benefit-card">
+      <div class="benefit-icon">✓</div>
+      <h3 class="benefit-title">Qualidade Garantida</h3>
+      <p class="benefit-text">Produtos de alta qualidade com certificação</p>
+    </div>
+
+    <!-- Benefício 2 -->
+    <div class="benefit-card">
+      <div class="benefit-icon">🚚</div>
+      <h3 class="benefit-title">Entrega Rápida</h3>
+      <p class="benefit-text">Enviamos para todo o Brasil em 48h</p>
+    </div>
+
+    <!-- Benefício 3 -->
+    <div class="benefit-card">
+      <div class="benefit-icon">💬</div>
+      <h3 class="benefit-title">Suporte via WhatsApp</h3>
+      <p class="benefit-text">Atendimento rápido e personalizado</p>
+    </div>
+
+    <!-- Benefício 4 -->
+    <div class="benefit-card">
+      <div class="benefit-icon">💰</div>
+      <h3 class="benefit-title">Melhores Preços</h3>
+      <p class="benefit-text">Tabela de preços competitiva no mercado</p>
     </div>
   </div>
-  {% endfor %}
-</div>
+</section>
+
+<!-- ===== SEÇÃO DE PRODUTOS ===== -->
+<section class="products-section" id="produtos">
+  <div class="section-header">
+    <h2 class="section-title">Nossos Produtos</h2>
+    <p class="section-subtitle">Confira nossa seleção completa de cantoneiras e perfis metálicos</p>
+  </div>
+
+  <!-- Grid de produtos -->
+  <div class="grid-produtos">
+    {% for p in produtos %}
+    <!-- IMPORTANTE: Esta estrutura não deve ser alterada para manter compatibilidade com o backend -->
+    <div class="card-produto">
+      <!-- Imagem do produto -->
+      <div class="card-image-wrapper">
+        <img 
+          src="{{ p.imagem_url }}" 
+          alt="{{ p.nome }}" 
+          class="card-image" 
+          onerror="this.src='/static/images/placeholder.png'"
+        >
+        <!-- Badge de desconto (opcional) -->
+        <span class="product-badge">Novo</span>
+      </div>
+
+      <!-- Conteúdo do card -->
+      <div class="card-body">
+        <h3 class="product-name">{{ p.nome }}</h3>
+        
+        <!-- Preço -->
+        <div class="price-section">
+          <span class="product-price">R$ {{ '%.2f' % p.valor }}</span>
+        </div>
+
+        <!-- Descrição curta (se disponível) -->
+        {% if p.descricao %}
+        <p class="product-description">{{ p.descricao[:80] }}...</p>
+        {% endif %}
+
+        <!-- Botões de ação -->
+        <div class="card-actions">
+          <button 
+            class="btn-adicionar" 
+            onclick="adicionarCarrinho({{ p.id }})"
+            aria-label="Adicionar {{ p.nome }} ao carrinho"
+          >
+            Adicionar
+          </button>
+          <a 
+            href="/produto/{{ p.id }}" 
+            class="btn-detalhes"
+            aria-label="Ver detalhes de {{ p.nome }}"
+          >
+            Detalhes
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Mensagem quando não há produtos -->
+  {% if not produtos %}
+  <div class="empty-state">
+    <p class="empty-state-text">Nenhum produto disponível no momento.</p>
+  </div>
+  {% endif %}
+</section>
+
+<!-- ===== SEÇÃO DE CHAMADA PARA AÇÃO ===== -->
+<section class="cta-section" id="contato">
+  <div class="cta-content">
+    <h2 class="cta-title">Precisa de um Orçamento?</h2>
+    <p class="cta-text">Entre em contato conosco via WhatsApp para solicitar um orçamento personalizado</p>
+    <a href="https://wa.me/5541999999999" target="_blank" class="btn-whatsapp">
+      💬 Fale Conosco no WhatsApp
+    </a>
+  </div>
+</section>
+
 {% endblock %}

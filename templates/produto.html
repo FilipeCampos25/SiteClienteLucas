@@ -1,10 +1,114 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="produto-detalhe">
-  <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" onerror="this.src='/static/images/placeholder.png'">
-  <h2>{{ p.nome }}</h2>
-  <p>{{ p.descricao }}</p>
-  <div class="preco">R$ {{ '%.2f' % p.valor }}</div>
-  <button class="btn-laranja" onclick="adicionarCarrinho({{ p.id }})">Adicionar ao carrinho</button>
-</div>
+<!-- ===== BREADCRUMB (Navegação) ===== -->
+<nav class="breadcrumb">
+  <a href="/" class="breadcrumb-link">Início</a>
+  <span class="breadcrumb-separator">/</span>
+  <a href="/#produtos" class="breadcrumb-link">Produtos</a>
+  <span class="breadcrumb-separator">/</span>
+  <span class="breadcrumb-current">{{ p.nome }}</span>
+</nav>
+
+<!-- ===== SEÇÃO DE DETALHES DO PRODUTO ===== -->
+<section class="produto-detalhe-container">
+  <div class="produto-grid">
+    <!-- Coluna 1: Imagem do produto -->
+    <div class="produto-image-section">
+      <div class="product-image-wrapper">
+        <img 
+          src="{{ p.imagem_url }}" 
+          alt="{{ p.nome }}" 
+          class="product-image-large"
+          onerror="this.src='/static/images/placeholder.png'"
+        >
+      </div>
+    </div>
+
+    <!-- Coluna 2: Informações do produto -->
+    <div class="produto-info-section">
+      <!-- Nome do produto -->
+      <h1 class="produto-title">{{ p.nome }}</h1>
+
+      <!-- ID do produto (informação técnica) -->
+      <p class="produto-id">SKU: #{{ p.id }}</p>
+
+      <!-- Preço destaque -->
+      <div class="price-highlight">
+        <span class="price-label">Preço:</span>
+        <span class="price-value">R$ {{ '%.2f' % p.valor }}</span>
+      </div>
+
+      <!-- Descrição do produto -->
+      <div class="produto-description-section">
+        <h2 class="section-subtitle">Descrição</h2>
+        <p class="produto-description">{{ p.descricao }}</p>
+      </div>
+
+      <!-- Informações adicionais -->
+      <div class="produto-info-box">
+        <div class="info-item">
+          <span class="info-label">📦 Disponibilidade:</span>
+          <span class="info-value">Em estoque</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">🚚 Entrega:</span>
+          <span class="info-value">Até 48 horas</span>
+        </div>
+      </div>
+
+      <!-- Seção de ações -->
+      <div class="produto-actions">
+        <!-- Botão Adicionar ao Carrinho -->
+        <button 
+          class="btn-adicionar-grande" 
+          onclick="adicionarCarrinho({{ p.id }})"
+          aria-label="Adicionar {{ p.nome }} ao carrinho"
+        >
+          🛒 Adicionar ao Carrinho
+        </button>
+
+        <!-- Botão WhatsApp -->
+        <a 
+          href="https://wa.me/5541999999999?text=Olá! Gostaria de mais informações sobre: {{ p.nome }}" 
+          target="_blank" 
+          class="btn-whatsapp-contato"
+          aria-label="Enviar mensagem via WhatsApp"
+        >
+          💬 Enviar via WhatsApp
+        </a>
+      </div>
+
+      <!-- Aviso de segurança -->
+      <div class="security-badge">
+        <p class="security-text">✓ Compra segura | 🔒 Dados protegidos | 💳 Múltiplas formas de pagamento</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO DE PRODUTOS RELACIONADOS ===== -->
+<section class="related-products-section">
+  <h2 class="section-title">Produtos Relacionados</h2>
+  <p class="section-subtitle">Você também pode se interessar por:</p>
+  
+  <div class="grid-produtos-relacionados">
+    <!-- Nota: Esta seção pode ser expandida com lógica de backend para mostrar produtos relacionados -->
+    <div class="related-product-placeholder">
+      <p>Navegue por nossa <a href="/#produtos">coleção completa de produtos</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SEÇÃO DE CHAMADA PARA AÇÃO ===== -->
+<section class="cta-section-produto">
+  <div class="cta-content">
+    <h2 class="cta-title">Dúvidas sobre este produto?</h2>
+    <p class="cta-text">Entre em contato com nosso time de especialistas</p>
+    <a href="https://wa.me/5541999999999" target="_blank" class="btn-whatsapp">
+      💬 Fale Conosco no WhatsApp
+    </a>
+  </div>
+</section>
+
 {% endblock %}

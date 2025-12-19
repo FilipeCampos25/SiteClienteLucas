@@ -1,30 +1,114 @@
 <!doctype html>
-<html>
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Cantoneira Fácil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- IMPORTANTE: Altere o título abaixo para o nome do seu projeto -->
+  <title>Cantoneira Fácil - Sua Loja de Cantoneiras e Perfis Metálicos</title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-<header class="site-header">
-  <div class="container">
-    <div class="logo">Cantoneira Fácil</div>
-    <div class="cart-btn" onclick="abrirCarrinho()">Carrinho</div>
+  <!-- ===== CABEÇALHO ===== -->
+  <!-- IMPORTANTE: Substitua "Cantoneira Fácil" pelo nome do seu projeto e adicione sua logo em /static/images/logo.png -->
+  <header class="site-header">
+    <div class="container-header">
+      <div class="header-content">
+        <!-- Logo e nome da loja -->
+        <div class="logo-section">
+          <img src="/static/images/logo.png" alt="Logo" class="logo-img" onerror="this.style.display='none'">
+          <div class="logo-text">
+            <h1 class="logo-title">Cantoneira Fácil</h1>
+            <p class="logo-subtitle">Perfis Metálicos de Qualidade</p>
+          </div>
+        </div>
+
+        <!-- Barra de busca (centro) -->
+        <div class="search-bar">
+          <input type="text" id="searchInput" class="search-input" placeholder="Buscar produtos..." aria-label="Buscar produtos">
+          <button class="search-btn" onclick="buscarProdutos()" aria-label="Botão de busca">
+            <span>🔍</span>
+          </button>
+        </div>
+
+        <!-- Carrinho (direita) -->
+        <div class="header-actions">
+          <button class="cart-btn" onclick="abrirCarrinho()" aria-label="Abrir carrinho">
+            <span class="cart-icon">🛒</span>
+            <span class="cart-count" id="cartCount">0</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navegação secundária -->
+    <nav class="nav-secondary">
+      <div class="container-header">
+        <ul class="nav-links">
+          <li><a href="/" class="nav-link">Início</a></li>
+          <li><a href="/#produtos" class="nav-link">Produtos</a></li>
+          <li><a href="#contato" class="nav-link">Contato</a></li>
+          <li><a href="/admin/" class="nav-link nav-admin">Painel Admin</a></li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ===== CONTEÚDO PRINCIPAL ===== -->
+  <main class="main-content">
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- ===== MODAL DO CARRINHO ===== -->
+  <div id="carrinhoModal" class="modal" style="display:none;">
+    <!-- Conteúdo gerado dinamicamente por main.js -->
   </div>
-</header>
-<main class="container">
-  {% block content %}{% endblock %}
-</main>
 
-<div id="carrinhoModal" class="modal" style="display:none;"></div>
+  <!-- ===== RODAPÉ ===== -->
+  <!-- IMPORTANTE: Atualize as informações de contato abaixo com os dados do seu projeto -->
+  <footer class="footer">
+    <div class="container-footer">
+      <div class="footer-content">
+        <!-- Seção de contato -->
+        <div class="footer-section">
+          <h3 class="footer-title">Contato</h3>
+          <ul class="footer-list">
+            <li><strong>Telefone:</strong> <a href="tel:+5541999999999">(55) 41 99999-9999</a></li>
+            <li><strong>Email:</strong> <a href="mailto:contato@cantoneirafacil.com">contato@cantoneirafacil.com</a></li>
+            <li><strong>Horário:</strong> Seg-Sex: 08h-18h</li>
+          </ul>
+        </div>
 
-<footer class="footer"> <!-- Adicionado footer -->
-  <div class="container">
-    Contato: (55) 41 99999-9999 | Email: contato@cantoneirafacil.com | <a href="/admin/">Admin (apenas dono)</a>
-  </div>
-</footer>
+        <!-- Seção de informações -->
+        <div class="footer-section">
+          <h3 class="footer-title">Informações</h3>
+          <ul class="footer-list">
+            <li><a href="#sobre">Sobre Nós</a></li>
+            <li><a href="#politica">Política de Privacidade</a></li>
+            <li><a href="#termos">Termos de Uso</a></li>
+          </ul>
+        </div>
 
-<script src="/static/js/main.js"></script>
+        <!-- Seção de redes sociais -->
+        <div class="footer-section">
+          <h3 class="footer-title">Siga-nos</h3>
+          <div class="social-links">
+            <a href="#" class="social-link" aria-label="Facebook">f</a>
+            <a href="#" class="social-link" aria-label="Instagram">📷</a>
+            <a href="#" class="social-link" aria-label="WhatsApp">💬</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Linha de copyright -->
+      <div class="footer-bottom">
+        <p>&copy; 2024 Cantoneira Fácil. Todos os direitos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== SCRIPTS ===== -->
+  <script src="/static/js/main.js"></script>
 </body>
 </html>
