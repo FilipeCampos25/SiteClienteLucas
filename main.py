@@ -8,6 +8,7 @@ import crud, schemas, models
 from config import ADMIN_USER, ADMIN_PASSWORD, WHATSAPP_NUMERO, CORS_ORIGINS
 from utils import gerar_link_whatsapp
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+import secrets  # Já importado, mas confirme
 
 # Função para ser chamada pelo start.sh (cria tabelas se não existirem)
 def init_db_and_admin():
@@ -103,14 +104,26 @@ def admin_upload(file: UploadFile = File(...), ok: bool = Depends(verify_admin))
         status_code=400
     )
 
-@app.put("/admin/produto/{produto_id}")
-def admin_update(produto_id: int, payload: schemas.ProdutoUpdate, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
-    p = crud.update_produto(db, produto_id, payload)
-    if not p:
-        raise HTTPException(404, "Produto não encontrado")
-    return p
-
-@app.delete("/admin/produto/{produto_id}")
-def admin_delete(produto_id: int, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
-    p = crud.delete_produto(db, produto_id)
-    return {"deleted": bool(p)}
+# Suporte a _method para forms (PUT/DELETE via POST)
+@app.post("/admin/produto/{produto_id}")
+async def admin_update_or_delete(produto_id: int, request: Request, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
+    form = await request.form()
+    _method = form.get('_method')
+    
+    if _method == 'PUT':
+        update_data = schemas.ProdutoUpdate(
+            nome=form.get('nome'),
+            descricao=form.get('descricao'),
+            valor=float(form.get('valor')) if form.get('valor') else None,
+            imagem_url=form.get('imagem_url')
+        )
+        p = crud.update_produto(db, produto_id, update_data)
+        if not p:
+            raise HTTPException(404, "Produto não encontrado")
+        return RedirectResponse(url="/admin/", status_code=status.HTTP_303_SEE_OTHER)
+    
+    elif _method == 'DELETE':
+        p = crud.delete_produto(db, produto_id)
+        return RedirectResponse(url="/admin/", status_code=status.HTTP_303_SEE_OTHER)
+    
+    raise HTTPException(400, "Método inválido")

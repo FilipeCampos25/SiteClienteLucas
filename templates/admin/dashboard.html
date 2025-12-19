@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Painel Admin</h2>
+
+<h3>Criar Novo Produto</h3>
 <form method="post" action="/admin/produto">
   <input name="nome" placeholder="Nome" required>
   <input name="valor" placeholder="Valor" required type="number" step="0.01">
@@ -9,10 +11,33 @@
   <button type="submit">Criar</button>
 </form>
 
-<h3>Produtos</h3>
+<h3>Produtos Existentes</h3>
 <ul>
 {% for p in produtos %}
-  <li>{{ p.id }} - {{ p.nome }} — R$ {{ '%.2f' % p.valor }} — <form style="display:inline" method="post" action="/admin/produto/{{ p.id }}?_method=DELETE"><button formaction="/admin/produto/{{ p.id }}" formmethod="delete">Deletar</button></form></li>
+  <li>
+    {{ p.id }} - {{ p.nome }} — R$ {{ '%.2f' % p.valor }} — 
+    <button onclick="toggleEditForm({{ p.id }})">Editar</button>
+    <form style="display:inline" method="post" action="/admin/produto/{{ p.id }}">
+      <input type="hidden" name="_method" value="DELETE"> <!-- Para compatibilidade HTML -->
+      <button type="submit">Deletar</button>
+    </form>
+    <!-- Form de Edit (escondido inicialmente) -->
+    <form id="edit-form-{{ p.id }}" style="display:none;" method="post" action="/admin/produto/{{ p.id }}">
+      <input type="hidden" name="_method" value="PUT"> <!-- Para compatibilidade -->
+      <input name="nome" value="{{ p.nome }}" placeholder="Nome">
+      <input name="valor" value="{{ p.valor }}" placeholder="Valor" type="number" step="0.01">
+      <input name="imagem_url" value="{{ p.imagem_url }}" placeholder="URL imagem">
+      <textarea name="descricao">{{ p.descricao }}</textarea>
+      <button type="submit">Salvar</button>
+    </form>
+  </li>
 {% endfor %}
 </ul>
+
+<script>
+function toggleEditForm(id) {
+  const form = document.getElementById('edit-form-' + id);
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+</script>
 {% endblock %}

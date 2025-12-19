@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Bem-vindo — Cantoneira Fácil</h1>
+<div class="banner"> <!-- Adicionado banner -->
+  <h1>Bem-vindo à Cantoneira Fácil — Sua Loja de Cantoneiras e Perfis Metálicos!</h1>
+  <p>Produtos de qualidade com entrega rápida. Adicione ao carrinho e entre em contato via WhatsApp.</p>
+</div>
 <div class="grid">
   {% for p in produtos %}
   <div class="card card-produto">
