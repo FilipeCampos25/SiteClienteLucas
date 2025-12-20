@@ -529,8 +529,6 @@ body {
 @media (max-width: 600px) {
   .card-image-container { height: 180px; }
 }
-  margin-bottom: var(--spacing-md);
-}
 
 .card-actions {
   display: flex;
@@ -999,26 +997,8 @@ body {
   cursor: pointer;
 }
 
-.empty-state-admin {
-  text-align: center;
-  padding: var(--spacing-2xl);
-  color: var(--cinza-texto);
-}
-
-.empty-icon {
-  font-size: 2.5rem;
-  margin-bottom: var(--spacing-sm);
-}
-
-.empty-title {
-  font-weight: 700;
-  margin-bottom: var(--spacing-xs);
-}
-
-.empty-text {
-  font-size: var(--font-size-sm);
-}
-
+.form-label {
+  display: block;
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--cinza-escuro);

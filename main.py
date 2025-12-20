@@ -34,6 +34,13 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# Expor variáveis e helpers úteis para todas as templates
+import utils
+templates.env.globals['WHATSAPP_NUMERO'] = WHATSAPP_NUMERO
+templates.env.globals['WHATSAPP_LINK'] = f"https://wa.me/{WHATSAPP_NUMERO}" if WHATSAPP_NUMERO else ''
+templates.env.globals['WHATSAPP_DISPLAY'] = utils.telefone_visivel()
+templates.env.globals['gerar_link_whatsapp_text'] = utils.gerar_link_whatsapp_text
+
 # DB dependency
 def get_db():
     db = SessionLocal()

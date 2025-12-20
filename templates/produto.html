@@ -51,7 +51,7 @@
         <button class="btn-primary btn-add-cart-large" onclick="adicionarCarrinho('{{ p.id }}')">
           🛒 Adicionar ao Carrinho
         </button>
-        <a href="https://wa.me/5541999999999?text=Olá! Tenho interesse no produto {{ p.nome }} (SKU: #{{ p.id }})" target="_blank" class="btn-whatsapp">
+        <a href="{{ gerar_link_whatsapp_text('Olá! Tenho interesse no produto ' ~ p.nome ~ ' (SKU: #' ~ p.id ~ ')') }}" target="_blank" class="btn-whatsapp">
           💬 Fale Conosco
         </a>
       </div> 
@@ -83,10 +83,10 @@
     <h2 class="cta-title">Dúvidas sobre este produto?</h2>
     <p class="cta-description">Nosso time de especialistas está pronto para ajudar</p>
     <div class="cta-buttons">
-      <a href="https://wa.me/5561985700278" target="_blank" class="btn-whatsapp-large">
+      <a href="{{ WHATSAPP_LINK }}" target="_blank" class="btn-whatsapp-large">
         💬 WhatsApp
       </a>
-      <a href="tel:+5541999999999" class="btn-phone-large">
+      <a href="tel:+{{ WHATSAPP_NUMERO }}" class="btn-phone-large">
         ☎️ Ligar
       </a>
     </div>
