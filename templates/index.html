@@ -1,3 +1,4 @@
+<!-- templates/index.html -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -5,6 +6,7 @@
 <section class="hero-section">
   <div class="hero-content">
     <div class="hero-text">
+      <!-- COMENTÁRIO: Para adicionar uma imagem ao hero, substitua o SVG por <img src="sua-imagem-hero.jpg" class="hero-img"> ou ajuste o placeholder. -->
       <h1 class="hero-title">Cantoneiras e Perfis Metálicos Premium</h1>
       <p class="hero-subtitle">Qualidade, durabilidade e confiança em cada produto</p>
       <p class="hero-description">Fornecemos soluções metálicas de excelência para sua obra. Entrega rápida e atendimento personalizado.</p>
@@ -31,151 +33,90 @@
 
 <!-- ===== SEÇÃO DE DIFERENCIAIS ===== -->
 <section class="differentials-section">
-  <h2 class="section-title">Por Que Nos Escolher?</h2>
+  <h2 class="section-title">Por Que Escolher a Cantoneira Fácil?</h2>
+  <p class="section-subtitle">Diferenciais que fazem a diferença na sua obra</p>
   <div class="differentials-grid">
     <div class="differential-card">
-      <div class="differential-icon">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-        </svg>
-      </div>
-      <h3 class="differential-title">Qualidade Certificada</h3>
-      <p class="differential-text">Todos os produtos possuem certificação de qualidade e passam por rigoroso controle.</p>
+      <div class="card-icon">🏆</div>
+      <h3 class="card-title">Qualidade Premium</h3>
+      <p class="card-description">Materiais certificados e testados para máxima durabilidade</p>
     </div>
-
     <div class="differential-card">
-      <div class="differential-icon">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="1"></circle>
-          <path d="M12 1v6m0 6v6"></path>
-          <path d="M4.22 4.22l4.24 4.24m3.08 3.08l4.24 4.24"></path>
-          <path d="M1 12h6m6 0h6"></path>
-          <path d="M4.22 19.78l4.24-4.24m3.08-3.08l4.24-4.24"></path>
-        </svg>
-      </div>
-      <h3 class="differential-title">Entrega Rápida</h3>
-      <p class="differential-text">Enviamos seus pedidos em até 48 horas para todo o Brasil com rastreamento.</p>
+      <div class="card-icon">🚚</div>
+      <h3 class="card-title">Entrega Rápida</h3>
+      <p class="card-description">Envios para todo o Brasil com prazos competitivos</p>
     </div>
-
     <div class="differential-card">
-      <div class="differential-icon">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-      </div>
-      <h3 class="differential-title">Suporte 24/7</h3>
-      <p class="differential-text">Atendimento via WhatsApp, email e telefone. Estamos sempre prontos para ajudar.</p>
+      <div class="card-icon">💰</div>
+      <h3 class="card-title">Preços Justos</h3>
+      <p class="card-description">Melhor custo-benefício do mercado sem comprometer a qualidade</p>
     </div>
-
     <div class="differential-card">
-      <div class="differential-icon">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="1" x2="12" y2="23"></line>
-          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-        </svg>
-      </div>
-      <h3 class="differential-title">Melhores Preços</h3>
-      <p class="differential-text">Tabela de preços competitiva com descontos para compras em quantidade.</p>
+      <div class="card-icon">🤝</div>
+      <h3 class="card-title">Atendimento Personalizado</h3>
+      <p class="card-description">Equipe especializada para tirar todas as suas dúvidas</p>
     </div>
   </div>
 </section>
 
 <!-- ===== SEÇÃO DE PRODUTOS ===== -->
-<section class="products-section" id="produtos">
-  <div class="section-header">
-    <h2 class="section-title">Nossos Produtos</h2>
-    <p class="section-subtitle">Catálogo completo de cantoneiras e perfis metálicos</p>
-  </div>
-
-  <!-- Grid de produtos premium -->
-  <div class="grid-produtos">
+<section id="produtos" class="produtos-section">
+  <h2 class="section-title">Nossos Produtos</h2>
+  <p class="section-subtitle">Explore nossa linha completa de cantoneiras e perfis metálicos</p>
+  <div class="grid-produtos" id="produtosGrid">
     {% for p in produtos %}
-    <div class="card-produto-premium">
-      <!-- Imagem com overlay -->
+    <div class="card-produto">
       <div class="card-image-container">
-        <img 
-          src="{{ p.imagem_url }}" 
-          alt="{{ p.nome }}" 
-          class="card-image" 
-          onerror="this.src='/static/images/placeholder.png'"
-        >
-        <div class="card-overlay">
-          <a href="/produto/{{ p.id }}" class="overlay-btn">Ver Detalhes</a>
-        </div>
+        <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="card-image" onerror="this.src='/static/images/placeholder.png'">
       </div>
-
-      <!-- Informações do produto -->
-      <div class="card-info">
-        <h3 class="product-name">{{ p.nome }}</h3>
-        
-        <!-- Preço destacado -->
-        <div class="price-container">
-          <span class="product-price">R$ {{ '%.2f' % p.valor }}</span>
+      <div class="card-content">
+        <h3 class="card-title">{{ p.nome }}</h3>
+        <p class="card-price">R$ {{ '%.2f' % p.valor }}</p>
+        <div class="card-actions">
+          <a href="/produto/{{ p.id }}" class="btn-view">Ver Detalhes</a>
+          <button class="btn-add-cart" onclick="adicionarCarrinho({{ p.id }})">Adicionar ao Carrinho</button>
         </div>
-
-        <!-- Descrição -->
-        {% if p.descricao %}
-        <p class="product-description">{{ p.descricao[:70] }}...</p>
-        {% endif %}
-
-        <!-- Botão de ação -->
-        <button 
-          class="btn-add-cart" 
-          onclick="adicionarCarrinho({{ p.id }})"
-          aria-label="Adicionar {{ p.nome }} ao carrinho"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="9" cy="21" r="1"></circle>
-            <circle cx="20" cy="21" r="1"></circle>
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-          </svg>
-          Adicionar
-        </button>
       </div>
     </div>
     {% endfor %}
   </div>
-
-  <!-- Mensagem quando não há produtos -->
-  {% if not produtos %}
-  <div class="empty-state">
-    <p class="empty-state-text">Nenhum produto disponível no momento.</p>
-  </div>
-  {% endif %}
 </section>
 
 <!-- ===== SEÇÃO DE ESTATÍSTICAS ===== -->
 <section class="stats-section">
   <div class="stats-grid">
     <div class="stat-card">
-      <h3 class="stat-number">1000+</h3>
-      <p class="stat-label">Clientes Satisfeitos</p>
+      <div class="stat-icon">📦</div>
+      <div class="stat-number">+10k</div>
+      <div class="stat-text">Produtos Vendidos</div>
     </div>
     <div class="stat-card">
-      <h3 class="stat-number">500+</h3>
-      <p class="stat-label">Produtos em Catálogo</p>
+      <div class="stat-icon">😊</div>
+      <div class="stat-number">+5k</div>
+      <div class="stat-text">Clientes Satisfeitos</div>
     </div>
     <div class="stat-card">
-      <h3 class="stat-number">48h</h3>
-      <p class="stat-label">Tempo de Entrega</p>
+      <div class="stat-icon">🌎</div>
+      <div class="stat-number">Todo BR</div>
+      <div class="stat-text">Entregas Nacionais</div>
     </div>
     <div class="stat-card">
-      <h3 class="stat-number">100%</h3>
-      <p class="stat-label">Satisfação Garantida</p>
+      <div class="stat-icon">🏆</div>
+      <div class="stat-number">10+</div>
+      <div class="stat-text">Anos de Experiência</div>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO DE CTA FINAL ===== -->
-<section class="final-cta-section" id="contato">
-  <div class="cta-wrapper">
-    <h2 class="cta-title">Pronto para Fazer Seu Pedido?</h2>
-    <p class="cta-description">Entre em contato conosco e receba um orçamento personalizado</p>
+<!-- ===== SEÇÃO CTA ===== -->
+<section class="cta-section">
+  <div class="cta-content">
+    <h2 class="cta-title">Pronto para Transformar Sua Obra?</h2>
+    <p class="cta-description">Entre em contato agora e solicite um orçamento personalizado</p>
     <div class="cta-buttons">
       <a href="https://wa.me/5541999999999" target="_blank" class="btn-whatsapp-large">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-4.255.949c-1.238.503-2.335 1.236-3.356 2.192-1.048 1.007-1.954 2.14-2.668 3.426-.779 1.423-1.348 2.914-1.684 4.425-.368 1.619-.453 3.319-.25 5.003.112.904.275 1.803.486 2.694.107.452.226.896.359 1.331.05.169.042.34-.057.424-.099.084-.237.13-.375.13-.145 0-.28-.045-.394-.13l-1.286-.824c-.565-.362-1.113-.755-1.64-1.176-.531-.43-1.034-.888-1.509-1.372-.971-.971-1.831-2.008-2.566-3.114-.735-1.106-1.340-2.279-1.799-3.51-.459-1.231-.77-2.515-.924-3.818-.154-1.303-.12-2.619.1-3.91.22-1.291.655-2.554 1.289-3.749.634-1.195 1.466-2.312 2.47-3.297 1.004-.985 2.183-1.8 3.507-2.41 1.324-.61 2.78-.99 4.25-1.12 1.47-.13 2.94.04 4.35.5 1.41.46 2.73 1.15 3.9 2.04 1.17.89 2.16 1.98 2.93 3.22.77 1.24 1.3 2.61 1.57 4.05.27 1.44.27 2.92 0 4.36-.27 1.44-.8 2.81-1.57 4.05-.77 1.24-1.76 2.33-2.93 3.22-1.17.89-2.49 1.58-3.9 2.04-1.41.46-2.88.63-4.35.5-1.47-.13-2.93-.51-4.25-1.12-1.324-.61-2.503-1.425-3.507-2.41-.504-.485-.985-.998-1.437-1.537"/>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 21 3.674 18.326A9.7 9.7 0 0 1 2.1 13.902 9.8 9.8 0 0 1 5.802 5.82 9.8 9.8 0 0 1 13.884 2.1a9.8 9.8 0 0 1 8.082 3.702 9.8 9.8 0 0 1 3.702 8.082 9.8 9.8 0 0 1-3.702 8.082 9.8 9.8 0 0 1-8.082 3.702 9.7 9.7 0 0 1-4.424-1.574L3 21Zm3.67-3.004.285.285a7.8 7.8 0 0 0 3.57 1.27 7.8 7.8 0 0 0 6.44-2.95 7.8 7.8 0 0 0 2.95-6.44 7.8 7.8 0 0 0-2.95-6.44 7.8 7.8 0 0 0-6.44-2.95 7.8 7.8 0 0 0-6.44 2.95 7.8 7.8 0 0 0-2.95 6.44 7.7 7.7 0 0 0 1.27 3.57l.285.285-.67 2.45 2.45-.67Zm8.33-5.23c.27 1.44.27 2.92 0 4.36-.27 1.44-.8 2.81-1.57 4.05-.77 1.24-1.76 2.33-2.93 3.22-1.17.89-2.49 1.58-3.9 2.04-1.41.46-2.88.63-4.35.5-1.47-.13-2.93-.51-4.25-1.12-1.324-.61-2.503-1.425-3.507-2.41-.504-.485-.985-.998-1.437-1.537"/>
         </svg>
         Fale Conosco no WhatsApp
       </a>

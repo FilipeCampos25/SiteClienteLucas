@@ -1,3 +1,4 @@
+// static/js/main.js
 /**
  * ============================================
  * CANTONEIRA FÁCIL - SCRIPT PRINCIPAL
@@ -66,118 +67,41 @@ function adicionarCarrinho(id) {
   const existente = carrinho.find(i => i.id === id);
   
   if (existente) {
-    // Incrementa quantidade
-    existente.quantidade += 1;
+    existente.quantidade++;
   } else {
-    // Adiciona novo item
-    carrinho.push({ id: id, quantidade: 1 });
+    carrinho.push({id, quantidade: 1});
   }
   
-  // Salva no localStorage
   localStorage.setItem('carrinho', JSON.stringify(carrinho));
   
-  // Atualiza o ícone do carrinho
+  // Atualiza ícone
   atualizarIconeCarrinho();
   
-  // Feedback visual ao usuário
-  mostrarNotificacao('✓ Produto adicionado ao carrinho!');
+  // Mostra notificação
+  mostrarNotificacao('Produto adicionado ao carrinho!');
 }
 
 /**
- * Abre o modal do carrinho com todos os itens
- * Calcula o total e prepara dados para WhatsApp
- */
-function abrirCarrinho() {
-  let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-  
-  // Inicia o HTML do modal
-  let html = '<div class="modal-content">';
-  html += '<span class="close-modal" onclick="fecharCarrinho()">&times;</span>';
-  html += '<h3>🛒 Seu Carrinho</h3><ul>';
-  
-  let total = 0;
-  const itensParaWhats = [];
-  
-  // Itera sobre os itens do carrinho
-  carrinho.forEach(item => {
-    const prod = (window.todosProdutos || []).find(p => p.id === item.id);
-    
-    if (prod) {
-      const subtotal = parseFloat(prod.valor) * item.quantidade;
-      total += subtotal;
-      
-      // Adiciona item ao HTML
-      html += `
-        <li>
-          <div>
-            <strong>${item.quantidade}x</strong> ${prod.nome}
-            <br>
-            <span style="color: #FF6200; font-weight: 600;">R$ ${subtotal.toFixed(2)}</span>
-          </div>
-          <button onclick="remover(${item.id})" title="Remover do carrinho">✕</button>
-        </li>
-      `;
-      
-      // Prepara dados para WhatsApp
-      itensParaWhats.push({
-        nome: prod.nome,
-        quantidade: item.quantidade,
-        valor_unitario: Number(prod.valor)
-      });
-    }
-  });
-  
-  html += `</ul>`;
-  
-  // Adiciona total
-  html += `
-    <div style="background: #F8F8F8; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-      <h4 style="margin: 0; color: #FF6200;">Total: R$ ${total.toFixed(2)}</h4>
-    </div>
-  `;
-  
-  // Adiciona botão de ação
-  if (carrinho.length > 0) {
-    html += `
-      <button 
-        onclick='enviarWhats(${JSON.stringify(itensParaWhats)})' 
-        class="btn-submit"
-        style="width: 100%; margin-top: 1rem;"
-      >
-        💬 Enviar via WhatsApp
-      </button>
-    `;
-  } else {
-    html += '<p style="text-align: center; color: #999; margin-top: 1rem;">Carrinho vazio</p>';
-  }
-  
-  html += '</div>';
-  
-  // Exibe o modal
-  const modal = document.getElementById('carrinhoModal');
-  modal.innerHTML = html;
-  modal.style.display = 'flex';
-}
-
-/**
- * Remove um produto do carrinho
+ * Remove um item do carrinho ou decrementa quantidade
  * 
- * @param {number} id - ID do produto a remover
+ * @param {number} id - ID do produto
  */
-function remover(id) {
+function removerDoCarrinho(id) {
   let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
   
-  // Filtra removendo o produto
-  carrinho = carrinho.filter(i => i.id !== id);
+  const index = carrinho.findIndex(i => i.id === id);
   
-  // Salva no localStorage
-  localStorage.setItem('carrinho', JSON.stringify(carrinho));
-  
-  // Atualiza ícone e modal
-  atualizarIconeCarrinho();
-  abrirCarrinho();
-  
-  mostrarNotificacao('✓ Produto removido do carrinho');
+  if (index !== -1) {
+    if (carrinho[index].quantidade > 1) {
+      carrinho[index].quantidade--;
+    } else {
+      carrinho.splice(index, 1);
+    }
+    
+    localStorage.setItem('carrinho', JSON.stringify(carrinho));
+    atualizarIconeCarrinho();
+    mostrarCarrinho(); // Atualiza o modal
+  }
 }
 
 /**
@@ -191,143 +115,111 @@ function fecharCarrinho() {
 }
 
 /**
- * Envia os itens do carrinho via WhatsApp
- * Chama a API de geração de link do WhatsApp
- * 
- * @param {array} itens - Array com os itens do carrinho
+ * Mostra o modal do carrinho com itens
  */
-async function enviarWhats(itens) {
+async function mostrarCarrinho() {
+  await carregarProdutos(); // Garante que produtos estejam carregados
+  
+  let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+  let html = '<h3 class="modal-title">Seu Carrinho</h3><ul class="carrinho-lista">';
+  let total = 0;
+  const itensParaWhats = [];
+
+  carrinho.forEach(item => {
+    const prod = todosProdutos.find(p => p.id === item.id);
+    if (prod) {
+      const subtotal = prod.valor * item.quantidade;
+      total += subtotal;
+      html += `
+        <li class="carrinho-item">
+          <span>${item.quantidade}x ${prod.nome}</span>
+          <span>R$ ${subtotal.toFixed(2)}</span>
+          <button class="btn-remove" onclick="removerDoCarrinho(${item.id})">Remover</button>
+        </li>
+      `;
+      itensParaWhats.push({
+        nome: prod.nome,
+        quantidade: item.quantidade,
+        valor_unitario: prod.valor
+      });
+    }
+  });
+
+  html += '</ul>';
+  html += `<h4 class="carrinho-total">Total: R$ ${total.toFixed(2)}</h4>`;
+  
+  if (carrinho.length > 0) {
+    html += `<button class="btn-primary carrinho-btn" onclick='enviarWhatsApp(${JSON.stringify(itensParaWhats)})'>Entrar em Contato</button>`;
+  } else {
+    html += '<p class="empty-cart">Seu carrinho está vazio.</p>';
+  }
+
+  const modalContent = document.querySelector('#carrinhoModal .modal-content');
+  if (modalContent) {
+    modalContent.innerHTML = html;
+  }
+
+  const modal = document.getElementById('carrinhoModal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+/**
+ * Envia itens do carrinho para API e abre WhatsApp
+ * 
+ * @param {array} itens - Lista de itens para WhatsApp
+ */
+async function enviarWhatsApp(itens) {
   try {
-    // Envia os itens para a API
     const res = await fetch('/api/whatsapp', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(itens)
     });
     
     if (res.ok) {
       const data = await res.json();
-      
-      // Abre o link do WhatsApp em nova aba
       window.open(data.url, '_blank');
-      
-      // Limpa o carrinho após envio
+      // Limpa carrinho após envio
       localStorage.removeItem('carrinho');
       atualizarIconeCarrinho();
       fecharCarrinho();
-      
-      mostrarNotificacao('✓ Redirecionando para WhatsApp...');
     } else {
-      alert("Erro ao gerar link do WhatsApp. Tente novamente.");
+      alert('Erro ao gerar link. Tente novamente.');
     }
   } catch (error) {
-    console.error("Erro:", error);
-    alert("Erro ao conectar com o servidor.");
+    console.error('Erro:', error);
+    alert('Erro de conexão. Verifique sua internet.');
   }
 }
 
 /**
- * Busca produtos por nome
- * Filtra os produtos carregados e exibe os resultados
+ * Busca produtos na página
  */
 function buscarProdutos() {
-  const searchInput = document.getElementById('searchInput');
+  const input = document.getElementById('searchInput').value.toLowerCase();
+  const grid = document.getElementById('produtosGrid');
   
-  if (!searchInput) return;
+  if (!grid) return;
   
-  const termo = searchInput.value.toLowerCase().trim();
+  const cards = grid.querySelectorAll('.card-produto');
   
-  if (termo === '') {
-    // Se vazio, recarrega a página
-    location.reload();
-    return;
-  }
-  
-  // Filtra produtos que contêm o termo
-  const resultados = todosProdutos.filter(p => 
-    p.nome.toLowerCase().includes(termo) || 
-    (p.descricao && p.descricao.toLowerCase().includes(termo))
-  );
-  
-  // Atualiza o grid de produtos
-  atualizarGridProdutos(resultados);
+  cards.forEach(card => {
+    const title = card.querySelector('.card-title').textContent.toLowerCase();
+    card.style.display = title.includes(input) ? 'block' : 'none';
+  });
 }
 
 /**
- * Atualiza o grid de produtos com novos resultados
- * 
- * @param {array} produtos - Array com os produtos a exibir
- */
-function atualizarGridProdutos(produtos) {
-  const gridProdutos = document.querySelector('.grid-produtos');
-  
-  if (!gridProdutos) return;
-  
-  if (produtos.length === 0) {
-    gridProdutos.innerHTML = `
-      <div class="empty-state" style="grid-column: 1 / -1;">
-        <p class="empty-state-text">Nenhum produto encontrado.</p>
-      </div>
-    `;
-    return;
-  }
-  
-  // Reconstrói o grid com os produtos filtrados
-  gridProdutos.innerHTML = produtos.map(p => `
-    <div class="card-produto">
-      <div class="card-image-wrapper">
-        <img 
-          src="${p.imagem_url}" 
-          alt="${p.nome}" 
-          class="card-image" 
-          onerror="this.src='/static/images/placeholder.png'"
-        >
-        <span class="product-badge">Novo</span>
-      </div>
-      <div class="card-body">
-        <h3 class="product-name">${p.nome}</h3>
-        <div class="price-section">
-          <span class="product-price">R$ ${parseFloat(p.valor).toFixed(2)}</span>
-        </div>
-        ${p.descricao ? `<p class="product-description">${p.descricao.substring(0, 80)}...</p>` : ''}
-        <div class="card-actions">
-          <button 
-            class="btn-adicionar" 
-            onclick="adicionarCarrinho(${p.id})"
-          >
-            Adicionar
-          </button>
-          <a href="/produto/${p.id}" class="btn-detalhes">
-            Detalhes
-          </a>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-/**
- * Mostra uma notificação temporária ao usuário
+ * Mostra notificação toast
  * 
  * @param {string} mensagem - Mensagem a exibir
  */
 function mostrarNotificacao(mensagem) {
-  // Cria elemento de notificação
   const notificacao = document.createElement('div');
+  notificacao.className = 'notificacao';
   notificacao.textContent = mensagem;
-  notificacao.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #FF6200;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    z-index: 999;
-    animation: slideIn 0.3s ease;
-    font-weight: 600;
-  `;
   
   document.body.appendChild(notificacao);
   
@@ -375,6 +267,19 @@ function adicionarAnimacoes() {
         transform: translateX(400px);
         opacity: 0;
       }
+    }
+
+    .notificacao {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--laranja);
+      color: var(--branco);
+      padding: var(--spacing-md);
+      border-radius: 8px;
+      box-shadow: var(--shadow-md);
+      animation: slideIn 0.3s ease;
+      z-index: 1001;
     }
   `;
   document.head.appendChild(style);

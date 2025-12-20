@@ -1,3 +1,4 @@
+<!-- templates/base.html -->
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -15,9 +16,10 @@
     <div class="container-header">
       <div class="header-top">
         <!-- Logo e nome da loja -->
+        <!-- COMENTÁRIO: Para mudar o logo, substitua '/static/images/logo.png' pela URL da sua imagem de logo. Se não houver imagem, o texto 'Cantoneira Fácil' será exibido. Para mudar o nome do projeto, altere 'Cantoneira Fácil' aqui e em outros lugares. -->
         <div class="logo-section">
           <div class="logo-wrapper">
-            <img src="/static/images/logo.png" alt="Logo" class="logo-img" onerror="this.style.display='none'">
+            <img src="/static/images/logo.png" alt="Logo Cantoneira Fácil" class="logo-img" onerror="this.style.display='none'">
           </div>
           <div class="logo-text">
             <h1 class="logo-title">Cantoneira Fácil</h1>
@@ -46,55 +48,44 @@
 
         <!-- Carrinho premium -->
         <div class="header-actions">
-          <button class="cart-btn" onclick="abrirCarrinho()" aria-label="Abrir carrinho">
+          <button class="cart-btn" onclick="mostrarCarrinho()" aria-label="Abrir carrinho">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="9" cy="21" r="1"></circle>
               <circle cx="20" cy="21" r="1"></circle>
               <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
             </svg>
-            <span class="cart-count" id="cartCount">0</span>
+            <span id="cartCount" class="cart-count">0</span>
           </button>
         </div>
       </div>
-
-      <!-- Navegação principal -->
-      <nav class="nav-primary">
-        <ul class="nav-links">
-          <li><a href="/" class="nav-link">Início</a></li>
-          <li><a href="/#produtos" class="nav-link">Produtos</a></li>
-          <li><a href="#contato" class="nav-link">Contato</a></li>
-          <li><a href="/admin/" class="nav-link nav-admin">Admin</a></li>
-        </ul>
-      </nav>
     </div>
   </header>
 
   <!-- ===== CONTEÚDO PRINCIPAL ===== -->
   <main class="main-content">
-    <div class="container">
-      {% block content %}{% endblock %}
-    </div>
+    {% block content %}{% endblock %}
   </main>
 
-  <!-- ===== MODAL DO CARRINHO ===== -->
-  <div id="carrinhoModal" class="modal" style="display:none;">
-    <!-- Conteúdo gerado dinamicamente por main.js -->
+  <!-- ===== MODAL DE CARRINHO ===== -->
+  <div id="carrinhoModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="fecharCarrinho()">&times;</span>
+      <div id="carrinhoItens"></div>
+    </div>
   </div>
 
-  <!-- ===== RODAPÉ PREMIUM ===== -->
+  <!-- ===== FOOTER PREMIUM ===== -->
   <footer class="footer">
-    <div class="container-footer">
-      <!-- Conteúdo do rodapé -->
+    <div class="container">
       <div class="footer-content">
-        <!-- Coluna 1: Sobre -->
+        <!-- Coluna 1: Logo e descrição -->
+        <!-- COMENTÁRIO: Para mudar o logo no footer, substitua '/static/images/logo.png' pela URL da sua imagem. Para mudar o nome do projeto, altere 'Cantoneira Fácil' aqui. -->
         <div class="footer-column">
-          <h3 class="footer-title">Cantoneira Fácil</h3>
-          <p class="footer-description">Sua loja de confiança para cantoneiras e perfis metálicos de qualidade superior.</p>
-          <div class="social-links">
-            <a href="#" class="social-link" aria-label="Facebook" title="Facebook">f</a>
-            <a href="#" class="social-link" aria-label="Instagram" title="Instagram">📷</a>
-            <a href="#" class="social-link" aria-label="WhatsApp" title="WhatsApp">💬</a>
+          <div class="footer-logo">
+            <img src="/static/images/logo.png" alt="Logo Cantoneira Fácil" class="footer-logo-img" onerror="this.style.display='none'">
+            <h3 class="footer-title">Cantoneira Fácil</h3>
           </div>
+          <p class="footer-description">Fornecendo qualidade em perfis metálicos desde 2024. Sua parceira confiável em materiais de construção.</p>
         </div>
 
         <!-- Coluna 2: Links úteis -->

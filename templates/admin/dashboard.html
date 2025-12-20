@@ -1,3 +1,4 @@
+<!-- templates/dashboard.html -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -77,78 +78,50 @@
           ></textarea>
         </div>
       </div>
-
-      <button type="submit" class="btn-submit">
-        <span>✓</span> Criar Produto
-      </button>
+      <button type="submit" class="btn-save">Criar Produto</button>
     </form>
   </div>
 </section>
 
-<!-- ===== SEÇÃO DE PRODUTOS EXISTENTES ===== -->
+<!-- ===== SEÇÃO DE LISTA DE PRODUTOS ===== -->
 <section class="admin-section">
   <div class="admin-card">
     <div class="card-header">
       <h2 class="card-title">
-        <span class="card-icon">📋</span>
-        Produtos Cadastrados
+        <span class="card-icon">📦</span>
+        Lista de Produtos
       </h2>
-      {% if produtos %}
-      <span class="card-badge">{{ produtos|length }} produtos</span>
-      {% endif %}
     </div>
-
+    
     {% if produtos %}
-    <div class="products-table-wrapper">
-      <table class="products-table">
+    <div class="table-responsive">
+      <table class="admin-table">
         <thead>
           <tr>
             <th>ID</th>
             <th>Nome</th>
             <th>Valor</th>
+            <th>Ativo</th>
             <th>Ações</th>
           </tr>
         </thead>
         <tbody>
           {% for p in produtos %}
-          <tr class="product-row" id="row-{{ p.id }}">
-            <td class="cell-id">{{ p.id }}</td>
-            <td class="cell-name">{{ p.nome }}</td>
-            <td class="cell-price">R$ {{ '%.2f' % p.valor }}</td>
-            <td class="cell-actions">
-              <button 
-                type="button" 
-                class="btn-edit" 
-                onclick="toggleEditForm({{ p.id }})"
-              >
-                ✏️ Editar
-              </button>
-              <form 
-                style="display:inline;" 
-                method="post" 
-                action="/admin/produto/{{ p.id }}" 
-                onsubmit="return confirm('Tem certeza que deseja deletar este produto?');"
-              >
-                <input type="hidden" name="_method" value="DELETE">
-                <button type="submit" class="btn-delete">
-                  🗑️ Deletar
-                </button>
-              </form>
+          <tr id="row-{{ p.id }}">
+            <td>#{{ p.id }}</td>
+            <td>{{ p.nome }}</td>
+            <td>R$ {{ '%.2f' % p.valor }}</td>
+            <td>{{ 'Sim' if p.ativo else 'Não' }}</td>
+            <td>
+              <button class="btn-edit" onclick="toggleEditForm({{ p.id }})">Editar</button>
+              <button class="btn-delete" onclick="confirmDelete({{ p.id }})">Excluir</button>
             </td>
           </tr>
-
-          <!-- ===== FORMULÁRIO DE EDIÇÃO ===== -->
-          <tr class="edit-form-row" id="edit-row-{{ p.id }}" style="display:none;">
-            <td colspan="4">
-              <form 
-                id="edit-form-{{ p.id }}" 
-                method="post" 
-                action="/admin/produto/{{ p.id }}" 
-                class="edit-form"
-              >
+          <tr id="edit-row-{{ p.id }}" class="edit-row" style="display: none;">
+            <td colspan="5">
+              <form method="post" action="/admin/produto/{{ p.id }}" class="edit-form">
                 <input type="hidden" name="_method" value="PUT">
-
-                <div class="edit-form-grid">
+                <div class="form-grid">
                   <div class="form-group">
                     <label for="edit-nome-{{ p.id }}" class="form-label">Nome</label>
                     <input 
@@ -162,14 +135,14 @@
                   </div>
 
                   <div class="form-group">
-                    <label for="edit-valor-{{ p.id }}" class="form-label">Valor</label>
+                    <label for="edit-valor-{{ p.id }}" class="form-label">Valor (R$)</label>
                     <input 
                       type="number" 
                       id="edit-valor-{{ p.id }}" 
                       name="valor" 
                       value="{{ p.valor }}" 
                       class="form-input" 
-                      step="0.01"
+                      step="0.01" 
                       required
                     >
                   </div>
@@ -240,6 +213,20 @@ function toggleEditForm(id) {
     editRow.style.display = 'none';
     productRow.style.opacity = '1';
     productRow.style.pointerEvents = 'auto';
+  }
+}
+
+function confirmDelete(id) {
+  if (confirm('Tem certeza que deseja excluir este produto?')) {
+    // Envie uma requisição DELETE para /admin/produto/{id}
+    fetch(`/admin/produto/${id}`, { method: 'DELETE' })
+      .then(response => {
+        if (response.ok) {
+          location.reload();
+        } else {
+          alert('Erro ao excluir produto');
+        }
+      });
   }
 }
 </script>
