@@ -48,7 +48,7 @@
 
       <!-- Ações -->
       <div class="produto-actions">
-        <button class="btn-add-cart-large" onclick="adicionarCarrinho({{ p.id }})">
+        <button class="btn-add-cart-large" onclick="adicionarCarrinho('{{ p.id }}')">
           Adicionar ao Carrinho
         </button>
         <a href="https://wa.me/5541999999999?text=Olá! Tenho interesse no produto {{ p.nome }} (SKU: #{{ p.id }})" target="_blank" class="btn-whatsapp">

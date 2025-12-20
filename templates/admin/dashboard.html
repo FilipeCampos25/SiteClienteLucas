@@ -113,8 +113,8 @@
             <td>R$ {{ '%.2f' % p.valor }}</td>
             <td>{{ 'Sim' if p.ativo else 'Não' }}</td>
             <td>
-              <button class="btn-edit" onclick="toggleEditForm({{ p.id }})">Editar</button>
-              <button class="btn-delete" onclick="confirmDelete({{ p.id }})">Excluir</button>
+              <button class="btn-edit" onclick="toggleEditForm('{{ p.id }}')">Editar</button>
+              <button class="btn-delete" onclick="confirmDelete('{{ p.id }}')">Excluir</button>
             </td>
           </tr>
           <tr id="edit-row-{{ p.id }}" class="edit-row" style="display: none;">
@@ -177,7 +177,7 @@
                   <button 
                     type="button" 
                     class="btn-cancel" 
-                    onclick="toggleEditForm({{ p.id }})"
+                    onclick="toggleEditForm('{{ p.id }}')"
                   >
                     ✕ Cancelar
                   </button>

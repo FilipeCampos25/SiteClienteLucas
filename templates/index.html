@@ -74,7 +74,7 @@
         <p class="card-price">R$ {{ '%.2f' % p.valor }}</p>
         <div class="card-actions">
           <a href="/produto/{{ p.id }}" class="btn-view">Ver Detalhes</a>
-          <button class="btn-add-cart" onclick="adicionarCarrinho({{ p.id }})">Adicionar ao Carrinho</button>
+          <button class="btn-add-cart" onclick="adicionarCarrinho('{{ p.id }}')">Adicionar ao Carrinho</button>
         </div>
       </div>
     </div>
