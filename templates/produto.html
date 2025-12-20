@@ -48,16 +48,13 @@
 
       <!-- Ações -->
       <div class="produto-actions">
-        <button class="btn-add-cart-large" onclick="adicionarCarrinho('{{ p.id }}')">
-          Adicionar ao Carrinho
+        <button class="btn-primary btn-add-cart-large" onclick="adicionarCarrinho('{{ p.id }}')">
+          🛒 Adicionar ao Carrinho
         </button>
         <a href="https://wa.me/5541999999999?text=Olá! Tenho interesse no produto {{ p.nome }} (SKU: #{{ p.id }})" target="_blank" class="btn-whatsapp">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 21 3.674 18.326A9.7 9.7 0 0 1 2.1 13.902 9.8 9.8 0 0 1 5.802 5.82 9.8 9.8 0 0 1 13.884 2.1a9.8 9.8 0 0 1 8.082 3.702 9.8 9.8 0 0 1 3.702 8.082 9.8 9.8 0 0 1-3.702 8.082 9.8 9.8 0 0 1-8.082 3.702 9.7 9.7 0 0 1-4.424-1.574L3 21Zm3.67-3.004.285.285a7.8 7.8 0 0 0 3.57 1.27 7.8 7.8 0 0 0 6.44-2.95 7.8 7.8 0 0 0 2.95-6.44 7.8 7.8 0 0 0-2.95-6.44 7.8 7.8 0 0 0-6.44-2.95 7.8 7.8 0 0 0-6.44 2.95 7.8 7.8 0 0 0-2.95 6.44 7.7 7.7 0 0 0 1.27 3.57l.285.285-.67 2.45 2.45-.67Zm8.33-5.23c.27 1.44.27 2.92 0 4.36-.27 1.44-.8 2.81-1.57 4.05-.77 1.24-1.76 2.33-2.93 3.22-1.17.89-2.49 1.58-3.9 2.04-1.41.46-2.88.63-4.35.5-1.47-.13-2.93-.51-4.25-1.12-1.324-.61-2.503-1.425-3.507-2.41-.504-.485-.985-.998-1.437-1.537"/>
-          </svg>
-          Fale Conosco
+          💬 Fale Conosco
         </a>
-      </div>
+      </div> 
 
       <!-- Badge de segurança -->
       <div class="security-badge">

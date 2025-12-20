@@ -68,13 +68,13 @@
     <div class="card-produto">
       <div class="card-image-container">
         <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="card-image" onerror="this.src='/static/images/placeholder.png'">
+        <div class="card-badge">R$ {{ '%.2f' % p.valor }}</div>
       </div>
       <div class="card-content">
         <h3 class="card-title">{{ p.nome }}</h3>
-        <p class="card-price">R$ {{ '%.2f' % p.valor }}</p>
         <div class="card-actions">
           <a href="/produto/{{ p.id }}" class="btn-view">Ver Detalhes</a>
-          <button class="btn-add-cart" onclick="adicionarCarrinho('{{ p.id }}')">Adicionar ao Carrinho</button>
+          <button class="btn-primary btn-add-cart" onclick="adicionarCarrinho('{{ p.id }}')">Adicionar</button>
         </div>
       </div>
     </div>

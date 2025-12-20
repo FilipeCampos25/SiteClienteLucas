@@ -324,3 +324,16 @@ window.addEventListener('load', () => {
 setInterval(() => {
   atualizarIconeCarrinho();
 }, 5000);
+
+// ===== Mobile navigation =====
+function toggleNavMenu() {
+  const nav = document.getElementById('siteNav');
+  if (!nav) return;
+  nav.classList.toggle('open');
+}
+
+// Fecha menu se a tela for redimensionada para desktop
+window.addEventListener('resize', () => {
+  const nav = document.getElementById('siteNav');
+  if (nav && window.innerWidth > 800) nav.classList.remove('open');
+});
