@@ -1110,6 +1110,72 @@ body {
   color: var(--cinza-texto);
 }
 
+/* ===== PAGE INNER & SIDES ===== */
+.page-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* vertical decorative borders on both sides */
+.page-inner:before,
+.page-inner:after {
+  content: "";
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--cinza-medio);
+  pointer-events: none;
+}
+.page-inner:before { left: calc(50% - 600px - 20px); } /* left border aligned with max-width + padding */
+.page-inner:after { right: calc(50% - 600px - 20px); } /* right border */
+
+/* Ensure content does not touch the borders on very small screens */
+@media (max-width: 1280px) {
+  .page-inner:before, .page-inner:after { left: 12px; right: 12px; width: 1px; }
+}
+
+/* Add internal spacing for main content so elements are centered */
+.main-content > .page-inner > section,
+.main-content > .page-inner > .cta-content,
+.main-content > .page-inner > .stats-grid,
+.main-content > .page-inner > .grid-produtos {
+  padding-left: 0; /* padding handled by .page-inner */
+}
+
+/* ===== NEWSLETTER / FOOTER FIX ===== */
+.newsletter-form {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+.newsletter-input {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: var(--branco);
+  color: var(--cinza-escuro);
+}
+.newsletter-input::placeholder { color: var(--cinza-texto); }
+.newsletter-btn {
+  background: var(--laranja);
+  color: var(--branco);
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+@media (max-width: 420px) {
+  .newsletter-form { flex-direction: column; align-items: stretch; }
+  .newsletter-btn { width: 100%; }
+}
+
 /* ===== ADMIN LOGIN ===== */
 .admin-login-section { display:flex; justify-content:center; padding:3rem 1rem; }
 .login-card { max-width:420px; width:100%; }
