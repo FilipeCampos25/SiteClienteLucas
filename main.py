@@ -105,14 +105,14 @@ def _verify_admin_token(token: str, max_age: int = 86400) -> bool:
         return False
 
 # Core verifier: accepts either Basic auth or a valid cookie token
-def verify_admin(request: Request, credentials: HTTPBasicCredentials = Depends(security)):
+async def verify_admin(request: Request, credentials: HTTPBasicCredentials = Depends(security)):
     import logging
     import secrets as _secrets
 
-    # If called manually (not via DI), credentials may be a Depends object; resolve it via security(request)
+    # If called manually (not via DI), credentials may be a Depends object or awaitable; resolve it via security(request)
     if not isinstance(credentials, HTTPBasicCredentials):
         try:
-            credentials = security(request)
+            credentials = await security(request)
         except Exception:
             credentials = None
 
@@ -149,14 +149,14 @@ def verify_admin(request: Request, credentials: HTTPBasicCredentials = Depends(s
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro no servidor ao validar credenciais")
 
 # Dependency wrapper usable with Depends()
-def verify_admin_dep(request: Request, credentials: HTTPBasicCredentials = Depends(security)):
-    return verify_admin(request, credentials)
+async def verify_admin_dep(request: Request, credentials: HTTPBasicCredentials = Depends(security)):
+    return await verify_admin(request, credentials)
 
 @app.get("/admin/", response_class=HTMLResponse)
-def admin_dashboard(request: Request, db: Session = Depends(get_db)):
+async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     # Redirect to graphical login if not authenticated
     try:
-        verify_admin(request)
+        await verify_admin(request)
     except HTTPException as e:
         if e.status_code == status.HTTP_401_UNAUTHORIZED:
             return RedirectResponse(url="/admin/login")
@@ -178,14 +178,14 @@ def admin_create(
     valor: float = Form(...),
     imagem_url: str = Form(""),
     db: Session = Depends(get_db),
-    ok: bool = Depends(verify_admin_dep)
+    ok: bool = Depends(verify_admin)
 ):
     novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor, imagem_url=imagem_url)
     p = crud.create_produto(db, novo)
     return RedirectResponse(url="/admin/", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/admin/upload")
-def admin_upload(file: UploadFile = File(...), ok: bool = Depends(verify_admin_dep)):
+def admin_upload(file: UploadFile = File(...), ok: bool = Depends(verify_admin)):
     return JSONResponse(
         {"error": "Upload de arquivos desativado. Configure um serviço de armazenamento externo."},
         status_code=400
@@ -193,7 +193,7 @@ def admin_upload(file: UploadFile = File(...), ok: bool = Depends(verify_admin_d
 
 # Suporte a _method para forms (PUT/DELETE via POST)
 @app.post("/admin/produto/{produto_id}")
-async def admin_update_or_delete(produto_id: int, request: Request, db: Session = Depends(get_db), ok: bool = Depends(verify_admin_dep)):
+async def admin_update_or_delete(produto_id: int, request: Request, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
     form = await request.form()
     _method = form.get('_method')
     
