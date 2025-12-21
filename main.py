@@ -76,8 +76,17 @@ def api_whatsapp(itens: list[schemas.ItemCarrinho]):
 security = HTTPBasic()
 
 def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_user = secrets.compare_digest(credentials.username, ADMIN_USER)
-    correct_pass = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+    try:
+        correct_user = secrets.compare_digest(credentials.username, ADMIN_USER)
+        correct_pass = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+    except Exception:
+        import logging
+        logging.exception("Erro ao comparar credenciais de admin")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro no servidor ao validar credenciais",
+        )
+
     if not (correct_user and correct_pass):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -88,8 +97,14 @@ def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
 
 @app.get("/admin/", response_class=HTMLResponse)
 def admin_dashboard(request: Request, db: Session = Depends(get_db), ok: bool = Depends(verify_admin)):
-    produtos = db.query(models.Produto).all()
-    return templates.TemplateResponse("dashboard.html", {"request": request, "produtos": produtos})
+    try:
+        produtos = db.query(models.Produto).all()
+        return templates.TemplateResponse("dashboard.html", {"request": request, "produtos": produtos})
+    except Exception:
+        import logging
+        logging.exception("Erro ao renderizar dashboard admin")
+        # Mensagem diminuta para o usuário, detalhe no log
+        return HTMLResponse("Internal Server Error while rendering admin dashboard. Check logs for details.", status_code=500)
 
 @app.post("/admin/produto")
 def admin_create(
