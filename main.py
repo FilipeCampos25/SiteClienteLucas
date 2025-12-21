@@ -109,6 +109,13 @@ def verify_admin(request: Request, credentials: HTTPBasicCredentials = Depends(s
     import logging
     import secrets as _secrets
 
+    # If called manually (not via DI), credentials may be a Depends object; resolve it via security(request)
+    if not isinstance(credentials, HTTPBasicCredentials):
+        try:
+            credentials = security(request)
+        except Exception:
+            credentials = None
+
     try:
         # Try HTTP Basic if present
         if credentials:
