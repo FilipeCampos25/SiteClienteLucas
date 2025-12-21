@@ -1110,6 +1110,19 @@ body {
   color: var(--cinza-texto);
 }
 
+/* ===== ADMIN LOGIN ===== */
+.admin-login-section { display:flex; justify-content:center; padding:3rem 1rem; }
+.login-card { max-width:420px; width:100%; }
+.login-card .card-header { text-align: center; }
+.login-card .card-title { margin-bottom: 0.25rem; }
+.login-card .card-subtitle { color: var(--cinza-texto); font-size: var(--font-size-sm); }
+
+.alert { background:#ffe6e6; border:1px solid #ffb3b3; padding:0.75rem; margin-bottom:1rem; border-radius:6px; color: #611111; }
+
+.login-note { font-size: var(--font-size-sm); color: var(--cinza-texto); margin-top: var(--spacing-md); }
+
+.form-actions { display:flex; gap: var(--spacing-sm); align-items:center; }
+
 /* ===== MODAL ===== */
 .modal {
   display: none;

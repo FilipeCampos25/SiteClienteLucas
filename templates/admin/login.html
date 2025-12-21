@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="admin-login-section">
+  <div class="admin-card login-card">
+    <div class="card-header">
+      <h2 class="card-title">Acesso Administrativo</h2>
+      <p class="card-subtitle">Entre com seu usuário e senha para acessar o painel</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/admin/login" class="admin-form">
+      <div class="form-group">
+        <label for="username" class="form-label">Usuário</label>
+        <input type="text" id="username" name="username" class="form-input" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Senha</label>
+        <input type="password" id="password" name="password" class="form-input" required>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-save">Entrar</button>
+        <a href="/" class="btn-cancel">Voltar</a>
+      </div>
+    </form>
+
+    <p class="login-note">Dica: mantenha as credenciais seguras. Esta página cria um cookie de sessão segura para administração.</p>
+  </div>
+</section>
+{% endblock %}
