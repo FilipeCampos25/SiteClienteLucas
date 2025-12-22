@@ -1230,6 +1230,30 @@ body {
   margin-top: auto;
 }
 
+/* Fix: the .container utility applies a white background by default; inside footer we keep it transparent so dark footer color shows through */
+.footer .container {
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  box-shadow: none;
+  padding: 0 var(--spacing-lg);
+}
+
+/* Ensure footer text and links are clearly legible on dark background */
+.footer-title,
+.footer-description,
+.footer-description-small,
+.footer-links a,
+.footer-contact a,
+.footer-bottom,
+.footer-bottom a {
+  color: rgba(255,255,255,0.95);
+}
+
+.footer-bottom {
+  opacity: 0.8;
+}
+
 .footer-content {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
