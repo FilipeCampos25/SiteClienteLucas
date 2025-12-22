@@ -1296,9 +1296,9 @@ body {
 }
 
 .footer-links a {
-  color: var(--branco);
+  color: rgba(25,25,25,1);
   text-decoration: none;
-  opacity: 0.8;
+  opacity: 0.95;
   transition: var(--transition-fast);
 }
 
@@ -1315,7 +1315,7 @@ body {
 }
 
 .footer-contact a {
-  color: var(--branco);
+  color: rgba(25,25,25,1);
   text-decoration: none;
 }
 
@@ -1350,7 +1350,7 @@ body {
 }
 
 .footer-bottom a {
-  color: var(--branco);
+  color: rgba(25,25,25,1);
   text-decoration: none;
 }
 
