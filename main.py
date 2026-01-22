@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, Depends, HTTPException, Form, UploadFile, File, status
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -8,6 +8,9 @@ import crud, schemas, models
 from config import ADMIN_USER, ADMIN_PASSWORD, WHATSAPP_NUMERO, CORS_ORIGINS
 from utils import gerar_link_whatsapp
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+import os
+import shutil
+import uuid
 import secrets  # Já importado, mas confirme
 
 # Função para ser chamada pelo start.sh (cria tabelas se não existirem)
@@ -48,6 +51,26 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# Upload helpers (local storage in /static/uploads)
+UPLOAD_DIR = os.path.join("static", "uploads")
+ALLOWED_IMAGE_TYPES = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+}
+
+def _save_upload_image(file: UploadFile) -> str:
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail="Nenhuma imagem enviada.")
+    ext = ALLOWED_IMAGE_TYPES.get(file.content_type)
+    if not ext:
+        raise HTTPException(status_code=400, detail="Formato invalido. Use PNG ou JPG.")
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return f"/static/uploads/{filename}"
 
 # Public pages
 @app.get("/", response_class=HTMLResponse)
@@ -176,20 +199,19 @@ def admin_create(
     nome: str = Form(...),
     descricao: str = Form(""),
     valor: float = Form(...),
-    imagem_url: str = Form(""),
+    imagem_arquivo: UploadFile = File(...),
     db: Session = Depends(get_db),
     ok: bool = Depends(verify_admin)
 ):
+    imagem_url = _save_upload_image(imagem_arquivo)
     novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor, imagem_url=imagem_url)
     p = crud.create_produto(db, novo)
     return RedirectResponse(url="/admin/", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/admin/upload")
 def admin_upload(file: UploadFile = File(...), ok: bool = Depends(verify_admin)):
-    return JSONResponse(
-        {"error": "Upload de arquivos desativado. Configure um serviço de armazenamento externo."},
-        status_code=400
-    )
+    url = _save_upload_image(file)
+    return {"url": url}
 
 # Suporte a _method para forms (PUT/DELETE via POST)
 @app.post("/admin/produto/{produto_id}")
@@ -198,12 +220,15 @@ async def admin_update_or_delete(produto_id: int, request: Request, db: Session 
     _method = form.get('_method')
     
     if _method == 'PUT':
-        update_data = schemas.ProdutoUpdate(
-            nome=form.get('nome'),
-            descricao=form.get('descricao'),
-            valor=float(form.get('valor')) if form.get('valor') else None,
-            imagem_url=form.get('imagem_url')
-        )
+        update_kwargs = {
+            "nome": form.get('nome'),
+            "descricao": form.get('descricao'),
+            "valor": float(form.get('valor')) if form.get('valor') else None,
+        }
+        imagem_arquivo = form.get('imagem_arquivo')
+        if isinstance(imagem_arquivo, UploadFile) and imagem_arquivo.filename:
+            update_kwargs["imagem_url"] = _save_upload_image(imagem_arquivo)
+        update_data = schemas.ProdutoUpdate(**update_kwargs)
         p = crud.update_produto(db, produto_id, update_data)
         if not p:
             raise HTTPException(404, "Produto não encontrado")

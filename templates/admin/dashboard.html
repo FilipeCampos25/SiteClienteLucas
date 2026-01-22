@@ -28,7 +28,7 @@
       </h2>
     </div>
     
-    <form method="post" action="/admin/produto" class="admin-form">
+    <form method="post" action="/admin/produto" class="admin-form" enctype="multipart/form-data">
       <div class="form-grid">
         <div class="form-group">
           <label for="nome" class="form-label">Nome do Produto *</label>
@@ -55,16 +55,26 @@
           >
         </div>
 
-        <div class="form-group">
-          <label for="imagem_url" class="form-label">URL da Imagem *</label>
-          <input 
-            type="url" 
-            id="imagem_url" 
-            name="imagem_url" 
-            class="form-input" 
-            placeholder="https://exemplo.com/imagem.jpg" 
-            required
-          >
+        <div class="form-group form-group-full">
+          <label class="form-label">Imagem do Produto *</label>
+          <label class="upload-area">
+            <input 
+              type="file" 
+              name="imagem_arquivo"
+              accept="image/png,image/jpeg"
+              class="upload-input"
+              required
+              onchange="updateUploadPreview(this, 'create-preview', 'create-upload-label')"
+            >
+            <span class="upload-content">
+              <span class="upload-title">Toque para escolher uma imagem</span>
+              <span class="upload-subtitle">PNG ou JPG</span>
+              <span id="create-upload-label" class="upload-filename">Nenhum arquivo selecionado</span>
+            </span>
+          </label>
+          <div class="upload-preview">
+            <img id="create-preview" class="upload-preview-img" alt="Preview da imagem" />
+          </div>
         </div>
 
         <div class="form-group form-group-full">
@@ -119,7 +129,7 @@
           </tr>
           <tr id="edit-row-{{ p.id }}" class="edit-row" style="display: none;">
             <td colspan="5">
-              <form method="post" action="/admin/produto/{{ p.id }}" class="edit-form">
+              <form method="post" action="/admin/produto/{{ p.id }}" class="edit-form" enctype="multipart/form-data">
                 <input type="hidden" name="_method" value="PUT">
                 <div class="form-grid">
                   <div class="form-group">
@@ -147,16 +157,25 @@
                     >
                   </div>
 
-                  <div class="form-group">
-                    <label for="edit-imagem-{{ p.id }}" class="form-label">URL da Imagem</label>
-                    <input 
-                      type="url" 
-                      id="edit-imagem-{{ p.id }}" 
-                      name="imagem_url" 
-                      value="{{ p.imagem_url }}" 
-                      class="form-input" 
-                      required
-                    >
+                  <div class="form-group form-group-full">
+                    <label class="form-label">Trocar imagem (opcional)</label>
+                    <label class="upload-area upload-area-compact">
+                      <input 
+                        type="file" 
+                        name="imagem_arquivo"
+                        accept="image/png,image/jpeg"
+                        class="upload-input"
+                        onchange="updateUploadPreview(this, 'edit-preview-{{ p.id }}', 'edit-upload-label-{{ p.id }}')"
+                      >
+                      <span class="upload-content">
+                        <span class="upload-title">Selecionar nova imagem</span>
+                        <span class="upload-subtitle">Mantem a atual se nao escolher</span>
+                        <span id="edit-upload-label-{{ p.id }}" class="upload-filename">Nenhum arquivo selecionado</span>
+                      </span>
+                    </label>
+                    <div class="upload-preview">
+                      <img id="edit-preview-{{ p.id }}" class="upload-preview-img is-visible" src="{{ p.imagem_url }}" alt="Preview da imagem atual" onerror="this.style.display='none'">
+                    </div>
                   </div>
 
                   <div class="form-group form-group-full">
@@ -228,6 +247,28 @@ function confirmDelete(id) {
         }
       });
   }
+}
+
+function updateUploadPreview(input, previewId, labelId) {
+  const label = document.getElementById(labelId);
+  const preview = document.getElementById(previewId);
+  const file = input.files && input.files[0];
+
+  if (label) {
+    label.textContent = file ? file.name : 'Nenhum arquivo selecionado';
+  }
+
+  if (!preview) return;
+  if (!file) {
+    preview.src = '';
+    preview.style.display = 'none';
+    return;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  preview.src = objectUrl;
+  preview.style.display = 'block';
+  preview.onload = () => URL.revokeObjectURL(objectUrl);
 }
 </script>
 
