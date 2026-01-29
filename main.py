@@ -35,6 +35,11 @@ app.add_middleware(
 
 # static & templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
+# Legacy/static aliases to avoid 404s from older URLs or cached HTML
+app.mount("/uploads", StaticFiles(directory=os.path.join("static", "uploads")), name="uploads")
+app.mount("/images", StaticFiles(directory=os.path.join("static", "images")), name="images")
+app.mount("/css", StaticFiles(directory=os.path.join("static", "css")), name="css")
+app.mount("/js", StaticFiles(directory=os.path.join("static", "js")), name="js")
 templates = Jinja2Templates(directory="templates")
 
 # Expor variáveis e helpers úteis para todas as templates
