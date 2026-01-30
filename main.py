@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, Depends, HTTPException, Form, UploadFile, File, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -57,43 +57,78 @@ def get_db():
     finally:
         db.close()
 
-# Upload helpers (local storage in /static/uploads)
-UPLOAD_DIR = os.path.join("static", "uploads")
+# Upload helpers (armazenamento confiável no DB para imagens de produto)
 ALLOWED_IMAGE_TYPES = {
     "image/png": ".png",
     "image/jpeg": ".jpg",
 }
+MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", "4000000"))  # 4MB padrão (ajuste via env)
 
-def _save_upload_image(file: UploadFile) -> str:
+def _read_upload_image(file: UploadFile) -> tuple[bytes, str]:
+    """Lê uma imagem do upload e valida tipo/tamanho."""
     if not file or not file.filename:
         raise HTTPException(status_code=400, detail="Nenhuma imagem enviada.")
-    ext = ALLOWED_IMAGE_TYPES.get(file.content_type)
-    if not ext:
-        raise HTTPException(status_code=400, detail="Formato invalido. Use PNG ou JPG.")
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    filename = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    return f"/static/uploads/{filename}"
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="Formato inválido. Use PNG ou JPG.")
+
+    data = file.file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Arquivo de imagem vazio.")
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail=f"Imagem muito grande (max {MAX_IMAGE_BYTES} bytes).")
+
+    # rebobina para evitar efeitos colaterais
+    try:
+        file.file.seek(0)
+    except Exception:
+        pass
+
+    return data, file.content_type
 
 # Public pages
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, db: Session = Depends(get_db)):
     produtos = crud.get_produtos_ativos(db)
+    for p in produtos:
+        if getattr(p, "imagem_bytes", None) and not getattr(p, "imagem_url", None):
+            p.imagem_url = f"/media/produto/{p.id}"
     return templates.TemplateResponse("index.html", {"request": request, "produtos": produtos})
 
 @app.get("/produto/{produto_id}", response_class=HTMLResponse)
 def produto_detail(request: Request, produto_id: int, db: Session = Depends(get_db)):
     produto = crud.get_produto(db, produto_id)
+    if produto and getattr(produto, "imagem_bytes", None) and not getattr(produto, "imagem_url", None):
+        produto.imagem_url = f"/media/produto/{produto.id}"
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
     return templates.TemplateResponse("produto.html", {"request": request, "p": produto})
 
-@app.get("/api/produtos")
+@app.get("/api/produtos", response_model=list[schemas.ProdutoOut])
 def api_produtos(db: Session = Depends(get_db)):
     produtos = crud.get_produtos_ativos(db)
+    # garante imagem_url consistente quando a imagem está no DB
+    for p in produtos:
+        if getattr(p, "imagem_bytes", None) and not getattr(p, "imagem_url", None):
+            p.imagem_url = f"/media/produto/{p.id}"
     return produtos
+
+
+@app.get("/media/produto/{produto_id}")
+def media_produto(produto_id: int, request: Request, db: Session = Depends(get_db)):
+    # Para servir imagens de forma confiável (armazenadas no DB)
+    p = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
+    if not p or not getattr(p, "imagem_bytes", None):
+        raise HTTPException(status_code=404, detail="Imagem não encontrada")
+
+    etag = getattr(p, "imagem_sha256", None)
+    if etag and request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+
+    headers = {"Cache-Control": "public, max-age=86400"}  # 1 dia
+    if etag:
+        headers["ETag"] = etag
+
+    return Response(content=p.imagem_bytes, media_type=p.imagem_mime or "application/octet-stream", headers=headers)
 
 @app.post("/api/whatsapp")
 def api_whatsapp(itens: list[schemas.ItemCarrinho]):
@@ -208,15 +243,18 @@ def admin_create(
     db: Session = Depends(get_db),
     ok: bool = Depends(verify_admin)
 ):
-    imagem_url = _save_upload_image(imagem_arquivo)
-    novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor, imagem_url=imagem_url)
-    p = crud.create_produto(db, novo)
+    imagem_bytes, imagem_mime = _read_upload_image(imagem_arquivo)
+    novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor)
+    p = crud.create_produto(db, novo, imagem_bytes=imagem_bytes, imagem_mime=imagem_mime)
     return RedirectResponse(url="/admin/", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/admin/upload")
 def admin_upload(file: UploadFile = File(...), ok: bool = Depends(verify_admin)):
-    url = _save_upload_image(file)
-    return {"url": url}
+    imagem_bytes, imagem_mime = _read_upload_image(file)
+    # endpoint de upload avulso sem vínculo com produto não persiste; devolvemos data-url para prévia
+    import base64
+    b64 = base64.b64encode(imagem_bytes).decode("ascii")
+    return {"data_url": f"data:{imagem_mime};base64,{b64}"}
 
 # Suporte a _method para forms (PUT/DELETE via POST)
 @app.post("/admin/produto/{produto_id}")
@@ -230,11 +268,13 @@ async def admin_update_or_delete(produto_id: int, request: Request, db: Session 
             "descricao": form.get('descricao'),
             "valor": float(form.get('valor')) if form.get('valor') else None,
         }
+        imagem_bytes = None
+        imagem_mime = None
         imagem_arquivo = form.get('imagem_arquivo')
         if isinstance(imagem_arquivo, UploadFile) and imagem_arquivo.filename:
-            update_kwargs["imagem_url"] = _save_upload_image(imagem_arquivo)
+            imagem_bytes, imagem_mime = _read_upload_image(imagem_arquivo)
         update_data = schemas.ProdutoUpdate(**update_kwargs)
-        p = crud.update_produto(db, produto_id, update_data)
+        p = crud.update_produto(db, produto_id, update_data, imagem_bytes=imagem_bytes, imagem_mime=imagem_mime)
         if not p:
             raise HTTPException(404, "Produto não encontrado")
         return RedirectResponse(url="/admin/", status_code=status.HTTP_303_SEE_OTHER)
