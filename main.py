@@ -64,6 +64,46 @@ ALLOWED_IMAGE_TYPES = {
 }
 MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", "4000000"))  # 4MB padrão (ajuste via env)
 
+# Placeholder inline to avoid 404s when product image is missing/legacy
+PLACEHOLDER_IMAGE_DATA_URL = (
+    "data:image/svg+xml;base64,"
+    "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2"
+    "NDAiIGhlaWdodD0iNDgwIiB2aWV3Qm94PSIwIDAgNjQwIDQ4MCI+PHJlY3Qgd2lk"
+    "dGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2YyZjJmMiIvPjxyZWN0IHg9"
+    "IjE2IiB5PSIxNiIgd2lkdGg9IjYwOCIgaGVpZ2h0PSI0NDgiIHJ4PSIxNiIgZmls"
+    "bD0iI2U2ZTZlNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNl"
+    "bGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOWE5YTlh"
+    "IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjgi"
+    "PlNlbSBpbWFnZW08L3RleHQ+PC9zdmc+"
+)
+
+def _resolve_produto_imagem_url(produto) -> str:
+    """Retorna a URL de imagem mais confiavel para o produto, sem 404."""
+    if getattr(produto, "imagem_bytes", None):
+        return f"/media/produto/{produto.id}"
+
+    url = getattr(produto, "imagem_url", None)
+    if url:
+        if url.startswith("/uploads/") or url.startswith("/images/"):
+            local_path = os.path.join("static", url.lstrip("/"))
+            if os.path.exists(local_path):
+                return url
+            return PLACEHOLDER_IMAGE_DATA_URL
+        return url
+
+    return PLACEHOLDER_IMAGE_DATA_URL
+
+def _resolve_logo_url() -> str | None:
+    logo_path = os.path.join("static", "images", "logo.png")
+    try:
+        if os.path.exists(logo_path) and os.path.getsize(logo_path) > 0:
+            return "/static/images/logo.png"
+    except Exception:
+        pass
+    return None
+
+templates.env.globals['LOGO_URL'] = _resolve_logo_url()
+
 def _read_upload_image(file: UploadFile) -> tuple[bytes, str]:
     """Lê uma imagem do upload e valida tipo/tamanho."""
     if not file or not file.filename:
@@ -90,15 +130,14 @@ def _read_upload_image(file: UploadFile) -> tuple[bytes, str]:
 def index(request: Request, db: Session = Depends(get_db)):
     produtos = crud.get_produtos_ativos(db)
     for p in produtos:
-        if getattr(p, "imagem_bytes", None) and not getattr(p, "imagem_url", None):
-            p.imagem_url = f"/media/produto/{p.id}"
+        p.imagem_url = _resolve_produto_imagem_url(p)
     return templates.TemplateResponse("index.html", {"request": request, "produtos": produtos})
 
 @app.get("/produto/{produto_id}", response_class=HTMLResponse)
 def produto_detail(request: Request, produto_id: int, db: Session = Depends(get_db)):
     produto = crud.get_produto(db, produto_id)
-    if produto and getattr(produto, "imagem_bytes", None) and not getattr(produto, "imagem_url", None):
-        produto.imagem_url = f"/media/produto/{produto.id}"
+    if produto:
+        produto.imagem_url = _resolve_produto_imagem_url(produto)
     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
     return templates.TemplateResponse("produto.html", {"request": request, "p": produto})
@@ -106,10 +145,8 @@ def produto_detail(request: Request, produto_id: int, db: Session = Depends(get_
 @app.get("/api/produtos", response_model=list[schemas.ProdutoOut])
 def api_produtos(db: Session = Depends(get_db)):
     produtos = crud.get_produtos_ativos(db)
-    # garante imagem_url consistente quando a imagem está no DB
     for p in produtos:
-        if getattr(p, "imagem_bytes", None) and not getattr(p, "imagem_url", None):
-            p.imagem_url = f"/media/produto/{p.id}"
+        p.imagem_url = _resolve_produto_imagem_url(p)
     return produtos
 
 
@@ -227,6 +264,8 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 
     try:
         produtos = db.query(models.Produto).all()
+        for p in produtos:
+            p.imagem_url = _resolve_produto_imagem_url(p)
         return templates.TemplateResponse("admin/dashboard.html", {"request": request, "produtos": produtos})
     except Exception:
         import logging

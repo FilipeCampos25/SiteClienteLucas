@@ -19,7 +19,9 @@
         <!-- COMENTÁRIO: Para mudar o logo, substitua '/static/images/logo.png' pela URL da sua imagem de logo. Se não houver imagem, o texto 'Cantoneira Fácil' será exibido. Para mudar o nome do projeto, altere 'Cantoneira Fácil' aqui e em outros lugares. -->
         <div class="logo-section">
           <div class="logo-wrapper">
-            <img src="/static/images/logo.png" alt="Logo Cantoneira Fácil" class="logo-img" onerror="this.style.display='none'">
+            {% if LOGO_URL %}
+            <img src="{{ LOGO_URL }}" alt="Logo Cantoneira Fácil" class="logo-img">
+            {% endif %}
           </div>
           <div class="logo-text">
             <h1 class="logo-title">Cantoneira Fácil</h1>
@@ -98,7 +100,9 @@
         <!-- COMENTÁRIO: Para mudar o logo no footer, substitua '/static/images/logo.png' pela URL da sua imagem. Para mudar o nome do projeto, altere 'Cantoneira Fácil' aqui. -->
         <div class="footer-column">
           <div class="footer-logo">
-            <img src="/static/images/logo.png" alt="Logo Cantoneira Fácil" class="footer-logo-img" onerror="this.style.display='none'">
+            {% if LOGO_URL %}
+            <img src="{{ LOGO_URL }}" alt="Logo Cantoneira Fácil" class="footer-logo-img">
+            {% endif %}
             <h3 class="footer-title">Cantoneira Fácil</h3>
           </div>
           <p class="footer-description">Fornecendo qualidade em perfis metálicos desde 2024. Sua parceira confiável em materiais de construção.</p>
