@@ -22,3 +22,8 @@ Esta versão armazena a imagem do produto **no banco (Postgres)** (`imagem_bytes
 - ou aplicar um `ALTER TABLE` adicionando as colunas: `imagem_mime`, `imagem_bytes`, `imagem_sha256`, `atualizado_em` e tornar `imagem_url` nullable.
 
 As imagens são servidas por: `/media/produto/{id}` com cache (ETag + Cache-Control).
+
+
+& "C:\Program Files\Python312\python.exe" -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt

@@ -80,6 +80,41 @@
     </div>
     {% endfor %}
   </div>
+  {% if total_paginas > 1 %}
+  <nav class="pagination-nav" aria-label="Paginação de produtos">
+    <a
+      href="/?page={{ pagina_atual - 1 }}#produtos"
+      class="pagination-btn pagination-prev {% if pagina_atual == 1 %}is-disabled{% endif %}"
+      {% if pagina_atual == 1 %}aria-disabled="true" tabindex="-1"{% endif %}
+    >
+      Anterior
+    </a>
+
+    <div class="pagination-pages">
+      {% for item in paginacao %}
+        {% if item %}
+          <a
+            href="/?page={{ item }}#produtos"
+            class="pagination-btn pagination-page {% if item == pagina_atual %}is-active{% endif %}"
+            {% if item == pagina_atual %}aria-current="page"{% endif %}
+          >
+            {{ item }}
+          </a>
+        {% else %}
+          <span class="pagination-ellipsis">...</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <a
+      href="/?page={{ pagina_atual + 1 }}#produtos"
+      class="pagination-btn pagination-next {% if pagina_atual == total_paginas %}is-disabled{% endif %}"
+      {% if pagina_atual == total_paginas %}aria-disabled="true" tabindex="-1"{% endif %}
+    >
+      Próxima
+    </a>
+  </nav>
+  {% endif %}
 </section>
 
 <!-- ===== SEÇÃO DE ESTATÍSTICAS ===== -->

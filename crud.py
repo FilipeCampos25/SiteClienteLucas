@@ -14,7 +14,7 @@ Observação:
 """
 
 import hashlib
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 import models
@@ -32,6 +32,32 @@ def get_produtos_ativos(db: Session):
         db.query(models.Produto)
         .filter(models.Produto.ativo.is_(True))
         .order_by(desc(models.Produto.atualizado_em), desc(models.Produto.criado_em))
+        .all()
+    )
+
+
+def count_produtos_ativos(db: Session) -> int:
+    """Retorna a quantidade total de produtos ativos."""
+    return (
+        db.query(func.count(models.Produto.id))
+        .filter(models.Produto.ativo.is_(True))
+        .scalar()
+        or 0
+    )
+
+
+def get_produtos_ativos_paginados(db: Session, *, page: int = 1, page_size: int = 10):
+    """Lista produtos ativos paginados, ordenando pelos mais recentes."""
+    page = max(1, page)
+    page_size = max(1, page_size)
+    offset = (page - 1) * page_size
+
+    return (
+        db.query(models.Produto)
+        .filter(models.Produto.ativo.is_(True))
+        .order_by(desc(models.Produto.atualizado_em), desc(models.Produto.criado_em))
+        .offset(offset)
+        .limit(page_size)
         .all()
     )
 
