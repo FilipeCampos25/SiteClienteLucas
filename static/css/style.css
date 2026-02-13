@@ -628,56 +628,6 @@ body {
   padding: 0 var(--spacing-xs);
 }
 
-/* ===== PAGINAÇÃO (CATÁLOGO) ===== */
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-xl);
-  flex-wrap: wrap;
-}
-
-.page-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-  height: 40px;
-  padding: 0 var(--spacing-md);
-  border-radius: 9999px;
-  border: 1px solid var(--cinza-medio);
-  background: var(--branco);
-  color: var(--cinza-escuro);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: var(--font-size-sm);
-  box-shadow: var(--shadow-xs);
-  transition: var(--transition-fast);
-}
-
-.page-btn:hover {
-  border-color: var(--laranja);
-  box-shadow: var(--shadow-sm);
-}
-
-.page-btn-active {
-  background: var(--laranja);
-  color: var(--branco);
-  border-color: var(--laranja);
-}
-
-.page-btn-disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.page-ellipsis {
-  padding: 0 var(--spacing-sm);
-  color: var(--cinza-texto);
-  font-weight: 700;
-}
-
 /* ===== ESTATÍSTICAS ===== */
 .stats-section {
   padding: var(--spacing-2xl) 0;

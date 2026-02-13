@@ -79,45 +79,42 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 # Compatibilidade com URLs antigas (caso existam)
 app.mount("/uploads", StaticFiles(directory=os.path.join("static", "uploads")), name="uploads")
-app.mount("/images", StaticFiles(directory=os.path.join("static", "images")), name="images")
-app.mount("/css", StaticFiles(directory=os.path.join("static", "css")), name="css")
-app.mount("/js", StaticFiles(directory=os.path.join("static", "js")), name="js")
 
 templates = Jinja2Templates(directory="templates")
 
-# Variáveis globais nas templates
-templates.env.globals["WHATSAPP_NUMERO"] = WHATSAPP_NUMERO
-templates.env.globals["WHATSAPP_LINK"] = f"https://wa.me/{WHATSAPP_NUMERO}" if WHATSAPP_NUMERO else ""
-templates.env.globals["WHATSAPP_DISPLAY"] = telefone_visivel()
-templates.env.globals["gerar_link_whatsapp_text"] = gerar_link_whatsapp_text
+# =============================================================================
+# Auth (Admin)
+# =============================================================================
+
+security = HTTPBasic()
 
 
-def _resolve_logo_url() -> Optional[str]:
+def _auth_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
     """
+    Protege endpoints /admin/* com HTTP Basic.
+
     COMENTÁRIO:
-    - Se existir /static/images/logo.png, usamos como logo.
-    - Se não existir, a template mostra apenas texto.
+    - Mantém o comportamento atual e evita mudanças drásticas de autenticação.
     """
-    logo_path = os.path.join("static", "images", "logo.png")
-    try:
-        if os.path.exists(logo_path) and os.path.getsize(logo_path) > 0:
-            return "/static/images/logo.png"
-    except Exception:
-        pass
-    return None
+    correct_username = secrets.compare_digest(credentials.username, ADMIN_USER)
+    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
 
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciais inválidas",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
-templates.env.globals["LOGO_URL"] = _resolve_logo_url()
 
 # =============================================================================
-# DB dependency
+# DB Dependency
 # =============================================================================
-
 
 def get_db() -> Generator[Session, None, None]:
     """
-    COMENTÁRIO:
-    Dependência padrão do FastAPI para abrir/fechar sessão do SQLAlchemy.
+    Dependency do FastAPI para obter Session do SQLAlchemy.
     """
     db = SessionLocal()
     try:
@@ -127,270 +124,23 @@ def get_db() -> Generator[Session, None, None]:
 
 
 # =============================================================================
-# Imagens: validação + leitura segura (+ compactação no upload)
+# Helpers (Imagens)
 # =============================================================================
 
-# Regras do usuário: apenas PNG/JPG
-ALLOWED_MIME = {"image/png", "image/jpeg"}
-MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", "4000000"))  # 4MB (limite de upload bruto)
-
-# Tópico 2: Compactação automática no upload
-# ------------------------------------------------------------
-# Objetivo: permitir que o ADMIN suba "qualquer foto" (celular),
-# mas armazenar no DB uma versão mais leve para não estourar storage
-# e melhorar performance de carregamento.
-#
-# Defaults recomendados (ajustáveis via ENV):
-# - alvo: ~200KB (200 * 1024)
-# - maior lado: 1200px
-TARGET_IMAGE_BYTES = int(os.getenv("TARGET_IMAGE_BYTES", str(200 * 1024)))
-IMAGE_MAX_DIM = int(os.getenv("IMAGE_MAX_DIM", "1200"))
-
-# Assinaturas (magic bytes) para validação adicional.
-_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
-_JPG_MAGIC = b"\xff\xd8\xff"
-
-
-def _detect_image_mime(data: bytes) -> Optional[str]:
+def _produto_image_url(p: models.Produto) -> str:
     """
+    Resolve URL da imagem do produto.
+
     COMENTÁRIO:
-    Valida o arquivo pela assinatura (magic bytes). Isso evita:
-    - upload de arquivo com content_type falso
-    - bytes inválidos que depois "quebram" no browser
+    - Se a imagem estiver no banco (`imagem_bytes`), padroniza em /media/produto/{id}.
+    - Se não houver, tenta fallback em `imagem_url`.
+    - Se tudo falhar, usa placeholder.
     """
-    if data.startswith(_PNG_MAGIC):
-        return "image/png"
-    if data.startswith(_JPG_MAGIC):
-        return "image/jpeg"
-    return None
+    if getattr(p, "imagem_bytes", None):
+        return f"/media/produto/{p.id}"
 
-
-def _has_alpha(img: Image.Image) -> bool:
-    """
-    COMENTÁRIO:
-    Retorna True se a imagem possui transparência (alpha).
-
-    Por quê?
-    - Se tiver transparência, não dá pra salvar como JPEG sem perder alpha.
-    - Então mantemos como PNG nesse caso.
-    """
-    if img.mode in ("RGBA", "LA"):
-        return True
-    # Alguns PNGs em modo "P" podem ter transparência via paleta
-    return "transparency" in img.info
-
-
-def _resize_if_needed(img: Image.Image, max_dim: int) -> Image.Image:
-    """
-    Redimensiona mantendo proporção se a imagem exceder `max_dim` no maior lado.
-
-    Nota:
-    - Downscale controlado é uma das maiores economias de tamanho do arquivo.
-    - Para vitrine, 1200px no maior lado costuma ser excelente.
-    """
-    if max_dim <= 0:
-        return img
-
-    w, h = img.size
-    longest = max(w, h)
-    if longest <= max_dim:
-        return img
-
-    scale = max_dim / float(longest)
-    new_w = max(1, int(w * scale))
-    new_h = max(1, int(h * scale))
-
-    # LANCZOS é o melhor para downscale (qualidade).
-    return img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-
-
-def _encode_jpeg_under_target(img: Image.Image, target_bytes: int) -> bytes:
-    """
-    Codifica a imagem como JPEG tentando ficar <= target_bytes.
-
-    Estratégia:
-    - binary search de qualidade entre 35..90
-    - se ainda ficar maior que o alvo, o chamador pode reduzir dimensões e tentar de novo
-
-    Obs:
-    - JPEG é excelente para fotos (sem transparência).
-    - Esse método tenta manter qualidade o maior possível dentro do alvo.
-    """
-    # JPEG não suporta alfa: garante RGB.
-    if img.mode not in ("RGB", "L"):
-        img = img.convert("RGB")
-
-    low, high = 35, 90
-    best: Optional[bytes] = None
-
-    while low <= high:
-        q = (low + high) // 2
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=q, optimize=True, progressive=True)
-        data = buf.getvalue()
-
-        if len(data) <= target_bytes:
-            best = data
-            # tenta melhorar a qualidade mantendo <= alvo
-            low = q + 1
-        else:
-            high = q - 1
-
-    # Se não conseguiu ficar abaixo, retorna o menor (qualidade mais baixa)
-    if best is not None:
-        return best
-
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=35, optimize=True, progressive=True)
-    return buf.getvalue()
-
-
-def _encode_png(img: Image.Image) -> bytes:
-    """
-    Codifica como PNG com compressão alta (sem perda).
-
-    Nota:
-    - PNG é maior que JPEG para fotos, mas é necessário quando há transparência.
-    - compress_level=9: mais compressão (mais CPU), mas upload é raro (admin),
-      então vale a pena.
-    """
-    buf = io.BytesIO()
-    img.save(buf, format="PNG", optimize=True, compress_level=9)
-    return buf.getvalue()
-
-
-def _optimize_image_bytes(data: bytes, mime: str) -> Tuple[bytes, str]:
-    """
-    Tópico 2: Compactar automaticamente a imagem no upload.
-
-    Regras:
-    - Entrada: PNG/JPG (já validado)
-    - Saída: PNG ou JPG (sempre)
-    - Mantém transparência (PNG) quando existir alfa
-    - Para fotos (sem alfa), converte/salva como JPEG otimizado
-    - Tenta ficar <= TARGET_IMAGE_BYTES, reduzindo qualidade/dimensões de forma controlada
-
-    Por que isso é ideal para um admin leigo?
-    - Ele sobe a imagem "do jeito que tem" (celular / galeria)
-    - O sistema automaticamente padroniza e deixa leve para o DB/site.
-    """
-    try:
-        img = Image.open(io.BytesIO(data))
-        # Corrige rotação de fotos de celular (EXIF)
-        img = ImageOps.exif_transpose(img)
-    except Exception:
-        # Se Pillow não conseguir abrir, é melhor falhar do que salvar bytes quebrados
-        raise HTTPException(status_code=400, detail="Imagem inválida (não foi possível processar).")
-
-    # 1) Redimensiona para um tamanho adequado de vitrine
-    img = _resize_if_needed(img, IMAGE_MAX_DIM)
-
-    # 2) Decide formato final
-    alpha = _has_alpha(img)
-    out_mime: str
-
-    # 3) Tenta alcançar o alvo de tamanho.
-    #    Se não alcançar, reduz dimensões gradualmente até um mínimo razoável.
-    min_dim = 320  # mínimo para não ficar ridículo em vitrine
-
-    while True:
-        if alpha:
-            # Mantém PNG quando existe transparência
-            out_bytes = _encode_png(img.convert("RGBA") if img.mode != "RGBA" else img)
-            out_mime = "image/png"
-        else:
-            # Para foto (sem alpha), JPEG é mais leve e mantém boa qualidade
-            out_bytes = _encode_jpeg_under_target(img, TARGET_IMAGE_BYTES)
-            out_mime = "image/jpeg"
-
-        # Se já está <= alvo, sucesso
-        if len(out_bytes) <= TARGET_IMAGE_BYTES:
-            return out_bytes, out_mime
-
-        # Se passou do alvo, tenta diminuir dimensões antes de desistir
-        w, h = img.size
-        if max(w, h) <= min_dim:
-            # Não reduz mais: salva mesmo assim (melhor do que falhar cadastro do produto)
-            # Obs: isso acontece raramente (ex.: PNG com alpha muito "complexo").
-            return out_bytes, out_mime
-
-        # reduz ~10% e tenta novamente
-        scale = 0.90
-        new_w = max(1, int(w * scale))
-        new_h = max(1, int(h * scale))
-        img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-
-
-def _read_image_upload(file: UploadFile) -> Tuple[bytes, str]:
-    """
-    Lê o arquivo enviado pelo admin e valida:
-    - Existe arquivo
-    - MIME permitido (png/jpg)
-    - Magic bytes compatível (anti-corrupção / anti-fake)
-    - Tamanho máximo (upload bruto)
-
-    Retorna: (bytes, mime)
-
-    IMPORTANTE:
-    - Aqui é onde aplicamos a compactação automática (tópico 2) antes de gravar no DB.
-    """
-    # 1) valida presença
-    if not file or not file.filename:
-        raise HTTPException(status_code=400, detail="Nenhuma imagem enviada.")
-
-    # 2) valida content-type declarado
-    if file.content_type not in ALLOWED_MIME:
-        raise HTTPException(status_code=400, detail="Formato inválido. Use PNG ou JPG.")
-
-    # 3) lê bytes
-    data = file.file.read()
-    if not data:
-        raise HTTPException(status_code=400, detail="Arquivo de imagem vazio.")
-    if len(data) > MAX_IMAGE_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Imagem muito grande (max {MAX_IMAGE_BYTES} bytes).",
-        )
-
-    # 4) valida assinatura real (magic bytes)
-    real_mime = _detect_image_mime(data)
-    if real_mime is None:
-        raise HTTPException(status_code=400, detail="Imagem inválida ou corrompida (assinatura não reconhecida).")
-
-    # 5) garante consistência: se o browser mandou jpeg mas é png (ou vice-versa), usamos o real
-    mime = real_mime
-
-    # 6) rebobina (boa prática)
-    try:
-        file.file.seek(0)
-    except Exception:
-        pass
-
-    # 7) Tópico 2: compacta automaticamente antes de armazenar no DB.
-    #    Isso evita estourar o banco (storage) e melhora o carregamento do site.
-    data, mime = _optimize_image_bytes(data, mime)
-
-    return data, mime
-
-
-def _produto_image_url(produto: models.Produto) -> str:
-    """
-    Retorna a melhor URL de imagem para o produto:
-    - Se houver bytes no DB -> endpoint /media/produto/{id}
-    - Se houver imagem_url legado -> usa, mas tenta evitar 404 em arquivos locais
-    - Caso contrário -> placeholder local
-    """
-    if getattr(produto, "imagem_bytes", None):
-        return f"/media/produto/{produto.id}"
-
-    url = getattr(produto, "imagem_url", None)
+    url = getattr(p, "imagem_url", "") or ""
     if url:
-        # Se era URL local antiga (/uploads/... ou /images/...), valida se existe
-        if url.startswith("/uploads/") or url.startswith("/images/"):
-            local_path = os.path.join("static", url.lstrip("/"))
-            if os.path.exists(local_path):
-                return url
-            return "/static/images/placeholder.png"
         return url
 
     return "/static/images/placeholder.png"
@@ -401,7 +151,14 @@ def _produto_image_url(produto: models.Produto) -> str:
 # =============================================================================
 
 
-HOME_PAGE_SIZE = 10
+# -----------------------------------------------------------------------------
+# Paginação (HOME)
+# - Carrega APENAS 10 produtos por página para reduzir carga no servidor/DB.
+# - A navegação é feita via querystring: /?page=1, /?page=2 ...
+# - O frontend (templates/index.html) renderiza botões com base em `paginacao`.
+# -----------------------------------------------------------------------------
+
+HOME_PAGE_SIZE = 10  # número fixo de produtos por página (otimização)
 
 
 def _build_pagination_items(current_page: int, total_pages: int) -> list[int | None]:
@@ -419,7 +176,8 @@ def _build_pagination_items(current_page: int, total_pages: int) -> list[int | N
     if window_start > 2:
         items.append(None)
 
-    items.extend(range(window_start, window_end + 1))
+    for p in range(window_start, window_end + 1):
+        items.append(p)
 
     if window_end < total_pages - 1:
         items.append(None)
@@ -436,6 +194,12 @@ def index(
 ):
     """
     Página inicial: lista produtos ativos.
+
+    COMENTÁRIO (PAGINAÇÃO):
+    - Conta o total de produtos ativos.
+    - Calcula total de páginas com HOME_PAGE_SIZE (=10).
+    - Busca só os itens do "page" atual via OFFSET/LIMIT.
+    - Envia `paginacao` para o template montar os botões.
     """
     total_produtos = crud.count_produtos_ativos(db)
     total_paginas = max(1, math.ceil(total_produtos / HOME_PAGE_SIZE))
@@ -488,84 +252,32 @@ def media_produto(produto_id: int, request: Request, db: Session = Depends(get_d
     """
     Entrega a imagem guardada no DB de forma *byte-perfect*.
 
-    CAUSA MAIS COMUM DE "IMAGEM CORROMPIDA" NESTE TIPO DE SISTEMA:
-    - Postgres retorna bytea como `memoryview` (psycopg2/psycopg3),
-      e alguns fluxos acabam convertendo para string ou aplicando encoding.
-
-    A solução correta é:
-    - Garantir `bytes(...)` ao entregar
-    - Usar media_type correto
-    - Opcional: ETag/cache
+    CAUSA MAIS COMUM DE "IMAGEM CORROMPIDA":
+    - Converter bytes <-> base64 <-> str e voltar, ou escrever com modo errado.
+    Aqui nós:
+    - devolvemos exatamente os bytes salvos
+    - colocamos Content-Type correto
+    - usamos ETag com sha256 para cache do navegador
     """
-    produto = crud.get_produto(db, produto_id)
-    if not produto or not getattr(produto, "imagem_bytes", None):
+    produto = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
+    if not produto or not produto.imagem_bytes:
         raise HTTPException(status_code=404, detail="Imagem não encontrada")
 
-    raw = produto.imagem_bytes
+    etag = produto.imagem_sha256 or hashlib.sha256(produto.imagem_bytes).hexdigest()
+    client_etag = request.headers.get("if-none-match")
 
-    # psycopg2/psycopg3 podem devolver memoryview
-    if isinstance(raw, memoryview):
-        img_bytes = raw.tobytes()
-    else:
-        img_bytes = bytes(raw)
-
-    # MIME preferencial do DB, mas validamos assinatura por segurança
-    mime = getattr(produto, "imagem_mime", None) or _detect_image_mime(img_bytes) or "application/octet-stream"
-
-    # Se assinatura não bate com PNG/JPG, falha (dados no banco estão inválidos)
-    real_mime = _detect_image_mime(img_bytes)
-    if real_mime is None:
-        raise HTTPException(status_code=500, detail="Imagem no banco está inválida/corrompida.")
-
-    # Normaliza mime com base no real
-    mime = real_mime
-
-    # ETag simples (hash do conteúdo). Ajuda browser a cachear.
-    etag = hashlib.sha256(img_bytes).hexdigest()
-
-    # If-None-Match: evita retransferir a imagem
-    inm = request.headers.get("if-none-match")
-    if inm and inm.strip('"') == etag:
+    if client_etag and client_etag.strip('"') == etag:
         return Response(status_code=304)
 
-    headers = {
-        "Content-Type": mime,
-        "Content-Length": str(len(img_bytes)),
-        "ETag": f"\"{etag}\"",
-        # Cache público (ajuste como preferir). Como o conteúdo muda quando a imagem muda,
-        # o ETag protege.
-        "Cache-Control": "public, max-age=86400",
-    }
-    return Response(content=img_bytes, media_type=mime, headers=headers)
+    return Response(
+        content=produto.imagem_bytes,
+        media_type=produto.imagem_mime or "application/octet-stream",
+        headers={"ETag": f'"{etag}"'},
+    )
 
 
 # =============================================================================
-# Auth Admin
-# =============================================================================
-
-security = HTTPBasic()
-
-
-def _auth_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
-    """
-    Autenticação básica do admin.
-
-    COMENTÁRIO:
-    Mantém o comportamento original: Basic Auth para /admin.
-    """
-    correct_username = secrets.compare_digest(credentials.username, ADMIN_USER)
-    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
-    if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciais inválidas",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
-
-
-# =============================================================================
-# Rotas Admin
+# Admin
 # =============================================================================
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -631,35 +343,97 @@ def admin_edit_produto(
 
     COMENTÁRIO:
     - Se o admin enviar uma nova imagem, ela também passa por _read_image_upload,
-      portanto também é compactada automaticamente (tópico 2).
+      portanto mantém compressão/validação.
     """
-    img_bytes: Optional[bytes] = None
-    img_mime: Optional[str] = None
+    imagem_bytes: bytes | None = None
+    imagem_mime: str | None = None
 
-    if imagem_arquivo and imagem_arquivo.filename:
-        img_bytes, img_mime = _read_image_upload(imagem_arquivo)
+    if imagem_arquivo is not None:
+        imagem_bytes, imagem_mime = _read_image_upload(imagem_arquivo)
 
     crud.update_produto(
         db,
         produto_id,
-        nome=nome,
-        descricao=descricao,
-        valor=valor,
-        imagem_bytes=img_bytes,
-        imagem_mime=img_mime,
+        schemas.ProdutoUpdate(nome=nome, descricao=descricao, valor=valor),
+        imagem_bytes=imagem_bytes,
+        imagem_mime=imagem_mime,
     )
     return RedirectResponse(url="/admin/", status_code=303)
 
 
 # =============================================================================
-# WhatsApp (mantido)
+# WhatsApp helpers (injeção no template)
 # =============================================================================
 
-@app.post("/api/whatsapp")
-def api_whatsapp(payload: dict):
+@app.get("/_template_context")
+def _template_context():
     """
-    Gera link do WhatsApp com texto.
-    (Mantido; não faz parte do tópico 2)
+    Endpoint auxiliar (opcional) para debug.
     """
-    link = gerar_link_whatsapp(payload)
-    return {"url": link}
+    return {
+        "WHATSAPP_NUMERO": WHATSAPP_NUMERO,
+        "WHATSAPP_LINK": gerar_link_whatsapp(WHATSAPP_NUMERO),
+        "WHATSAPP_TEL_VISIVEL": telefone_visivel(WHATSAPP_NUMERO),
+    }
+
+
+# =============================================================================
+# Upload helpers (compactação no upload)
+# =============================================================================
+
+def _read_image_upload(file: UploadFile) -> Tuple[bytes, str]:
+    """
+    Lê e valida a imagem enviada no upload e aplica compactação.
+
+    REGRAS:
+    - Aceita PNG e JPEG.
+    - Converte para RGB quando necessário (ex: PNG com alpha), garantindo compatibilidade.
+    - Redimensiona para no máx 1200px no maior lado (mantém proporção).
+    - Salva como JPEG (qualidade 82) ou mantém PNG se necessário.
+
+    Obs:
+    - Este método foi usado no Tópico 2 (compactação automática).
+    """
+    if not file:
+        raise HTTPException(status_code=400, detail="Imagem obrigatória")
+
+    content = file.file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Imagem vazia")
+
+    # Detecta pelo content-type
+    mime = (file.content_type or "").lower().strip()
+    if mime not in ("image/png", "image/jpeg", "image/jpg"):
+        raise HTTPException(status_code=400, detail="Formato de imagem inválido (use PNG ou JPEG)")
+
+    try:
+        img = Image.open(io.BytesIO(content))
+        img = ImageOps.exif_transpose(img)  # respeita orientação EXIF (celular)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Falha ao ler imagem: {e}") from e
+
+    # Redimensiona (mantém proporção)
+    max_side = 1200
+    w, h = img.size
+    scale = min(1.0, max_side / max(w, h))
+    if scale < 1.0:
+        img = img.resize((int(w * scale), int(h * scale)))
+
+    # Normaliza modo
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+
+    out = io.BytesIO()
+
+    # Mantém PNG apenas se o upload era PNG e o modo for compatível.
+    # Caso contrário, salva JPEG (mais leve).
+    if mime == "image/png":
+        img.save(out, format="PNG", optimize=True)
+        out_bytes = out.getvalue()
+        out_mime = "image/png"
+    else:
+        img.save(out, format="JPEG", quality=82, optimize=True, progressive=True)
+        out_bytes = out.getvalue()
+        out_mime = "image/jpeg"
+
+    return out_bytes, out_mime

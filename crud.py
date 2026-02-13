@@ -14,7 +14,7 @@ Observação:
 """
 
 import hashlib
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 import models
@@ -37,34 +37,27 @@ def get_produtos_ativos(db: Session):
 
 
 def count_produtos_ativos(db: Session) -> int:
-    """
-    Retorna a quantidade total de produtos ativos.
+    """Retorna a quantidade total de produtos ativos."""
+    return (
+        db.query(func.count(models.Produto.id))
+        .filter(models.Produto.ativo.is_(True))
+        .scalar()
+        or 0
+    )
 
-    COMENTÁRIO:
-    - Necessário para calcular o número de páginas no frontend.
-    - Mantém a mesma regra do catálogo público: somente `ativo=True`.
-    """
-    return int(db.query(models.Produto).filter(models.Produto.ativo.is_(True)).count())
 
+def get_produtos_ativos_paginados(db: Session, *, page: int = 1, page_size: int = 10):
+    """Lista produtos ativos paginados, ordenando pelos mais recentes."""
+    page = max(1, page)
+    page_size = max(1, page_size)
+    offset = (page - 1) * page_size
 
-def get_produtos_ativos_paginado(db: Session, *, limit: int, offset: int):
-    """
-    Lista produtos ativos com paginação.
-
-    COMENTÁRIO:
-    - Usado para carregar "10 em 10" no site e reduzir custo de render/query.
-    - Mantém a ordenação original (mais recentes primeiro).
-
-    Parâmetros:
-    - limit: quantidade máxima de registros retornados
-    - offset: quantos registros pular (ex.: página 2 com limit=10 => offset=10)
-    """
     return (
         db.query(models.Produto)
         .filter(models.Produto.ativo.is_(True))
         .order_by(desc(models.Produto.atualizado_em), desc(models.Produto.criado_em))
         .offset(offset)
-        .limit(limit)
+        .limit(page_size)
         .all()
     )
 
