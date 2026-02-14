@@ -59,7 +59,7 @@ def count_produtos_ativos(db: Session) -> int:
     )
 
 
-def get_produtos_ativos_paginados(db: Session, *, page: int = 1, page_size: int = 10):
+def get_produtos_ativos_paginados(db: Session, *, page: int = 1, page_size: int = 20):
     """
     Retorna produtos ativos paginados (para otimizar a home).
     """

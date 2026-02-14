@@ -74,6 +74,7 @@
         <h3 class="card-title">{{ p.nome }}</h3>
         <div class="card-actions">
           <a href="/produto/{{ p.id }}" class="btn-view">Ver Detalhes</a>
+
           <button class="btn-primary btn-add-cart" onclick="adicionarCarrinho('{{ p.id }}')">Adicionar</button>
         </div>
       </div>
@@ -86,76 +87,57 @@
   {# - `pagina_atual`, `total_paginas` e `paginacao` vêm da rota "/" (main.py). #}
   {# - Cada botão aponta para "/?page=N#produtos" mantendo o scroll no grid.    #}
   {# ------------------------------------------------------------------------- #}
-  {% if total_paginas > 1 %}
-  <nav class="pagination-nav" aria-label="Paginação de produtos">
-    <a
-      href="/?page={{ pagina_atual - 1 }}#produtos"
-      class="pagination-btn pagination-prev {% if pagina_atual == 1 %}is-disabled{% endif %}"
-      {% if pagina_atual == 1 %}aria-disabled="true" tabindex="-1"{% endif %}
-    >
-      Anterior
-    </a>
 
-    <div class="pagination-pages">
-      {% for item in paginacao %}
-        {% if item %}
-          <a
-            href="/?page={{ item }}#produtos"
-            class="pagination-btn pagination-page {% if item == pagina_atual %}is-active{% endif %}"
-            {% if item == pagina_atual %}aria-current="page"{% endif %}
-          >
-            {{ item }}
-          </a>
+  {% if total_paginas and total_paginas > 1 %}
+  <div class="pagination-wrapper">
+    <div class="pagination">
+      {% if pagina_atual > 1 %}
+      <a class="page-btn" href="/?page={{ pagina_atual - 1 }}#produtos">←</a>
+      {% else %}
+      <span class="page-btn disabled">←</span>
+      {% endif %}
+
+      {% for p in paginacao %}
+        {% if p is none %}
+          <span class="page-ellipsis">…</span>
         {% else %}
-          <span class="pagination-ellipsis">...</span>
+          {% if p == pagina_atual %}
+            <span class="page-btn active">{{ p }}</span>
+          {% else %}
+            <a class="page-btn" href="/?page={{ p }}#produtos">{{ p }}</a>
+          {% endif %}
         {% endif %}
       {% endfor %}
-    </div>
 
-    <a
-      href="/?page={{ pagina_atual + 1 }}#produtos"
-      class="pagination-btn pagination-next {% if pagina_atual == total_paginas %}is-disabled{% endif %}"
-      {% if pagina_atual == total_paginas %}aria-disabled="true" tabindex="-1"{% endif %}
-    >
-      Próxima
-    </a>
-  </nav>
+      {% if pagina_atual < total_paginas %}
+      <a class="page-btn" href="/?page={{ pagina_atual + 1 }}#produtos">→</a>
+      {% else %}
+      <span class="page-btn disabled">→</span>
+      {% endif %}
+    </div>
+  </div>
   {% endif %}
 </section>
 
-<!-- ===== SEÇÃO DE ESTATÍSTICAS ===== -->
-<section class="stats-section">
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-icon">📦</div>
-      <div class="stat-number">+10k</div>
-      <div class="stat-text">Produtos Vendidos</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">😊</div>
-      <div class="stat-number">+5k</div>
-      <div class="stat-text">Clientes Satisfeitos</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">🌎</div>
-      <div class="stat-number">Todo BR</div>
-      <div class="stat-text">Entregas Nacionais</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">🏆</div>
-      <div class="stat-number">10+</div>
-      <div class="stat-text">Anos de Mercado</div>
-    </div>
+<!-- ===== SEÇÃO SOBRE ===== -->
+<section id="sobre" class="about-section">
+  <h2 class="section-title">Sobre Nós</h2>
+  <p class="section-subtitle">Conheça nossa história e compromisso com qualidade</p>
+  <div class="about-content">
+    <p>
+      A Cantoneira Fácil nasceu com o objetivo de fornecer cantoneiras e perfis metálicos com qualidade,
+      atendimento humano e foco na satisfação do cliente.
+    </p>
   </div>
 </section>
 
-<!-- ===== SEÇÃO DE CTA FINAL ===== -->
-<section class="final-cta-section">
-  <div class="final-cta-content">
-    <h2 class="final-cta-title">Pronto para fazer seu pedido?</h2>
-    <p class="final-cta-subtitle">Entre em contato pelo WhatsApp e solicite um orçamento sem compromisso</p>
-    <a href="{{ WHATSAPP_LINK }}" target="_blank" class="btn-primary btn-large">
-      Solicitar Orçamento
+<!-- ===== SEÇÃO CONTATO ===== -->
+<section id="contato" class="contact-section">
+  <h2 class="section-title">Contato</h2>
+  <p class="section-subtitle">Fale com a gente pelo WhatsApp</p>
+  <div class="contact-actions">
+    <a href="{{ WHATSAPP_LINK }}" target="_blank" class="btn-whatsapp-large">
+      💬 Falar no WhatsApp
     </a>
   </div>
 </section>

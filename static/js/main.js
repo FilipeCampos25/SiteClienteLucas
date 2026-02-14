@@ -39,7 +39,9 @@ async function carregarProdutos() {
  */
 function atualizarIconeCarrinho() {
   const carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-  const totalItens = carrinho.reduce((sum, item) => sum + item.quantidade, 0);
+
+  // FIX: garante soma numérica mesmo se "quantidade" vier como string/undefined
+  const totalItens = carrinho.reduce((sum, item) => sum + Number(item.quantidade || 0), 0);
   
   const cartCount = document.getElementById('cartCount');
   if (cartCount) {
@@ -61,15 +63,19 @@ function atualizarIconeCarrinho() {
  * @param {number} id - ID do produto
  */
 function adicionarCarrinho(id) {
+  // FIX: garante ID numérico (no HTML pode vir como string)
+  id = Number(id);
+
   let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
   
   // Verifica se o produto já está no carrinho
-  const existente = carrinho.find(i => i.id === id);
+  // FIX: Number(i.id) para compatibilidade com carrinhos antigos salvos como string
+  const existente = carrinho.find(i => Number(i.id) === id);
   
   if (existente) {
     existente.quantidade++;
   } else {
-    carrinho.push({id, quantidade: 1});
+    carrinho.push({ id: id, quantidade: 1 }); // armazena id como número
   }
   
   localStorage.setItem('carrinho', JSON.stringify(carrinho));
@@ -87,9 +93,13 @@ function adicionarCarrinho(id) {
  * @param {number} id - ID do produto
  */
 function removerDoCarrinho(id) {
+  // FIX: garante ID numérico (evita mismatch na busca/remocao)
+  id = Number(id);
+
   let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
   
-  const index = carrinho.findIndex(i => i.id === id);
+  // FIX: Number(i.id) para compatibilidade com carrinhos antigos salvos como string
+  const index = carrinho.findIndex(i => Number(i.id) === id);
   
   if (index !== -1) {
     if (carrinho[index].quantidade > 1) {
@@ -126,7 +136,10 @@ async function mostrarCarrinho() {
   const itensParaWhats = [];
 
   carrinho.forEach(item => {
-    const prod = todosProdutos.find(p => p.id === item.id);
+      // FIX: item.id pode estar como string no localStorage; converte para número
+      const itemId = Number(item.id);
+      const prod = todosProdutos.find(p => p.id === itemId);
+
     if (prod) {
       const subtotal = prod.valor * item.quantidade;
       total += subtotal;
@@ -134,7 +147,7 @@ async function mostrarCarrinho() {
         <li class="carrinho-item">
           <span>${item.quantidade}x ${prod.nome}</span>
           <span>R$ ${subtotal.toFixed(2)}</span>
-          <button class="btn-remove" onclick="removerDoCarrinho(${item.id})">Remover</button>
+          <button class="btn-remove" onclick="removerDoCarrinho(${itemId})">Remover</button>
         </li>
       `;
       itensParaWhats.push({

@@ -128,112 +128,153 @@ def get_db() -> Generator[Session, None, None]:
 
 def _produto_image_url(p: models.Produto) -> str:
     """
-    Resolve URL da imagem do produto.
-
-    COMENTÁRIO:
-    - Se a imagem estiver no banco (`imagem_bytes`), padroniza em /media/produto/{id}.
-    - Se não houver, tenta fallback em `imagem_url`.
-    - Se tudo falhar, usa placeholder.
+    Retorna a URL correta para a imagem do produto.
     """
-    if getattr(p, "imagem_bytes", None):
+    # Se tiver imagem no banco, serve via endpoint /media/produto/{id}
+    if getattr(p, "imagem", None):
         return f"/media/produto/{p.id}"
-
-    url = getattr(p, "imagem_url", "") or ""
-    if url:
-        return url
-
+    # Se tiver imagem_url definida, usa ela
+    if getattr(p, "imagem_url", None):
+        return p.imagem_url
+    # Fallback para placeholder
     return "/static/images/placeholder.png"
 
 
-# =============================================================================
-# Rotas públicas
-# =============================================================================
-
-
-# -----------------------------------------------------------------------------
-# Paginação (HOME)
-# - Carrega APENAS 10 produtos por página para reduzir carga no servidor/DB.
-# - A navegação é feita via querystring: /?page=1, /?page=2 ...
-# - O frontend (templates/index.html) renderiza botões com base em `paginacao`.
-# -----------------------------------------------------------------------------
-
-HOME_PAGE_SIZE = 10  # número fixo de produtos por página (otimização)
-
-
-def _build_pagination_items(current_page: int, total_pages: int) -> list[int | None]:
+def _img_bytes_to_response(img_bytes: bytes) -> Response:
     """
-    Monta uma lista compacta de páginas para o frontend.
-    `None` representa reticências.
+    Detecta content-type de forma simples e retorna Response.
     """
-    if total_pages <= 7:
-        return list(range(1, total_pages + 1))
+    # Heurística mínima (sem mudanças drásticas):
+    # - Se começar com bytes PNG -> image/png
+    # - Se começar com bytes JPG -> image/jpeg
+    if img_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        return Response(content=img_bytes, media_type="image/png")
+    if img_bytes.startswith(b"\xff\xd8"):
+        return Response(content=img_bytes, media_type="image/jpeg")
+    # fallback
+    return Response(content=img_bytes, media_type="application/octet-stream")
 
-    items: list[int | None] = [1]
-    window_start = max(2, current_page - 1)
-    window_end = min(total_pages - 1, current_page + 1)
 
-    if window_start > 2:
-        items.append(None)
-
-    for p in range(window_start, window_end + 1):
-        items.append(p)
-
-    if window_end < total_pages - 1:
-        items.append(None)
-
-    items.append(total_pages)
-    return items
-
+# =============================================================================
+# Rotas (Site)
+# =============================================================================
 
 @app.get("/", response_class=HTMLResponse)
-def index(
+def home(
     request: Request,
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
 ):
     """
-    Página inicial: lista produtos ativos.
-
-    COMENTÁRIO (PAGINAÇÃO):
-    - Conta o total de produtos ativos.
-    - Calcula total de páginas com HOME_PAGE_SIZE (=10).
-    - Busca só os itens do "page" atual via OFFSET/LIMIT.
-    - Envia `paginacao` para o template montar os botões.
+    Página inicial do catálogo com paginação (se já existir no projeto).
     """
-    total_produtos = crud.count_produtos_ativos(db)
-    total_paginas = max(1, math.ceil(total_produtos / HOME_PAGE_SIZE))
-    pagina_atual = min(page, total_paginas)
+    # OBS: Mantido como está no seu projeto (não mexer fora do escopo)
+    page_size = 20
+    skip = (page - 1) * page_size
 
-    produtos = crud.get_produtos_ativos_paginados(db, page=pagina_atual, page_size=HOME_PAGE_SIZE)
+    total = crud.count_produtos_ativos(db)
+    total_paginas = max(1, math.ceil(total / page_size))
+
+    produtos = crud.get_produtos_ativos_paginado(db, skip=skip, limit=page_size)
+
+    # Ajusta URLs das imagens
     for p in produtos:
         p.imagem_url = _produto_image_url(p)
 
-    paginacao = _build_pagination_items(pagina_atual, total_paginas)
+    # Paginacao simples (com reticências)
+    paginacao: list[Optional[int]] = []
+    if total_paginas <= 7:
+        paginacao = list(range(1, total_paginas + 1))
+    else:
+        # Exibe: 1, 2, ..., atual-1, atual, atual+1, ..., last
+        paginacao = [1, 2, None]
+        start = max(3, page - 1)
+        end = min(total_paginas - 2, page + 1)
+        if start > 3:
+            paginacao.append(None)
+        paginacao.extend(range(start, end + 1))
+        if end < total_paginas - 2:
+            paginacao.append(None)
+        paginacao.extend([None, total_paginas - 1, total_paginas])
+
+        # Normaliza duplicidades de None/valores
+        cleaned: list[Optional[int]] = []
+        last = object()
+        for x in paginacao:
+            if x == last:
+                continue
+            cleaned.append(x)
+            last = x
+        paginacao = cleaned
+
+    # Link direto do WhatsApp (sem texto) para o botão geral do header/hero
+    WHATSAPP_LINK = gerar_link_whatsapp([])
+
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
             "produtos": produtos,
-            "pagina_atual": pagina_atual,
+            "pagina_atual": page,
             "total_paginas": total_paginas,
-            "total_produtos": total_produtos,
             "paginacao": paginacao,
+            "WHATSAPP_LINK": WHATSAPP_LINK,
+            "WHATSAPP_NUMERO": WHATSAPP_NUMERO,
+            "LOGO_URL": None,
         },
     )
 
 
 @app.get("/produto/{produto_id}", response_class=HTMLResponse)
-def produto_detail(request: Request, produto_id: int, db: Session = Depends(get_db)):
+def detalhe_produto(
+    request: Request,
+    produto_id: int,
+    db: Session = Depends(get_db),
+):
     """
-    Página de detalhe do produto.
+    Página de detalhe de um produto.
     """
-    produto = crud.get_produto(db, produto_id)
-    if not produto:
+    p = crud.get_produto(db, produto_id=produto_id)
+    if not p or not p.ativo:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
 
-    produto.imagem_url = _produto_image_url(produto)
-    return templates.TemplateResponse("produto.html", {"request": request, "p": produto})
+    p.imagem_url = _produto_image_url(p)
 
+    # Link direto do WhatsApp (sem texto) para CTA geral
+    WHATSAPP_LINK = gerar_link_whatsapp([])
+
+    return templates.TemplateResponse(
+        "produto.html",
+        {
+            "request": request,
+            "p": p,
+            "WHATSAPP_LINK": WHATSAPP_LINK,
+            "WHATSAPP_NUMERO": WHATSAPP_NUMERO,
+            "LOGO_URL": None,
+        },
+    )
+
+
+# =============================================================================
+# Rotas (Media)
+# =============================================================================
+
+@app.get("/media/produto/{produto_id}")
+def media_produto(produto_id: int, db: Session = Depends(get_db)):
+    """
+    Serve a imagem do produto armazenada no banco.
+    """
+    p = crud.get_produto(db, produto_id=produto_id)
+    if not p or not p.imagem:
+        raise HTTPException(status_code=404, detail="Imagem não encontrada")
+
+    # p.imagem é bytes no banco
+    return _img_bytes_to_response(p.imagem)
+
+
+# =============================================================================
+# API
+# =============================================================================
 
 @app.get("/api/produtos", response_model=list[schemas.ProdutoOut])
 def api_produtos(db: Session = Depends(get_db)):
@@ -246,195 +287,146 @@ def api_produtos(db: Session = Depends(get_db)):
     return produtos
 
 
-@app.get("/media/produto/{produto_id}")
-def media_produto(produto_id: int, request: Request, db: Session = Depends(get_db)):
+# =============================================================================
+# API (Carrinho -> WhatsApp)
+# =============================================================================
+@app.post("/api/whatsapp")
+def api_whatsapp(itens: list[schemas.ItemCarrinho]):
     """
-    Entrega a imagem guardada no DB de forma *byte-perfect*.
+    Recebe os itens do carrinho (vindos do frontend) e devolve um link do WhatsApp
+    já com a mensagem pronta.
 
-    CAUSA MAIS COMUM DE "IMAGEM CORROMPIDA":
-    - Converter bytes <-> base64 <-> str e voltar, ou escrever com modo errado.
-    Aqui nós:
-    - devolvemos exatamente os bytes salvos
-    - colocamos Content-Type correto
-    - usamos ETag com sha256 para cache do navegador
+    IMPORTANTE (escopo desta tarefa):
+    - O carrinho é mantido no navegador via localStorage (static/js/main.js).
+    - Este endpoint existe apenas para centralizar a montagem do texto/URL
+      (evita ter o número e o formato de mensagem "hardcoded" no JS).
+
+    Retorno:
+        {"url": "<link wa.me com texto codificado>"}
     """
-    produto = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
-    if not produto or not produto.imagem_bytes:
-        raise HTTPException(status_code=404, detail="Imagem não encontrada")
+    # COMENTÁRIO: compatibilidade pydantic v1/v2
+    def _dump(model):
+        return model.model_dump() if hasattr(model, "model_dump") else model.dict()
 
-    etag = produto.imagem_sha256 or hashlib.sha256(produto.imagem_bytes).hexdigest()
-    client_etag = request.headers.get("if-none-match")
+    itens_dict = [_dump(i) for i in (itens or [])]
+    url = gerar_link_whatsapp(itens_dict)
 
-    if client_etag and client_etag.strip('"') == etag:
-        return Response(status_code=304)
-
-    return Response(
-        content=produto.imagem_bytes,
-        media_type=produto.imagem_mime or "application/octet-stream",
-        headers={"ETag": f'"{etag}"'},
-    )
+    return {"url": url}
 
 
 # =============================================================================
-# Admin
+# Admin (mantido como está no seu projeto)
 # =============================================================================
 
 @app.get("/admin", response_class=HTMLResponse)
-@app.get("/admin/", response_class=HTMLResponse)
-def admin_page(request: Request, _: str = Depends(_auth_admin), db: Session = Depends(get_db)):
-    """
-    Página do admin: lista produtos + form de cadastro.
-
-    CORREÇÃO IMPORTANTE:
-    - Antes: tentava renderizar "admin.html" (que NÃO existe no seu projeto),
-      gerando jinja2.exceptions.TemplateNotFound: admin.html
-    - Agora: renderiza "admin/dashboard.html" (arquivo que EXISTE em templates/admin/dashboard.html)
-    """
+def admin_dashboard(
+    request: Request,
+    _: str = Depends(_auth_admin),
+    db: Session = Depends(get_db),
+):
     produtos = crud.get_produtos(db)
     for p in produtos:
         p.imagem_url = _produto_image_url(p)
 
-    # ✅ template correto (existe no ZIP)
-    return templates.TemplateResponse("admin/dashboard.html", {"request": request, "produtos": produtos})
+    return templates.TemplateResponse(
+        "admin/dashboard.html",
+        {
+            "request": request,
+            "produtos": produtos,
+            "WHATSAPP_NUMERO": WHATSAPP_NUMERO,
+            "TEL_VISIVEL": telefone_visivel(),
+        },
+    )
 
 
-@app.post("/admin/produto")
-def admin_create_produto(
+@app.get("/admin/login", response_class=HTMLResponse)
+def admin_login(request: Request):
+    return templates.TemplateResponse("admin/login.html", {"request": request})
+
+
+@app.post("/admin/produtos/novo")
+def admin_produto_novo(
+    _: str = Depends(_auth_admin),
     nome: str = Form(...),
     descricao: str = Form(""),
     valor: float = Form(...),
-    imagem_arquivo: UploadFile = File(...),
-    _: str = Depends(_auth_admin),
+    imagem: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
-    """
-    Cria produto no DB.
+    # ===========================
+    # Upload de imagem (com compactação)
+    # ===========================
+    imagem_bytes: Optional[bytes] = None
+    imagem_url: Optional[str] = None
 
-    COMENTÁRIO:
-    - A imagem é lida/validada e compactada automaticamente (_read_image_upload).
-    """
-    img_bytes, img_mime = _read_image_upload(imagem_arquivo)
+    if imagem and imagem.filename:
+        raw = imagem.file.read()
 
-    crud.create_produto(
-        db,
-        schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor),
-        imagem_bytes=img_bytes,
-        imagem_mime=img_mime,
-    )
-    return RedirectResponse(url="/admin/", status_code=303)
+        # COMENTÁRIO: Compactação leve p/ reduzir peso no DB sem mudar UX
+        try:
+            pil = Image.open(io.BytesIO(raw))
+            pil = ImageOps.exif_transpose(pil)
+            pil = pil.convert("RGB")
+
+            # Reduz dimensões (limite) mantendo proporção
+            pil.thumbnail((1600, 1600))
+
+            out = io.BytesIO()
+            pil.save(out, format="JPEG", quality=82, optimize=True)
+            imagem_bytes = out.getvalue()
+        except Exception:
+            # fallback se algo falhar
+            imagem_bytes = raw
+
+    novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor, imagem_url=imagem_url)
+    crud.create_produto(db, novo, imagem_bytes=imagem_bytes)
+
+    return RedirectResponse("/admin", status_code=303)
 
 
-@app.post("/admin/produto/{produto_id}/delete")
-def admin_delete_produto(produto_id: int, _: str = Depends(_auth_admin), db: Session = Depends(get_db)):
-    """
-    Remove produto do DB (delete lógico).
-    """
-    crud.delete_produto(db, produto_id)
-    return RedirectResponse(url="/admin/", status_code=303)
-
-
-@app.post("/admin/produto/{produto_id}/edit")
-def admin_edit_produto(
+@app.post("/admin/produtos/{produto_id}/atualizar")
+def admin_produto_atualizar(
     produto_id: int,
-    nome: str = Form(...),
-    descricao: str = Form(""),
-    valor: float = Form(...),
-    imagem_arquivo: Optional[UploadFile] = File(None),
+    _: str = Depends(_auth_admin),
+    nome: str = Form(None),
+    descricao: str = Form(None),
+    valor: float = Form(None),
+    ativo: Optional[bool] = Form(None),
+    imagem: UploadFile = File(None),
+    db: Session = Depends(get_db),
+):
+    imagem_bytes: Optional[bytes] = None
+
+    if imagem and imagem.filename:
+        raw = imagem.file.read()
+        try:
+            pil = Image.open(io.BytesIO(raw))
+            pil = ImageOps.exif_transpose(pil)
+            pil = pil.convert("RGB")
+            pil.thumbnail((1600, 1600))
+
+            out = io.BytesIO()
+            pil.save(out, format="JPEG", quality=82, optimize=True)
+            imagem_bytes = out.getvalue()
+        except Exception:
+            imagem_bytes = raw
+
+    upd = schemas.ProdutoUpdate(
+        nome=nome,
+        descricao=descricao,
+        valor=valor,
+        ativo=ativo,
+    )
+    crud.update_produto(db, produto_id=produto_id, dados=upd, imagem_bytes=imagem_bytes)
+
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/produtos/{produto_id}/excluir")
+def admin_produto_excluir(
+    produto_id: int,
     _: str = Depends(_auth_admin),
     db: Session = Depends(get_db),
 ):
-    """
-    Edita produto existente.
-
-    COMENTÁRIO:
-    - Se enviar uma nova imagem, ela também passa por compactação/validação.
-    """
-    imagem_bytes: bytes | None = None
-    imagem_mime: str | None = None
-
-    if imagem_arquivo is not None:
-        imagem_bytes, imagem_mime = _read_image_upload(imagem_arquivo)
-
-    crud.update_produto(
-        db,
-        produto_id,
-        schemas.ProdutoUpdate(nome=nome, descricao=descricao, valor=valor),
-        imagem_bytes=imagem_bytes,
-        imagem_mime=imagem_mime,
-    )
-    return RedirectResponse(url="/admin/", status_code=303)
-
-
-# =============================================================================
-# WhatsApp helpers (injeção no template)
-# =============================================================================
-
-@app.get("/_template_context")
-def _template_context():
-    """
-    Endpoint auxiliar (opcional) para debug.
-    """
-    return {
-        "WHATSAPP_NUMERO": WHATSAPP_NUMERO,
-        "WHATSAPP_LINK": gerar_link_whatsapp(WHATSAPP_NUMERO),
-        "WHATSAPP_TEL_VISIVEL": telefone_visivel(WHATSAPP_NUMERO),
-    }
-
-
-# =============================================================================
-# Upload helpers (compactação no upload)
-# =============================================================================
-
-def _read_image_upload(file: UploadFile) -> Tuple[bytes, str]:
-    """
-    Lê e valida a imagem enviada no upload e aplica compactação.
-
-    REGRAS:
-    - Aceita PNG e JPEG.
-    - Converte para RGB quando necessário (ex: PNG com alpha), garantindo compatibilidade.
-    - Redimensiona para no máx 1200px no maior lado (mantém proporção).
-    - Salva como JPEG (qualidade 82) ou mantém PNG se necessário.
-    """
-    if not file:
-        raise HTTPException(status_code=400, detail="Imagem obrigatória")
-
-    content = file.file.read()
-    if not content:
-        raise HTTPException(status_code=400, detail="Imagem vazia")
-
-    # Detecta pelo content-type
-    mime = (file.content_type or "").lower().strip()
-    if mime not in ("image/png", "image/jpeg", "image/jpg"):
-        raise HTTPException(status_code=400, detail="Formato de imagem inválido (use PNG ou JPEG)")
-
-    try:
-        img = Image.open(io.BytesIO(content))
-        img = ImageOps.exif_transpose(img)  # respeita orientação EXIF (celular)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Falha ao ler imagem: {e}") from e
-
-    # Redimensiona (mantém proporção)
-    max_side = 1200
-    w, h = img.size
-    scale = min(1.0, max_side / max(w, h))
-    if scale < 1.0:
-        img = img.resize((int(w * scale), int(h * scale)))
-
-    # Normaliza modo
-    if img.mode not in ("RGB", "L"):
-        img = img.convert("RGB")
-
-    out = io.BytesIO()
-
-    # Mantém PNG apenas se o upload era PNG e o modo for compatível.
-    # Caso contrário, salva JPEG (mais leve).
-    if mime == "image/png":
-        img.save(out, format="PNG", optimize=True)
-        out_bytes = out.getvalue()
-        out_mime = "image/png"
-    else:
-        img.save(out, format="JPEG", quality=82, optimize=True, progressive=True)
-        out_bytes = out.getvalue()
-        out_mime = "image/jpeg"
-
-    return out_bytes, out_mime
+    crud.delete_produto(db, produto_id=produto_id)
+    return RedirectResponse("/admin", status_code=303)

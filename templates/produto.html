@@ -2,65 +2,44 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- ===== BREADCRUMB ===== -->
-<nav class="breadcrumb">
-  <a href="/" class="breadcrumb-link">Início</a>
-  <span class="breadcrumb-separator">/</span>
-  <a href="/#produtos" class="breadcrumb-link">Produtos</a>
-  <span class="breadcrumb-separator">/</span>
-  <span class="breadcrumb-current">{{ p.nome }}</span>
-</nav>
-
-<!-- ===== SEÇÃO DE DETALHES DO PRODUTO ===== -->
-<section class="produto-detalhe">
-  <div class="produto-grid">
-    <!-- Coluna 1: Imagem -->
-    <div class="produto-image-section">
-      <div class="product-image-wrapper">
-        <img 
-          src="{{ p.imagem_url }}" 
-          alt="{{ p.nome }}" 
-          class="product-image-large"
-          onerror="this.src='/static/images/placeholder.png'"
-        >
+<section class="produto-page">
+  <div class="produto-container">
+    <!-- Coluna esquerda: imagem -->
+    <div class="produto-gallery">
+      <div class="produto-image-wrapper">
+        <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="produto-image" onerror="this.src='/static/images/placeholder.png'">
       </div>
     </div>
 
-    <!-- Coluna 2: Informações -->
-    <div class="produto-info-section">
-      <!-- Nome e SKU -->
-      <div class="produto-header">
-        <h1 class="produto-title">{{ p.nome }}</h1>
-        <p class="produto-sku">SKU: #{{ p.id }}</p>
-      </div>
+    <!-- Coluna direita: informações -->
+    <div class="produto-info">
+      <h2 class="produto-title">{{ p.nome }}</h2>
 
-      <!-- Preço destaque -->
-      <div class="price-highlight">
-        <span class="price-label">Valor:</span>
+      <div class="produto-price">
+        <span class="price-label">Preço:</span>
         <span class="price-value">R$ {{ '%.2f' % p.valor }}</span>
       </div>
 
-      <!-- Descrição -->
-      <div class="produto-description-section">
-        <h2 class="section-subtitle">Descrição do Produto</h2>
-        <p class="produto-description">{{ p.descricao or 'Descrição detalhada em breve.' }}</p>
+      {% if p.descricao %}
+      <div class="produto-description">
+        <h3>Descrição</h3>
+        <p>{{ p.descricao }}</p>
       </div>
+      {% endif %}
 
-      <!-- Ações -->
       <div class="produto-actions">
+        <a href="/#produtos" class="btn-secondary">← Voltar</a>
+
         <button class="btn-primary btn-add-cart-large" onclick="adicionarCarrinho('{{ p.id }}')">
           🛒 Adicionar ao Carrinho
         </button>
-        <a href="{{ gerar_link_whatsapp_text('Olá! Tenho interesse no produto ' ~ p.nome ~ ' (SKU: #' ~ p.id ~ ')') }}" target="_blank" class="btn-whatsapp">
-          💬 Fale Conosco
-        </a>
-      </div> 
+      </div>
 
       <!-- Badge de segurança -->
       <div class="security-badge">
         <p class="security-text">
-          <span>✓</span> Compra Segura | 
-          <span>🔒</span> Dados Protegidos | 
+          <span>✓</span> Compra Segura |
+          <span>🔒</span> Dados Protegidos |
           <span>💳</span> Múltiplas Formas de Pagamento
         </p>
       </div>

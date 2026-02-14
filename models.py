@@ -10,7 +10,7 @@ class Produto(Base):
     descricao = Column(Text)
 
     # Numeric no Postgres vira Decimal na leitura; convertemos no schema de saída
-    valor = Column(Numeric(10, 2), nullable=False)
+    valor = Column(Numeric(20, 2), nullable=False)
 
     # Mantido por compatibilidade: pode apontar para CDN/S3 ou para endpoint local (/media/...)
     imagem_url = Column(String, nullable=True)
