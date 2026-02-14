@@ -13,9 +13,9 @@ TÓPICO 2 (desta etapa):
 - Compactar automaticamente as imagens no upload (admin), para reduzir peso no DB
   e melhorar performance do site (sem exigir burocracia do admin).
 
-O restante do comportamento do sistema foi preservado:
-- Admin cadastra produtos em /admin/
-- Usuários veem produtos na página inicial e detalhe do produto
+Correção aplicada agora (urgente /admin):
+- Trocar TemplateResponse("admin.html") por TemplateResponse("admin/dashboard.html")
+  porque NO SEU PROJETO NÃO EXISTE templates/admin.html e o Render quebra com TemplateNotFound.
 """
 
 import base64
@@ -46,7 +46,6 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 # Pillow é usado SOMENTE para compactação/redimensionamento no upload (tópico 2).
-# Obs: exigirá adicionar `pillow` em requirements.txt.
 from PIL import Image, ImageOps
 
 import crud
@@ -285,11 +284,18 @@ def media_produto(produto_id: int, request: Request, db: Session = Depends(get_d
 def admin_page(request: Request, _: str = Depends(_auth_admin), db: Session = Depends(get_db)):
     """
     Página do admin: lista produtos + form de cadastro.
+
+    CORREÇÃO IMPORTANTE:
+    - Antes: tentava renderizar "admin.html" (que NÃO existe no seu projeto),
+      gerando jinja2.exceptions.TemplateNotFound: admin.html
+    - Agora: renderiza "admin/dashboard.html" (arquivo que EXISTE em templates/admin/dashboard.html)
     """
     produtos = crud.get_produtos(db)
     for p in produtos:
         p.imagem_url = _produto_image_url(p)
-    return templates.TemplateResponse("admin.html", {"request": request, "produtos": produtos})
+
+    # ✅ template correto (existe no ZIP)
+    return templates.TemplateResponse("admin/dashboard.html", {"request": request, "produtos": produtos})
 
 
 @app.post("/admin/produto")
@@ -305,12 +311,11 @@ def admin_create_produto(
     Cria produto no DB.
 
     COMENTÁRIO:
-    - A imagem é lida/validada e agora também é compactada automaticamente (tópico 2)
-      dentro de _read_image_upload(...).
+    - A imagem é lida/validada e compactada automaticamente (_read_image_upload).
     """
     img_bytes, img_mime = _read_image_upload(imagem_arquivo)
 
-    produto = crud.create_produto(
+    crud.create_produto(
         db,
         schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor),
         imagem_bytes=img_bytes,
@@ -322,7 +327,7 @@ def admin_create_produto(
 @app.post("/admin/produto/{produto_id}/delete")
 def admin_delete_produto(produto_id: int, _: str = Depends(_auth_admin), db: Session = Depends(get_db)):
     """
-    Remove produto do DB (comportamento atual).
+    Remove produto do DB (delete lógico).
     """
     crud.delete_produto(db, produto_id)
     return RedirectResponse(url="/admin/", status_code=303)
@@ -342,8 +347,7 @@ def admin_edit_produto(
     Edita produto existente.
 
     COMENTÁRIO:
-    - Se o admin enviar uma nova imagem, ela também passa por _read_image_upload,
-      portanto mantém compressão/validação.
+    - Se enviar uma nova imagem, ela também passa por compactação/validação.
     """
     imagem_bytes: bytes | None = None
     imagem_mime: str | None = None
@@ -390,9 +394,6 @@ def _read_image_upload(file: UploadFile) -> Tuple[bytes, str]:
     - Converte para RGB quando necessário (ex: PNG com alpha), garantindo compatibilidade.
     - Redimensiona para no máx 1200px no maior lado (mantém proporção).
     - Salva como JPEG (qualidade 82) ou mantém PNG se necessário.
-
-    Obs:
-    - Este método foi usado no Tópico 2 (compactação automática).
     """
     if not file:
         raise HTTPException(status_code=400, detail="Imagem obrigatória")
