@@ -1,147 +1,97 @@
-from __future__ import annotations
-
+# projeto/crud.py
 """
 crud.py
-=======
-CRUD do banco (SQLAlchemy) para Produto.
+-------
+Camada de acesso ao banco (SQLAlchemy) para Produtos.
 
-CORREÇÃO CRÍTICA (deploy Render):
-- Este arquivo NÃO pode ter FastAPI (não existe `@app.context_processor` no FastAPI).
-- No seu estado atual, o crud.py estava contaminado com código de main.py e decoradores
-  que derrubam o servidor no boot.
+OBJETIVO DESTA VERSÃO (DO ZERO):
+- Garantir que as imagens sejam armazenadas e lidas EXCLUSIVAMENTE do banco (Postgres/Neon).
+- NÃO usar filesystem local (Render free tier pode dormir/reiniciar).
+- NÃO usar campos inexistentes (ex.: produto.imagem / imagem_etag) que quebravam em runtime.
 
-Regra:
-- CRUD = apenas operações de DB (Session, query, commit, refresh).
+Observação:
+- O model Produto (models.py) deve possuir:
+  imagem_bytes, imagem_mime, imagem_sha256, imagem_url (opcional), ativo, etc.
 """
 
+from __future__ import annotations
+
 import hashlib
-from sqlalchemy import desc, func
+from typing import Optional, List
+
 from sqlalchemy.orm import Session
 
 import models
 import schemas
 
 
-def _sha256(data: bytes) -> str:
-    """Gera sha256 hex para ETag/integridade."""
+def _sha256_hex(data: bytes) -> str:
+    """Calcula SHA256 (hex) para ETag/cache e integridade."""
     return hashlib.sha256(data).hexdigest()
 
 
-def get_produtos(db: Session):
-    """
-    Retorna TODOS os produtos (ativos e inativos).
-    Usado no painel /admin.
-    """
+# =============================================================================
+# READ
+# =============================================================================
+
+def get_produto(db: Session, *, produto_id: int) -> Optional[models.Produto]:
+    """Busca 1 produto por ID."""
+    return db.query(models.Produto).filter(models.Produto.id == produto_id).first()
+
+
+def get_produtos(db: Session) -> List[models.Produto]:
+    """Lista todos os produtos (admin)."""
     return (
         db.query(models.Produto)
-        .order_by(desc(models.Produto.ativo), desc(models.Produto.atualizado_em), desc(models.Produto.criado_em))
+        .order_by(models.Produto.id.desc())
         .all()
     )
 
 
-def get_produtos_ativos(db: Session):
-    """Retorna apenas produtos ativos (usado na home / api)."""
+def get_produtos_ativos(db: Session) -> List[models.Produto]:
+    """Lista produtos ativos (vitrine)."""
     return (
         db.query(models.Produto)
         .filter(models.Produto.ativo.is_(True))
-        .order_by(desc(models.Produto.atualizado_em), desc(models.Produto.criado_em))
+        .order_by(models.Produto.id.desc())
         .all()
     )
 
 
-def count_produtos_ativos(db: Session) -> int:
-    """Conta produtos ativos (para paginação)."""
-    return (
-        db.query(func.count(models.Produto.id))
-        .filter(models.Produto.ativo.is_(True))
-        .scalar()
-        or 0
-    )
-
-
-def get_produtos_ativos_paginados(db: Session, *, page: int = 1, page_size: int = 10):
-    """
-    Retorna produtos ativos paginados (para otimizar a home).
-    """
-    page = max(1, page)
-    page_size = max(1, page_size)
-    offset = (page - 1) * page_size
-
-    return (
-        db.query(models.Produto)
-        .filter(models.Produto.ativo.is_(True))
-        .order_by(desc(models.Produto.atualizado_em), desc(models.Produto.criado_em))
-        .offset(offset)
-        .limit(page_size)
-        .all()
-    )
-
-
-def get_produtos_ativos_paginado(db: Session, *, skip: int = 0, limit: int = 10):
-    """
-    COMPATIBILIDADE (hotfix):
-    -----------------------
-    Algumas versões do main.py chamam:
-        crud.get_produtos_ativos_paginado(db, skip=..., limit=...)
-
-    Porém, neste projeto o método "oficial" é:
-        get_produtos_ativos_paginados(db, page=..., page_size=...)
-
-    Para NÃO quebrar deploys já publicados (Render) e manter mudanças mínimas,
-    este alias implementa o mesmo comportamento usando OFFSET/LIMIT.
-
-    Parâmetros:
-      - skip: quantos itens pular (OFFSET)
-      - limit: quantos itens retornar (LIMIT)
-    """
-    # COMENTÁRIO: garantindo valores válidos para não gerar erro no SQLAlchemy
-    skip = max(0, int(skip or 0))
-    limit = max(1, int(limit or 10))
-
-    return (
-        db.query(models.Produto)
-        .filter(models.Produto.ativo.is_(True))
-        .order_by(desc(models.Produto.atualizado_em), desc(models.Produto.criado_em))
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
-
-
-def get_produto(db: Session, produto_id: int):
-    """Busca produto ativo por ID (página detalhe)."""
-    return (
-        db.query(models.Produto)
-        .filter(models.Produto.id == produto_id, models.Produto.ativo.is_(True))
-        .first()
-    )
-
+# =============================================================================
+# CREATE / UPDATE
+# =============================================================================
 
 def create_produto(
     db: Session,
     produto: schemas.ProdutoCreate,
     *,
-    imagem_bytes: bytes | None = None,
-    imagem_mime: str | None = None,
-):
+    imagem_bytes: Optional[bytes] = None,
+    imagem_mime: Optional[str] = None,
+) -> models.Produto:
     """
-    Cria produto e salva imagem no DB (se enviada).
+    Cria produto.
 
-    Observações:
-    - imagem_bytes pode ser None (produto sem imagem).
-    - imagem_mime pode ser None (heurística na entrega).
+    IMPORTANTE:
+    - Se vier imagem_bytes, salvamos no DB (imagem_bytes/mime/sha256).
+    - NÃO escrevemos nada em disco.
     """
     novo = models.Produto(
         nome=produto.nome,
-        descricao=produto.descricao or "",
+        descricao=(produto.descricao or "").strip(),
         valor=float(produto.valor),
         ativo=True,
     )
 
     if imagem_bytes:
-        novo.imagem = imagem_bytes
-        novo.imagem_etag = _sha256(imagem_bytes)
-        novo.imagem_mime = imagem_mime
+        # Comentário: armazenamento confiável no Postgres/Neon
+        novo.imagem_bytes = imagem_bytes
+        novo.imagem_mime = (imagem_mime or "").strip() or None
+        novo.imagem_sha256 = _sha256_hex(imagem_bytes)
+
+        # Comentário: imagem_url é opcional (ex.: CDN). Se você quer 100% DB,
+        # não dependemos dela. Ela pode ficar None.
+        novo.imagem_url = None
 
     db.add(novo)
     db.commit()
@@ -151,23 +101,24 @@ def create_produto(
 
 def update_produto(
     db: Session,
+    *,
     produto_id: int,
     dados: schemas.ProdutoUpdate,
-    *,
-    imagem_bytes: bytes | None = None,
-    imagem_mime: str | None = None,
-):
+    imagem_bytes: Optional[bytes] = None,
+    imagem_mime: Optional[str] = None,
+) -> Optional[models.Produto]:
     """
-    Atualiza um produto existente.
+    Atualiza produto existente.
 
     Regras:
-    - Só atualiza campos se vierem preenchidos.
-    - Se imagem_bytes vier, substitui a imagem e recalcula ETag.
+    - Só atualiza campos que vierem preenchidos.
+    - Se vier imagem_bytes, substitui a imagem e recalcula sha256.
     """
-    p = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
+    p = get_produto(db, produto_id=produto_id)
     if not p:
         return None
 
+    # Campos básicos
     if dados.nome is not None:
         p.nome = dados.nome
     if dados.descricao is not None:
@@ -177,25 +128,27 @@ def update_produto(
     if dados.ativo is not None:
         p.ativo = bool(dados.ativo)
 
+    # Imagem (DB)
     if imagem_bytes:
-        p.imagem = imagem_bytes
-        p.imagem_etag = _sha256(imagem_bytes)
-        p.imagem_mime = imagem_mime
+        p.imagem_bytes = imagem_bytes
+        p.imagem_mime = (imagem_mime or "").strip() or None
+        p.imagem_sha256 = _sha256_hex(imagem_bytes)
+
+        # Comentário: Mantemos imagem_url como None para forçar leitura via /media/produto/{id}
+        p.imagem_url = None
 
     db.commit()
     db.refresh(p)
     return p
 
 
-def delete_produto(db: Session, produto_id: int) -> bool:
-    """
-    Exclui produto do banco.
+# =============================================================================
+# DELETE
+# =============================================================================
 
-    Retorna:
-      - True se excluiu
-      - False se não encontrou
-    """
-    p = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
+def delete_produto(db: Session, *, produto_id: int) -> bool:
+    """Remove produto."""
+    p = get_produto(db, produto_id=produto_id)
     if not p:
         return False
 
