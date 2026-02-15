@@ -1,253 +1,200 @@
 // static/js/main.js
 /**
- * ============================================
- * CANTONEIRA FÁCIL - SCRIPT PRINCIPAL
- * Gerenciamento de carrinho, produtos e interações
- * ============================================
+ * Carrinho robusto:
+ * - Salva no localStorage: id, nome, valor, quantidade
+ * - Modal renderiza SEM depender de /api/produtos (isso elimina o "badge tem itens mas modal vazio")
  */
 
-/* ===== VARIÁVEIS GLOBAIS ===== */
-let todosProdutos = [];
-
-/**
- * Carrega todos os produtos da API uma única vez
- * Utiliza cache simples para melhor performance
- */
-async function carregarProdutos() {
-  // Se já foram carregados, não carrega novamente
-  if (todosProdutos.length > 0) return;
-
+function _getCarrinho() {
+  // COMENTÁRIO: sempre retorna array válido
   try {
-    const res = await fetch('/api/produtos');
-
-    if (res.ok) {
-      todosProdutos = await res.json();
-      window.todosProdutos = todosProdutos;
-    } else {
-      console.error("Erro carregando produtos:", res.status);
-      alert("Falha ao carregar produtos. Tente recarregar a página.");
-    }
-  } catch (error) {
-    console.error("Erro na requisição:", error);
-    alert("Erro ao conectar com o servidor. Verifique sua conexão.");
+    const raw = localStorage.getItem("carrinho");
+    const data = raw ? JSON.parse(raw) : [];
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error("Carrinho corrompido no localStorage, resetando.", e);
+    localStorage.removeItem("carrinho");
+    return [];
   }
 }
 
+function _setCarrinho(carrinho) {
+  localStorage.setItem("carrinho", JSON.stringify(carrinho));
+}
+
 /**
- * Atualiza o ícone do carrinho com a quantidade de itens
- * Mostra/esconde o badge de contagem
+ * Atualiza o badge com total de itens (somatório das quantidades)
  */
 function atualizarIconeCarrinho() {
-  const carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-
-  // COMENTÁRIO: garante soma numérica mesmo se "quantidade" vier como string/undefined
+  const carrinho = _getCarrinho();
   const totalItens = carrinho.reduce((sum, item) => sum + Number(item.quantidade || 0), 0);
 
-  const cartCount = document.getElementById('cartCount');
+  const cartCount = document.getElementById("cartCount");
   if (cartCount) {
-    cartCount.textContent = totalItens;
-
-    // Mostra/esconde o badge de contagem
-    if (totalItens > 0) {
-      cartCount.parentElement.classList.add('has-items');
-    } else {
-      cartCount.parentElement.classList.remove('has-items');
-    }
+    cartCount.textContent = String(totalItens);
+    if (totalItens > 0) cartCount.parentElement.classList.add("has-items");
+    else cartCount.parentElement.classList.remove("has-items");
   }
 }
 
 /**
- * Adiciona um produto ao carrinho (localStorage)
- * Se o produto já existe, incrementa a quantidade
+ * Adiciona produto ao carrinho.
+ * Agora recebemos também nome e valor no clique (templates).
  *
- * @param {number} id - ID do produto
+ * @param {number} id
+ * @param {string} nome
+ * @param {number|string} valor
  */
-function adicionarCarrinho(id) {
-  // COMENTÁRIO: garante ID numérico (no HTML pode vir como string)
+function adicionarCarrinho(id, nome, valor) {
+  // COMENTÁRIO: normaliza tipos para evitar mismatch
   id = Number(id);
+  nome = String(nome || "").trim();
 
-  let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+  // Valor pode vir como "12.34" (string do template) -> converte
+  const valorNum = Number(valor);
 
-  // COMENTÁRIO: Number(i.id) mantém compatibilidade com carrinhos antigos salvos como string
+  let carrinho = _getCarrinho();
+
+  // Procura item já existente
   const existente = carrinho.find(i => Number(i.id) === id);
 
   if (existente) {
-    existente.quantidade++;
+    existente.quantidade = Number(existente.quantidade || 0) + 1;
+
+    // COMENTÁRIO: garante que nome/valor sempre fiquem atualizados
+    if (nome) existente.nome = nome;
+    if (!Number.isNaN(valorNum)) existente.valor = valorNum;
   } else {
-    carrinho.push({ id: id, quantidade: 1 }); // armazena id como número
+    carrinho.push({
+      id: id,
+      nome: nome || `Produto #${id}`,
+      valor: Number.isNaN(valorNum) ? 0 : valorNum,
+      quantidade: 1
+    });
   }
 
-  localStorage.setItem('carrinho', JSON.stringify(carrinho));
-
-  // Atualiza ícone
+  _setCarrinho(carrinho);
   atualizarIconeCarrinho();
-
-  // Mostra notificação
-  mostrarNotificacao('Produto adicionado ao carrinho!');
+  mostrarNotificacao("Produto adicionado ao carrinho!");
 }
 
 /**
- * Remove um item do carrinho ou decrementa quantidade
- *
- * @param {number} id - ID do produto
+ * Remove 1 unidade do item, ou remove o item inteiro se chegar em 0
  */
 function removerDoCarrinho(id) {
-  // COMENTÁRIO: garante ID numérico (evita mismatch na busca/remocao)
   id = Number(id);
+  let carrinho = _getCarrinho();
 
-  let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+  const idx = carrinho.findIndex(i => Number(i.id) === id);
+  if (idx === -1) return;
 
-  // COMENTÁRIO: Number(i.id) para compatibilidade com carrinhos antigos salvos como string
-  const index = carrinho.findIndex(i => Number(i.id) === id);
+  const q = Number(carrinho[idx].quantidade || 0);
+  if (q > 1) carrinho[idx].quantidade = q - 1;
+  else carrinho.splice(idx, 1);
 
-  if (index !== -1) {
-    if (carrinho[index].quantidade > 1) {
-      carrinho[index].quantidade--;
-    } else {
-      carrinho.splice(index, 1);
-    }
-
-    localStorage.setItem('carrinho', JSON.stringify(carrinho));
-    atualizarIconeCarrinho();
-    mostrarCarrinho(); // Atualiza o modal
-  }
+  _setCarrinho(carrinho);
+  atualizarIconeCarrinho();
+  mostrarCarrinho(); // Atualiza modal
 }
 
 /**
- * Fecha o modal do carrinho
+ * Fecha modal
  */
 function fecharCarrinho() {
-  const modal = document.getElementById('carrinhoModal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
+  const modal = document.getElementById("carrinhoModal");
+  if (modal) modal.style.display = "none";
 }
 
 /**
- * Mostra o modal do carrinho com itens
+ * Abre modal e renderiza carrinho SEM depender de API.
  */
-async function mostrarCarrinho() {
-  await carregarProdutos(); // Garante que produtos estejam carregados
+function mostrarCarrinho() {
+  const carrinho = _getCarrinho();
 
-  let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-
-  // ==========================================================
-  // FIX IMPORTANTE:
-  // - Seu base.html tem <div id="carrinhoItens"></div>
-  // - NÃO devemos sobrescrever ".modal-content", senão
-  //   apagamos a estrutura original do modal e pode parecer vazio.
-  // ==========================================================
-  const carrinhoItensEl = document.getElementById('carrinhoItens');
+  const carrinhoItensEl = document.getElementById("carrinhoItens");
   if (!carrinhoItensEl) {
     console.error("Elemento #carrinhoItens não encontrado no HTML.");
     alert("Erro ao abrir carrinho: estrutura do modal não encontrada.");
     return;
   }
 
-  let html = '<h3 class="modal-title">Seu Carrinho</h3><ul class="carrinho-lista">';
   let total = 0;
-  const itensParaWhats = [];
 
-  // COMENTÁRIO: flag para detectar quando o carrinho tem itens,
-  // mas não conseguimos mapear os produtos (ex: falha ao carregar /api/produtos)
-  let encontrouAlgumProduto = false;
+  let html = `<h3 class="modal-title">Seu Carrinho</h3>`;
 
-  carrinho.forEach(item => {
-    // COMENTÁRIO: item.id pode estar como string no localStorage; converte para número
-    const itemId = Number(item.id);
+  if (carrinho.length === 0) {
+    html += `<p class="empty-cart">Seu carrinho está vazio.</p>`;
+    carrinhoItensEl.innerHTML = html;
 
-    // COMENTÁRIO: p.id vem como número do backend; agora a comparação fecha
-    const prod = todosProdutos.find(p => p.id === itemId);
+    const modal = document.getElementById("carrinhoModal");
+    if (modal) modal.style.display = "flex";
+    return;
+  }
 
-    if (prod) {
-      encontrouAlgumProduto = true;
+  html += `<ul class="carrinho-lista">`;
 
-      const subtotal = Number(prod.valor) * Number(item.quantidade || 0);
-      total += subtotal;
+  // COMENTÁRIO: renderiza sempre, porque agora temos nome/valor no localStorage
+  const itensParaWhats = carrinho.map(item => {
+    const nome = String(item.nome || `Produto #${item.id}`);
+    const quantidade = Number(item.quantidade || 0);
+    const valorUnit = Number(item.valor || 0);
 
-      html += `
-        <li class="carrinho-item">
-          <span>${Number(item.quantidade || 0)}x ${prod.nome}</span>
-          <span>R$ ${subtotal.toFixed(2)}</span>
-          <button class="btn-remove" onclick="removerDoCarrinho(${itemId})">Remover</button>
-        </li>
-      `;
+    const subtotal = valorUnit * quantidade;
+    total += subtotal;
 
-      itensParaWhats.push({
-        nome: prod.nome,
-        quantidade: Number(item.quantidade || 0),
-        valor_unitario: Number(prod.valor)
-      });
-    } else {
-      // COMENTÁRIO: fallback seguro (não muda regras do sistema)
-      // Se por algum motivo não achou o produto na lista, exibimos algo pra não parecer “vazio”
-      html += `
-        <li class="carrinho-item">
-          <span>${Number(item.quantidade || 0)}x Produto #${itemId} (não carregado)</span>
-          <span>—</span>
-          <button class="btn-remove" onclick="removerDoCarrinho(${itemId})">Remover</button>
-        </li>
-      `;
-    }
+    html += `
+      <li class="carrinho-item">
+        <span>${quantidade}x ${nome}</span>
+        <span>R$ ${subtotal.toFixed(2)}</span>
+        <button class="btn-remove" onclick="removerDoCarrinho(${Number(item.id)})">Remover</button>
+      </li>
+    `;
+
+    return {
+      nome: nome,
+      quantidade: quantidade,
+      valor_unitario: valorUnit
+    };
   });
 
-  html += '</ul>';
+  html += `</ul>`;
+  html += `<h4 class="carrinho-total">Total: R$ ${total.toFixed(2)}</h4>`;
+  html += `<button class="btn-primary carrinho-btn" onclick='enviarWhatsApp(${JSON.stringify(itensParaWhats)})'>Entrar em Contato</button>`;
 
-  // Se o carrinho tem itens, mas NENHUM produto foi encontrado, avisamos:
-  if (carrinho.length > 0 && !encontrouAlgumProduto) {
-    html += `
-      <p class="empty-cart">
-        Não consegui carregar os dados dos produtos agora.
-        Recarregue a página e tente novamente.
-      </p>
-    `;
-  }
-
-  // Total sempre aparece quando há itens, mesmo que 0 (transparência pro usuário)
-  if (carrinho.length > 0) {
-    html += `<h4 class="carrinho-total">Total: R$ ${total.toFixed(2)}</h4>`;
-    html += `<button class="btn-primary carrinho-btn" onclick='enviarWhatsApp(${JSON.stringify(itensParaWhats)})'>Entrar em Contato</button>`;
-  } else {
-    html += '<p class="empty-cart">Seu carrinho está vazio.</p>';
-  }
-
-  // FIX: injeta APENAS no container correto do modal
   carrinhoItensEl.innerHTML = html;
 
-  // Exibe modal
-  const modal = document.getElementById('carrinhoModal');
-  if (modal) {
-    modal.style.display = 'flex';
-  }
+  const modal = document.getElementById("carrinhoModal");
+  if (modal) modal.style.display = "flex";
 }
 
 /**
- * Envia itens do carrinho para API e abre WhatsApp
- *
- * @param {array} itens - Lista de itens para WhatsApp
+ * Envia itens para backend gerar o link do WhatsApp
  */
 async function enviarWhatsApp(itens) {
   try {
-    const res = await fetch('/api/whatsapp', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+    const res = await fetch("/api/whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(itens)
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      window.open(data.url, '_blank');
-
-      // Limpa carrinho após envio
-      localStorage.removeItem('carrinho');
-      atualizarIconeCarrinho();
-      fecharCarrinho();
-    } else {
-      alert('Erro ao gerar link. Tente novamente.');
+    if (!res.ok) {
+      alert("Erro ao gerar link. Tente novamente.");
+      return;
     }
+
+    const data = await res.json();
+
+    // Abre WhatsApp
+    window.open(data.url, "_blank");
+
+    // Limpa carrinho após envio
+    localStorage.removeItem("carrinho");
+    atualizarIconeCarrinho();
+    fecharCarrinho();
   } catch (error) {
-    console.error('Erro:', error);
-    alert('Erro de conexão. Verifique sua internet.');
+    console.error("Erro:", error);
+    alert("Erro de conexão. Verifique sua internet.");
   }
 }
 
@@ -255,66 +202,55 @@ async function enviarWhatsApp(itens) {
  * Busca produtos na página
  */
 function buscarProdutos() {
-  const inputEl = document.getElementById('searchInput');
-  const input = (inputEl ? inputEl.value : '').toLowerCase();
-  const grid = document.getElementById('produtosGrid');
-
+  const inputEl = document.getElementById("searchInput");
+  const input = (inputEl ? inputEl.value : "").toLowerCase();
+  const grid = document.getElementById("produtosGrid");
   if (!grid) return;
 
-  const cards = grid.querySelectorAll('.card-produto');
-
+  const cards = grid.querySelectorAll(".card-produto");
   cards.forEach(card => {
-    const title = card.querySelector('.card-title').textContent.toLowerCase();
-    card.style.display = title.includes(input) ? 'block' : 'none';
+    const title = card.querySelector(".card-title").textContent.toLowerCase();
+    card.style.display = title.includes(input) ? "block" : "none";
   });
 }
 
 /**
- * Mostra notificação toast
- *
- * @param {string} mensagem - Mensagem a exibir
+ * Toast simples
  */
 function mostrarNotificacao(mensagem) {
-  const notificacao = document.createElement('div');
-  notificacao.className = 'notificacao';
+  const notificacao = document.createElement("div");
+  notificacao.className = "notificacao";
   notificacao.textContent = mensagem;
-
   document.body.appendChild(notificacao);
 
-  // Remove após 3 segundos
   setTimeout(() => {
-    notificacao.style.animation = 'slideOut 0.3s ease';
+    notificacao.style.animation = "slideOut 0.3s ease";
     setTimeout(() => notificacao.remove(), 300);
   }, 3000);
 }
 
 /**
- * Fecha o modal ao clicar fora dele
+ * Fecha modal ao clicar fora
  */
 function fecharModalAoClicar(event) {
-  const modal = document.getElementById('carrinhoModal');
-
-  if (modal && event.target === modal) {
-    fecharCarrinho();
-  }
+  const modal = document.getElementById("carrinhoModal");
+  if (modal && event.target === modal) fecharCarrinho();
 }
 
 /**
- * Adiciona animações CSS dinamicamente
+ * Animações do toast
  */
 function adicionarAnimacoes() {
-  const style = document.createElement('style');
+  const style = document.createElement("style");
   style.textContent = `
     @keyframes slideIn {
       from { transform: translateX(400px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
-
     @keyframes slideOut {
       from { transform: translateX(0); opacity: 1; }
       to { transform: translateX(400px); opacity: 0; }
     }
-
     .notificacao {
       position: fixed;
       bottom: 20px;
@@ -332,44 +268,38 @@ function adicionarAnimacoes() {
 }
 
 /**
- * Inicializa o site ao carregar
+ * Inicializa
  */
-window.addEventListener('load', () => {
-  carregarProdutos();
+window.addEventListener("load", () => {
   atualizarIconeCarrinho();
   adicionarAnimacoes();
 
-  const modal = document.getElementById('carrinhoModal');
-  if (modal) {
-    modal.addEventListener('click', fecharModalAoClicar);
-  }
+  const modal = document.getElementById("carrinhoModal");
+  if (modal) modal.addEventListener("click", fecharModalAoClicar);
 
-  const searchInput = document.getElementById('searchInput');
+  const searchInput = document.getElementById("searchInput");
   if (searchInput) {
-    searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') buscarProdutos();
+    searchInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") buscarProdutos();
     });
   }
-
-  console.log('✓ Site carregado com sucesso!');
 });
 
 /**
- * Sincroniza contagem do carrinho com outras abas
+ * Sincroniza badge com outras abas
  */
 setInterval(() => {
   atualizarIconeCarrinho();
-}, 5000);
+}, 2000);
 
 // ===== Mobile navigation =====
 function toggleNavMenu() {
-  const nav = document.getElementById('siteNav');
+  const nav = document.getElementById("siteNav");
   if (!nav) return;
-  nav.classList.toggle('open');
+  nav.classList.toggle("open");
 }
 
-// Fecha menu se a tela for redimensionada para desktop
-window.addEventListener('resize', () => {
-  const nav = document.getElementById('siteNav');
-  if (nav && window.innerWidth > 800) nav.classList.remove('open');
+window.addEventListener("resize", () => {
+  const nav = document.getElementById("siteNav");
+  if (nav && window.innerWidth > 800) nav.classList.remove("open");
 });

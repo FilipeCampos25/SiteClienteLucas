@@ -6,7 +6,6 @@
 <section class="hero-section">
   <div class="hero-content">
     <div class="hero-text">
-      <!-- COMENTÁRIO: Para adicionar uma imagem ao hero, substitua o SVG por <img src="sua-imagem-hero.jpg" class="hero-img"> ou ajuste o placeholder. -->
       <h1 class="hero-title">Cantoneiras e Perfis Metálicos Premium</h1>
       <p class="hero-subtitle">Qualidade, durabilidade e confiança em cada produto</p>
       <p class="hero-description">Fornecemos soluções metálicas de excelência para sua obra. Entrega rápida e atendimento personalizado.</p>
@@ -63,6 +62,7 @@
 <section id="produtos" class="produtos-section">
   <h2 class="section-title">Nossos Produtos</h2>
   <p class="section-subtitle">Explore nossa linha completa de cantoneiras e perfis metálicos</p>
+
   <div class="grid-produtos" id="produtosGrid">
     {% for p in produtos %}
     <div class="card-produto">
@@ -75,18 +75,25 @@
         <div class="card-actions">
           <a href="/produto/{{ p.id }}" class="btn-view">Ver Detalhes</a>
 
-          <button class="btn-primary btn-add-cart" onclick="adicionarCarrinho('{{ p.id }}')">Adicionar</button>
+          {# ===========================================================
+             FIX CARRINHO DEFINITIVO:
+             - Passa id (número), nome e valor para o JS
+             - Assim o carrinho NÃO depende de /api/produtos para renderizar
+             =========================================================== #}
+          <button
+            class="btn-primary btn-add-cart"
+            data-id="{{ p.id }}"
+            data-nome="{{ p.nome }}"
+            data-valor="{{ p.valor }}"
+            onclick="adicionarCarrinho(this.dataset.id, this.dataset.nome, this.dataset.valor)"
+          >
+            Adicionar
+          </button>
         </div>
       </div>
     </div>
     {% endfor %}
   </div>
-
-  {# ------------------------------------------------------------------------- #}
-  {# PAGINAÇÃO (Jinja2)                                                        #}
-  {# - `pagina_atual`, `total_paginas` e `paginacao` vêm da rota "/" (main.py). #}
-  {# - Cada botão aponta para "/?page=N#produtos" mantendo o scroll no grid.    #}
-  {# ------------------------------------------------------------------------- #}
 
   {% if total_paginas and total_paginas > 1 %}
   <div class="pagination-wrapper">

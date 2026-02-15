@@ -4,14 +4,12 @@
 {% block content %}
 <section class="produto-page">
   <div class="produto-container">
-    <!-- Coluna esquerda: imagem -->
     <div class="produto-gallery">
       <div class="produto-image-wrapper">
         <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="produto-image" onerror="this.src='/static/images/placeholder.png'">
       </div>
     </div>
 
-    <!-- Coluna direita: informações -->
     <div class="produto-info">
       <h2 class="produto-title">{{ p.nome }}</h2>
 
@@ -30,12 +28,21 @@
       <div class="produto-actions">
         <a href="/#produtos" class="btn-secondary">← Voltar</a>
 
-        <button class="btn-primary btn-add-cart-large" onclick="adicionarCarrinho('{{ p.id }}')">
+        {# ===========================================================
+           FIX CARRINHO DEFINITIVO:
+           - Passa id, nome e valor direto para o JS
+           =========================================================== #}
+        <button
+          class="btn-primary btn-add-cart-large"
+          data-id="{{ p.id }}"
+          data-nome="{{ p.nome }}"
+          data-valor="{{ p.valor }}"
+          onclick="adicionarCarrinho(this.dataset.id, this.dataset.nome, this.dataset.valor)"
+        >
           🛒 Adicionar ao Carrinho
         </button>
       </div>
 
-      <!-- Badge de segurança -->
       <div class="security-badge">
         <p class="security-text">
           <span>✓</span> Compra Segura |
@@ -47,7 +54,6 @@
   </div>
 </section>
 
-<!-- ===== SEÇÃO DE PRODUTOS RELACIONADOS ===== -->
 <section class="related-section">
   <h2 class="section-title">Você Também Pode Se Interessar</h2>
   <p class="section-subtitle">Navegue por nossa coleção completa</p>
@@ -56,7 +62,6 @@
   </div>
 </section>
 
-<!-- ===== SEÇÃO CTA FINAL ===== -->
 <section class="final-cta-section">
   <div class="cta-wrapper">
     <h2 class="cta-title">Dúvidas sobre este produto?</h2>
@@ -71,5 +76,4 @@
     </div>
   </div>
 </section>
-
 {% endblock %}
