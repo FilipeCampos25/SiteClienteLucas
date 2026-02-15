@@ -31,6 +31,21 @@ def _sha256_hex(data: bytes) -> str:
 
 
 # =============================================================================
+# PATCH MÍNIMO (DB NOT NULL em imagem_url)
+# -----------------------------------------------------------------------------
+# Seu Postgres/Neon está com a coluna `imagem_url` como NOT NULL.
+# Então, inserir/atualizar com imagem_url=None derruba o INSERT/UPDATE com 500.
+#
+# Como você NÃO autorizou mudar o schema, o menor delta possível é:
+# - garantir que imagem_url sempre tenha uma string válida (fallback).
+#
+# Esse fallback NÃO muda HTML/CSS, NÃO muda rotas, NÃO muda templates.
+# Só evita NULL no banco.
+# =============================================================================
+PLACEHOLDER_IMAGE_URL = "/static/images/placeholder.png"
+
+
+# =============================================================================
 # READ
 # =============================================================================
 
@@ -118,15 +133,24 @@ def create_produto(
         ativo=True,
     )
 
+    # -------------------------------------------------------------------------
+    # PATCH MÍNIMO:
+    # O DB exige imagem_url NOT NULL, então garantimos um valor string.
+    # Se você servir imagens via /media/produto/{id}, o placeholder é só fallback.
+    # -------------------------------------------------------------------------
+    # Nota: mesmo quando houver imagem_bytes, manteremos imagem_url preenchida
+    # para não violar o NOT NULL e para manter compatibilidade com templates antigos.
+    novo.imagem_url = PLACEHOLDER_IMAGE_URL
+
     if imagem_bytes:
         # Comentário: armazenamento confiável no Postgres/Neon
         novo.imagem_bytes = imagem_bytes
         novo.imagem_mime = (imagem_mime or "").strip() or None
         novo.imagem_sha256 = _sha256_hex(imagem_bytes)
 
-        # Comentário: imagem_url é opcional (ex.: CDN). Se você quer 100% DB,
-        # não dependemos dela. Ela pode ficar None.
-        novo.imagem_url = None
+        # PATCH: NÃO pode ser None por causa do NOT NULL
+        # (antes: novo.imagem_url = None)
+        novo.imagem_url = PLACEHOLDER_IMAGE_URL
 
     db.add(novo)
     db.commit()
@@ -163,14 +187,23 @@ def update_produto(
     if dados.ativo is not None:
         p.ativo = bool(dados.ativo)
 
+    # -------------------------------------------------------------------------
+    # PATCH MÍNIMO defensivo:
+    # garante que imagem_url nunca esteja None no objeto (DB NOT NULL).
+    # -------------------------------------------------------------------------
+    if getattr(p, "imagem_url", None) is None:
+        p.imagem_url = PLACEHOLDER_IMAGE_URL
+
     # Imagem (DB)
     if imagem_bytes:
         p.imagem_bytes = imagem_bytes
         p.imagem_mime = (imagem_mime or "").strip() or None
         p.imagem_sha256 = _sha256_hex(imagem_bytes)
 
-        # Comentário: Mantemos imagem_url como None para forçar leitura via /media/produto/{id}
-        p.imagem_url = None
+        # PATCH: NÃO pode ser None por causa do NOT NULL
+        # (antes: p.imagem_url = None)
+        if not p.imagem_url:
+            p.imagem_url = PLACEHOLDER_IMAGE_URL
 
     db.commit()
     db.refresh(p)
