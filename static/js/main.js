@@ -19,7 +19,7 @@ async function carregarProdutos() {
 
   try {
     const res = await fetch('/api/produtos');
-    
+
     if (res.ok) {
       todosProdutos = await res.json();
       window.todosProdutos = todosProdutos;
@@ -40,13 +40,13 @@ async function carregarProdutos() {
 function atualizarIconeCarrinho() {
   const carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
 
-  // FIX: garante soma numérica mesmo se "quantidade" vier como string/undefined
+  // COMENTÁRIO: garante soma numérica mesmo se "quantidade" vier como string/undefined
   const totalItens = carrinho.reduce((sum, item) => sum + Number(item.quantidade || 0), 0);
-  
+
   const cartCount = document.getElementById('cartCount');
   if (cartCount) {
     cartCount.textContent = totalItens;
-    
+
     // Mostra/esconde o badge de contagem
     if (totalItens > 0) {
       cartCount.parentElement.classList.add('has-items');
@@ -59,55 +59,54 @@ function atualizarIconeCarrinho() {
 /**
  * Adiciona um produto ao carrinho (localStorage)
  * Se o produto já existe, incrementa a quantidade
- * 
+ *
  * @param {number} id - ID do produto
  */
 function adicionarCarrinho(id) {
-  // FIX: garante ID numérico (no HTML pode vir como string)
+  // COMENTÁRIO: garante ID numérico (no HTML pode vir como string)
   id = Number(id);
 
   let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-  
-  // Verifica se o produto já está no carrinho
-  // FIX: Number(i.id) para compatibilidade com carrinhos antigos salvos como string
+
+  // COMENTÁRIO: Number(i.id) mantém compatibilidade com carrinhos antigos salvos como string
   const existente = carrinho.find(i => Number(i.id) === id);
-  
+
   if (existente) {
     existente.quantidade++;
   } else {
     carrinho.push({ id: id, quantidade: 1 }); // armazena id como número
   }
-  
+
   localStorage.setItem('carrinho', JSON.stringify(carrinho));
-  
+
   // Atualiza ícone
   atualizarIconeCarrinho();
-  
+
   // Mostra notificação
   mostrarNotificacao('Produto adicionado ao carrinho!');
 }
 
 /**
  * Remove um item do carrinho ou decrementa quantidade
- * 
+ *
  * @param {number} id - ID do produto
  */
 function removerDoCarrinho(id) {
-  // FIX: garante ID numérico (evita mismatch na busca/remocao)
+  // COMENTÁRIO: garante ID numérico (evita mismatch na busca/remocao)
   id = Number(id);
 
   let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-  
-  // FIX: Number(i.id) para compatibilidade com carrinhos antigos salvos como string
+
+  // COMENTÁRIO: Number(i.id) para compatibilidade com carrinhos antigos salvos como string
   const index = carrinho.findIndex(i => Number(i.id) === id);
-  
+
   if (index !== -1) {
     if (carrinho[index].quantidade > 1) {
       carrinho[index].quantidade--;
     } else {
       carrinho.splice(index, 1);
     }
-    
+
     localStorage.setItem('carrinho', JSON.stringify(carrinho));
     atualizarIconeCarrinho();
     mostrarCarrinho(); // Atualiza o modal
@@ -129,49 +128,93 @@ function fecharCarrinho() {
  */
 async function mostrarCarrinho() {
   await carregarProdutos(); // Garante que produtos estejam carregados
-  
+
   let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+
+  // ==========================================================
+  // FIX IMPORTANTE:
+  // - Seu base.html tem <div id="carrinhoItens"></div>
+  // - NÃO devemos sobrescrever ".modal-content", senão
+  //   apagamos a estrutura original do modal e pode parecer vazio.
+  // ==========================================================
+  const carrinhoItensEl = document.getElementById('carrinhoItens');
+  if (!carrinhoItensEl) {
+    console.error("Elemento #carrinhoItens não encontrado no HTML.");
+    alert("Erro ao abrir carrinho: estrutura do modal não encontrada.");
+    return;
+  }
+
   let html = '<h3 class="modal-title">Seu Carrinho</h3><ul class="carrinho-lista">';
   let total = 0;
   const itensParaWhats = [];
 
+  // COMENTÁRIO: flag para detectar quando o carrinho tem itens,
+  // mas não conseguimos mapear os produtos (ex: falha ao carregar /api/produtos)
+  let encontrouAlgumProduto = false;
+
   carrinho.forEach(item => {
-      // FIX: item.id pode estar como string no localStorage; converte para número
-      const itemId = Number(item.id);
-      const prod = todosProdutos.find(p => p.id === itemId);
+    // COMENTÁRIO: item.id pode estar como string no localStorage; converte para número
+    const itemId = Number(item.id);
+
+    // COMENTÁRIO: p.id vem como número do backend; agora a comparação fecha
+    const prod = todosProdutos.find(p => p.id === itemId);
 
     if (prod) {
-      const subtotal = prod.valor * item.quantidade;
+      encontrouAlgumProduto = true;
+
+      const subtotal = Number(prod.valor) * Number(item.quantidade || 0);
       total += subtotal;
+
       html += `
         <li class="carrinho-item">
-          <span>${item.quantidade}x ${prod.nome}</span>
+          <span>${Number(item.quantidade || 0)}x ${prod.nome}</span>
           <span>R$ ${subtotal.toFixed(2)}</span>
           <button class="btn-remove" onclick="removerDoCarrinho(${itemId})">Remover</button>
         </li>
       `;
+
       itensParaWhats.push({
         nome: prod.nome,
-        quantidade: item.quantidade,
-        valor_unitario: prod.valor
+        quantidade: Number(item.quantidade || 0),
+        valor_unitario: Number(prod.valor)
       });
+    } else {
+      // COMENTÁRIO: fallback seguro (não muda regras do sistema)
+      // Se por algum motivo não achou o produto na lista, exibimos algo pra não parecer “vazio”
+      html += `
+        <li class="carrinho-item">
+          <span>${Number(item.quantidade || 0)}x Produto #${itemId} (não carregado)</span>
+          <span>—</span>
+          <button class="btn-remove" onclick="removerDoCarrinho(${itemId})">Remover</button>
+        </li>
+      `;
     }
   });
 
   html += '</ul>';
-  html += `<h4 class="carrinho-total">Total: R$ ${total.toFixed(2)}</h4>`;
-  
+
+  // Se o carrinho tem itens, mas NENHUM produto foi encontrado, avisamos:
+  if (carrinho.length > 0 && !encontrouAlgumProduto) {
+    html += `
+      <p class="empty-cart">
+        Não consegui carregar os dados dos produtos agora.
+        Recarregue a página e tente novamente.
+      </p>
+    `;
+  }
+
+  // Total sempre aparece quando há itens, mesmo que 0 (transparência pro usuário)
   if (carrinho.length > 0) {
+    html += `<h4 class="carrinho-total">Total: R$ ${total.toFixed(2)}</h4>`;
     html += `<button class="btn-primary carrinho-btn" onclick='enviarWhatsApp(${JSON.stringify(itensParaWhats)})'>Entrar em Contato</button>`;
   } else {
     html += '<p class="empty-cart">Seu carrinho está vazio.</p>';
   }
 
-  const modalContent = document.querySelector('#carrinhoModal .modal-content');
-  if (modalContent) {
-    modalContent.innerHTML = html;
-  }
+  // FIX: injeta APENAS no container correto do modal
+  carrinhoItensEl.innerHTML = html;
 
+  // Exibe modal
   const modal = document.getElementById('carrinhoModal');
   if (modal) {
     modal.style.display = 'flex';
@@ -180,7 +223,7 @@ async function mostrarCarrinho() {
 
 /**
  * Envia itens do carrinho para API e abre WhatsApp
- * 
+ *
  * @param {array} itens - Lista de itens para WhatsApp
  */
 async function enviarWhatsApp(itens) {
@@ -190,10 +233,11 @@ async function enviarWhatsApp(itens) {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(itens)
     });
-    
+
     if (res.ok) {
       const data = await res.json();
       window.open(data.url, '_blank');
+
       // Limpa carrinho após envio
       localStorage.removeItem('carrinho');
       atualizarIconeCarrinho();
@@ -211,13 +255,14 @@ async function enviarWhatsApp(itens) {
  * Busca produtos na página
  */
 function buscarProdutos() {
-  const input = document.getElementById('searchInput').value.toLowerCase();
+  const inputEl = document.getElementById('searchInput');
+  const input = (inputEl ? inputEl.value : '').toLowerCase();
   const grid = document.getElementById('produtosGrid');
-  
+
   if (!grid) return;
-  
+
   const cards = grid.querySelectorAll('.card-produto');
-  
+
   cards.forEach(card => {
     const title = card.querySelector('.card-title').textContent.toLowerCase();
     card.style.display = title.includes(input) ? 'block' : 'none';
@@ -226,16 +271,16 @@ function buscarProdutos() {
 
 /**
  * Mostra notificação toast
- * 
+ *
  * @param {string} mensagem - Mensagem a exibir
  */
 function mostrarNotificacao(mensagem) {
   const notificacao = document.createElement('div');
   notificacao.className = 'notificacao';
   notificacao.textContent = mensagem;
-  
+
   document.body.appendChild(notificacao);
-  
+
   // Remove após 3 segundos
   setTimeout(() => {
     notificacao.style.animation = 'slideOut 0.3s ease';
@@ -248,7 +293,7 @@ function mostrarNotificacao(mensagem) {
  */
 function fecharModalAoClicar(event) {
   const modal = document.getElementById('carrinhoModal');
-  
+
   if (modal && event.target === modal) {
     fecharCarrinho();
   }
@@ -261,25 +306,13 @@ function adicionarAnimacoes() {
   const style = document.createElement('style');
   style.textContent = `
     @keyframes slideIn {
-      from {
-        transform: translateX(400px);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
     }
-    
+
     @keyframes slideOut {
-      from {
-        transform: translateX(0);
-        opacity: 1;
-      }
-      to {
-        transform: translateX(400px);
-        opacity: 0;
-      }
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(400px); opacity: 0; }
     }
 
     .notificacao {
@@ -300,39 +333,29 @@ function adicionarAnimacoes() {
 
 /**
  * Inicializa o site ao carregar
- * Carrega produtos, atualiza carrinho e adiciona event listeners
  */
 window.addEventListener('load', () => {
-  // Carrega produtos
   carregarProdutos();
-  
-  // Atualiza ícone do carrinho
   atualizarIconeCarrinho();
-  
-  // Adiciona animações
   adicionarAnimacoes();
-  
-  // Event listener para fechar modal ao clicar fora
+
   const modal = document.getElementById('carrinhoModal');
   if (modal) {
     modal.addEventListener('click', fecharModalAoClicar);
   }
-  
-  // Event listener para busca ao pressionar Enter
+
   const searchInput = document.getElementById('searchInput');
   if (searchInput) {
     searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        buscarProdutos();
-      }
+      if (e.key === 'Enter') buscarProdutos();
     });
   }
-  
+
   console.log('✓ Site carregado com sucesso!');
 });
 
 /**
- * Atualiza o carrinho a cada 5 segundos (sincronização com outras abas)
+ * Sincroniza contagem do carrinho com outras abas
  */
 setInterval(() => {
   atualizarIconeCarrinho();
