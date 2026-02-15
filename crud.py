@@ -59,7 +59,7 @@ def count_produtos_ativos(db: Session) -> int:
     )
 
 
-def get_produtos_ativos_paginados(db: Session, *, page: int = 1, page_size: int = 20):
+def get_produtos_ativos_paginados(db: Session, *, page: int = 1, page_size: int = 10):
     """
     Retorna produtos ativos paginados (para otimizar a home).
     """
@@ -73,6 +73,37 @@ def get_produtos_ativos_paginados(db: Session, *, page: int = 1, page_size: int 
         .order_by(desc(models.Produto.atualizado_em), desc(models.Produto.criado_em))
         .offset(offset)
         .limit(page_size)
+        .all()
+    )
+
+
+def get_produtos_ativos_paginado(db: Session, *, skip: int = 0, limit: int = 10):
+    """
+    COMPATIBILIDADE (hotfix):
+    -----------------------
+    Algumas versões do main.py chamam:
+        crud.get_produtos_ativos_paginado(db, skip=..., limit=...)
+
+    Porém, neste projeto o método "oficial" é:
+        get_produtos_ativos_paginados(db, page=..., page_size=...)
+
+    Para NÃO quebrar deploys já publicados (Render) e manter mudanças mínimas,
+    este alias implementa o mesmo comportamento usando OFFSET/LIMIT.
+
+    Parâmetros:
+      - skip: quantos itens pular (OFFSET)
+      - limit: quantos itens retornar (LIMIT)
+    """
+    # COMENTÁRIO: garantindo valores válidos para não gerar erro no SQLAlchemy
+    skip = max(0, int(skip or 0))
+    limit = max(1, int(limit or 10))
+
+    return (
+        db.query(models.Produto)
+        .filter(models.Produto.ativo.is_(True))
+        .order_by(desc(models.Produto.atualizado_em), desc(models.Produto.criado_em))
+        .offset(skip)
+        .limit(limit)
         .all()
     )
 
@@ -96,72 +127,78 @@ def create_produto(
     """
     Cria produto e salva imagem no DB (se enviada).
 
-    Observação:
-    - Guarda bytes puros (sem base64) para evitar corrupção.
-    - Preenche imagem_sha256 para cache/ETag.
+    Observações:
+    - imagem_bytes pode ser None (produto sem imagem).
+    - imagem_mime pode ser None (heurística na entrega).
     """
-    data = produto.dict() if hasattr(produto, "dict") else dict(produto)
-    db_produto = models.Produto(**data)
+    novo = models.Produto(
+        nome=produto.nome,
+        descricao=produto.descricao or "",
+        valor=float(produto.valor),
+        ativo=True,
+    )
 
-    if imagem_bytes is not None:
-        db_produto.imagem_bytes = imagem_bytes
-        db_produto.imagem_mime = imagem_mime or "application/octet-stream"
-        db_produto.imagem_sha256 = _sha256(imagem_bytes)
+    if imagem_bytes:
+        novo.imagem = imagem_bytes
+        novo.imagem_etag = _sha256(imagem_bytes)
+        novo.imagem_mime = imagem_mime
 
-    db.add(db_produto)
+    db.add(novo)
     db.commit()
-    db.refresh(db_produto)
-
-    # Após ter ID, define URL padrão se houver bytes
-    if db_produto.imagem_bytes:
-        db_produto.imagem_url = f"/media/produto/{db_produto.id}"
-        db.commit()
-        db.refresh(db_produto)
-
-    return db_produto
+    db.refresh(novo)
+    return novo
 
 
 def update_produto(
     db: Session,
     produto_id: int,
-    produto: schemas.ProdutoUpdate,
+    dados: schemas.ProdutoUpdate,
     *,
     imagem_bytes: bytes | None = None,
     imagem_mime: str | None = None,
 ):
     """
-    Atualiza campos do produto e substitui imagem (se enviada).
+    Atualiza um produto existente.
+
+    Regras:
+    - Só atualiza campos se vierem preenchidos.
+    - Se imagem_bytes vier, substitui a imagem e recalcula ETag.
     """
-    db_produto = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
-    if not db_produto:
+    p = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
+    if not p:
         return None
 
-    data = produto.dict(exclude_unset=True) if hasattr(produto, "dict") else dict(produto)
-    for k, v in data.items():
-        # Evita sobrescrever campos com None vindo do form
-        if v is not None:
-            setattr(db_produto, k, v)
+    if dados.nome is not None:
+        p.nome = dados.nome
+    if dados.descricao is not None:
+        p.descricao = dados.descricao
+    if dados.valor is not None:
+        p.valor = float(dados.valor)
+    if dados.ativo is not None:
+        p.ativo = bool(dados.ativo)
 
-    if imagem_bytes is not None:
-        db_produto.imagem_bytes = imagem_bytes
-        db_produto.imagem_mime = imagem_mime or "application/octet-stream"
-        db_produto.imagem_sha256 = _sha256(imagem_bytes)
-        db_produto.imagem_url = f"/media/produto/{produto_id}"
+    if imagem_bytes:
+        p.imagem = imagem_bytes
+        p.imagem_etag = _sha256(imagem_bytes)
+        p.imagem_mime = imagem_mime
 
     db.commit()
-    db.refresh(db_produto)
-    return db_produto
+    db.refresh(p)
+    return p
 
 
-def delete_produto(db: Session, produto_id: int):
+def delete_produto(db: Session, produto_id: int) -> bool:
     """
-    Delete lógico: marca produto como inativo.
-    """
-    db_produto = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
-    if not db_produto:
-        return None
+    Exclui produto do banco.
 
-    db_produto.ativo = False
+    Retorna:
+      - True se excluiu
+      - False se não encontrou
+    """
+    p = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
+    if not p:
+        return False
+
+    db.delete(p)
     db.commit()
-    db.refresh(db_produto)
-    return db_produto
+    return True
