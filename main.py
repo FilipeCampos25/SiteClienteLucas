@@ -228,7 +228,10 @@ def index(request: Request, db: Session = Depends(get_db)):
         {
             "request": request,
             "produtos": view,
-            "whatsapp_numero": telefone_visivel(WHATSAPP_NUMERO),
+            # PATCH MÍNIMO:
+            # telefone_visivel() no seu utils.py NÃO recebe parâmetro.
+            # Ela já lê WHATSAPP_NUMERO do config.py internamente.
+            "whatsapp_numero": telefone_visivel(),
         },
     )
 
@@ -250,7 +253,8 @@ def produto_detalhe(produto_id: int, request: Request, db: Session = Depends(get
                 "valor": p.valor,
                 "imagem_url": _produto_image_url(p),
             },
-            "whatsapp_numero": telefone_visivel(WHATSAPP_NUMERO),
+            # PATCH MÍNIMO:
+            "whatsapp_numero": telefone_visivel(),
             "whatsapp_link": gerar_link_whatsapp(WHATSAPP_NUMERO, p.nome),
         },
     )
@@ -436,7 +440,7 @@ def admin_produto_excluir(
 #   - POST /admin/produtos/{id}/atualizar
 #   - POST /admin/produtos/{id}/excluir
 #
-# Mas como o template chama outro caminho, ocorria 404 (como no seu log).
+# Mas como o template chama outro caminho, ocorria 404.
 # Este bloco adiciona ALIASES, preservando as rotas existentes.
 # =============================================================================
 
@@ -454,7 +458,6 @@ def admin_produto_novo_alias(
     Alias para criação de produto.
     Mantém exatamente a mesma regra de criação já usada em /admin/produtos/novo.
     """
-    # Comentário: zero disco; compacta em memória e salva no DB
     imagem_bytes: Optional[bytes] = None
     imagem_mime: Optional[str] = None
 
@@ -465,7 +468,6 @@ def admin_produto_novo_alias(
     novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor)
     crud.create_produto(db, novo, imagem_bytes=imagem_bytes, imagem_mime=imagem_mime)
 
-    # Comentário: 303 força GET após POST (bom para refresh de página no admin)
     return RedirectResponse("/admin", status_code=303)
 
 
@@ -512,7 +514,6 @@ def admin_produto_atualizar_alias(
 def admin_produto_method_override(
     produto_id: int,
     _: str = Depends(_auth_admin),
-    # Comentário: HTML forms suportam só GET/POST; o template manda _method=PUT
     _method: Optional[str] = Form(None),
     nome: str = Form(None),
     descricao: str = Form(None),
@@ -528,7 +529,6 @@ def admin_produto_method_override(
     method = (_method or "").strip().upper()
 
     if method == "PUT":
-        # Reaproveita a mesma lógica do alias PUT acima, mantendo o delta mínimo.
         return admin_produto_atualizar_alias(
             produto_id=produto_id,
             _=_,
@@ -540,7 +540,6 @@ def admin_produto_method_override(
             db=db,
         )
 
-    # Comentário: se chegar aqui, é porque o template chamou POST sem _method esperado
     raise HTTPException(
         status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
         detail="Método não suportado para /admin/produto/{id}. Use _method=PUT ou DELETE.",
