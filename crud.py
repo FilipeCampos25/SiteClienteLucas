@@ -59,6 +59,41 @@ def get_produtos_ativos(db: Session) -> List[models.Produto]:
 
 
 # =============================================================================
+# COMPATIBILIDADE (PATCH MÍNIMO)
+# -----------------------------------------------------------------------------
+# Seu main.py em produção (Render) está chamando:
+#   crud.list_produtos(db, apenas_ativos=True/False)
+#
+# Porém, o crud.py do projeto não possuía essa função.
+# Isso causava:
+#   AttributeError: module 'crud' has no attribute 'list_produtos'
+# e derrubava a rota "/" com 500.
+#
+# Para corrigir SEM mexer em rotas, templates ou arquitetura, criamos um ALIAS
+# compatível, reaproveitando as funções já existentes:
+#   - get_produtos_ativos(db)
+#   - get_produtos(db)
+#
+# Assim o delta é mínimo e não altera o comportamento esperado do sistema.
+# =============================================================================
+
+def list_produtos(db: Session, apenas_ativos: bool = True) -> List[models.Produto]:
+    """
+    Alias de compatibilidade para código que espera `crud.list_produtos`.
+
+    - apenas_ativos=True  -> lista só ativos (vitrine)
+    - apenas_ativos=False -> lista todos (admin)
+
+    Comentário (risco/decisão):
+    - Isso NÃO altera schema, NÃO altera templates, NÃO altera rotas.
+    - Apenas evita crash por falta de função.
+    """
+    if apenas_ativos:
+        return get_produtos_ativos(db)
+    return get_produtos(db)
+
+
+# =============================================================================
 # CREATE / UPDATE
 # =============================================================================
 
