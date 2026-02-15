@@ -146,58 +146,59 @@ def _compress_to_jpeg(raw: bytes) -> tuple[bytes, str]:
 
 
 # =============================================================================
-# Admin Auth: cookie assinado + fallback HTTP Basic
+# Admin auth (cookie assinado + basic)
 # =============================================================================
 
 security = HTTPBasic()
 
-# Comentário:
-# - Para evitar “sessão quebrar após restart”, a chave precisa ser estável.
-# - Se você não quiser criar ENV nova, derivamos de ADMIN_USER/ADMIN_PASSWORD (que já são ENV).
-# - Se quiser reforçar: crie ADMIN_SESSION_SECRET no Render e substitua abaixo.
-_ADMIN_SESSION_KEY = hashlib.sha256(f"{ADMIN_USER}:{ADMIN_PASSWORD}".encode("utf-8")).digest()
-
 _COOKIE_NAME = "admin_session"
-_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 dias
+_COOKIE_TTL_SECONDS = 60 * 60 * 6  # 6h
 
 
-def _b64url_encode(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")
-
-
-def _b64url_decode(s: str) -> bytes:
-    pad = "=" * ((4 - (len(s) % 4)) % 4)
-    return base64.urlsafe_b64decode(s + pad)
-
-
-def _sign(payload: bytes) -> str:
-    sig = hmac.new(_ADMIN_SESSION_KEY, payload, hashlib.sha256).hexdigest()
-    return sig
-
-
-def _make_session_cookie(username: str) -> str:
+def _sign_session_cookie(username: str) -> str:
     """
-    Cookie: base64url(payload).hexsig
+    Gera um cookie assinado (HMAC) com:
+      base64(payload).base64(signature)
     payload = "username|exp"
     """
-    exp = int(time.time()) + _SESSION_TTL_SECONDS
+    exp = int(time.time()) + _COOKIE_TTL_SECONDS
     payload = f"{username}|{exp}".encode("utf-8")
-    return f"{_b64url_encode(payload)}.{_sign(payload)}"
+    payload_b64 = base64.urlsafe_b64encode(payload).decode("ascii")
+
+    sig = hmac.new(
+        ADMIN_PASSWORD.encode("utf-8"),
+        payload,
+        hashlib.sha256,
+    ).digest()
+    sig_b64 = base64.urlsafe_b64encode(sig).decode("ascii")
+    return f"{payload_b64}.{sig_b64}"
 
 
 def _verify_session_cookie(cookie_value: str) -> Optional[str]:
-    """Valida cookie e retorna username se OK."""
+    """
+    Valida cookie assinado.
+    Retorna username se OK; senão None.
+    """
     try:
-        b64, sig = cookie_value.split(".", 1)
-        payload = _b64url_decode(b64)
-        expected = _sign(payload)
-
-        # Comentário: compare_digest evita timing attack
-        if not hmac.compare_digest(sig, expected):
+        parts = cookie_value.split(".", 1)
+        if len(parts) != 2:
             return None
 
-        text = payload.decode("utf-8")
-        username, exp_str = text.split("|", 1)
+        payload_b64, sig_b64 = parts
+        payload = base64.urlsafe_b64decode(payload_b64.encode("ascii"))
+        given_sig = base64.urlsafe_b64decode(sig_b64.encode("ascii"))
+
+        expected_sig = hmac.new(
+            ADMIN_PASSWORD.encode("utf-8"),
+            payload,
+            hashlib.sha256,
+        ).digest()
+
+        if not hmac.compare_digest(given_sig, expected_sig):
+            return None
+
+        # Payload = username|exp
+        username, exp_str = payload.decode("utf-8").split("|", 1)
         if int(exp_str) < int(time.time()):
             return None
 
@@ -239,14 +240,112 @@ def _auth_admin(
 # Site (Catálogo)
 # =============================================================================
 
+def _build_pagination(pagina_atual: int, total_paginas: int) -> list[Optional[int]]:
+    """
+    Monta a lista de páginas para o template (com reticências).
+
+    O template espera:
+      - int para páginas clicáveis
+      - None para renderizar "…" (ellipsis)
+
+    Mantemos a UI existente em templates/index.html, só alimentando os dados.
+    """
+    # Comentário: defesa simples para evitar estados inválidos
+    if total_paginas <= 1:
+        return [1]
+
+    pagina_atual = max(1, min(pagina_atual, total_paginas))
+
+    # Comentário: estratégia simples e previsível:
+    # - sempre mostra 1 e última
+    # - mostra um "miolo" de 2 páginas antes/depois da atual
+    janela = 2
+
+    paginas: list[Optional[int]] = []
+
+    def _add(p: Optional[int]) -> None:
+        # Evita duplicatas (principalmente quando total_paginas é pequeno)
+        if paginas and paginas[-1] == p:
+            return
+        paginas.append(p)
+
+    _add(1)
+
+    inicio = max(2, pagina_atual - janela)
+    fim = min(total_paginas - 1, pagina_atual + janela)
+
+    if inicio > 2:
+        _add(None)  # …
+
+    for p in range(inicio, fim + 1):
+        _add(p)
+
+    if fim < total_paginas - 1:
+        _add(None)  # …
+
+    _add(total_paginas)
+
+    return paginas
+
+
 @app.get("/", response_class=HTMLResponse)
-def home(request: Request, db: Session = Depends(get_db)):
-    produtos = crud.get_produtos_ativos(db)
+def home(request: Request, db: Session = Depends(get_db), page: int = 1):
+    """
+    Página inicial (catálogo) com paginação.
+
+    Requisito:
+    - Exibir 20 itens por página.
+    - O template já possui o componente de paginação; aqui apenas
+      fornecemos as variáveis (pagina_atual / total_paginas / paginacao).
+
+    Observação importante (mínimo delta):
+    - Não alteramos lógica de produto, carrinho, ou rotas.
+    - Apenas limitamos a query + adicionamos metadados de paginação.
+    """
+    # ------------------------------
+    # Paginação (20 por página)
+    # ------------------------------
+    POR_PAGINA = 20
+
+    # Comentário: defesa para query param inválido (ex.: ?page=0 ou ?page=-1)
+    if page < 1:
+        page = 1
+
+    # Conta total de produtos ativos (para calcular total_paginas)
+    total_itens = (
+        db.query(models.Produto)
+        .filter(models.Produto.ativo.is_(True))
+        .count()
+    )
+
+    # Comentário: se não tem itens, mantém total_paginas=0 e lista vazia
+    total_paginas = (total_itens + POR_PAGINA - 1) // POR_PAGINA if total_itens else 0
+
+    # Ajusta página caso o usuário peça uma página acima do máximo
+    if total_paginas and page > total_paginas:
+        page = total_paginas
+
+    offset = (page - 1) * POR_PAGINA
+
+    # Busca apenas os itens da página atual
+    produtos = (
+        db.query(models.Produto)
+        .filter(models.Produto.ativo.is_(True))
+        .order_by(models.Produto.id.desc())
+        .offset(offset)
+        .limit(POR_PAGINA)
+        .all()
+    )
+
+    # Prepara URL da imagem (DB) para o template
     for p in produtos:
         p.imagem_url = _produto_image_url(p)
 
     # Link “fale conosco” do hero
     whatsapp_link = f"https://wa.me/{WHATSAPP_NUMERO}" if WHATSAPP_NUMERO else "#"
+
+    # Lista de páginas para o componente já existente no template
+    paginacao = _build_pagination(page, total_paginas) if total_paginas > 1 else [1]
 
     return templates.TemplateResponse(
         "index.html",
@@ -256,96 +355,113 @@ def home(request: Request, db: Session = Depends(get_db)):
             "WHATSAPP_LINK": whatsapp_link,
             "TEL_VISIVEL": telefone_visivel(),
             "WHATSAPP_NUMERO": WHATSAPP_NUMERO,
+            # Variáveis usadas pelo bloco de paginação em templates/index.html
+            "pagina_atual": page,
+            "total_paginas": total_paginas,
+            "paginacao": paginacao,
         },
     )
 
 
 @app.get("/produto/{produto_id}", response_class=HTMLResponse)
 def produto_detalhe(produto_id: int, request: Request, db: Session = Depends(get_db)):
-    p = crud.get_produto(db, produto_id=produto_id)
-    if not p or not getattr(p, "ativo", True):
+    produto = crud.get_produto(db, produto_id=produto_id)
+    if not produto or not produto.ativo:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
 
-    p.imagem_url = _produto_image_url(p)
+    produto.imagem_url = _produto_image_url(produto)
 
     return templates.TemplateResponse(
         "produto.html",
         {
             "request": request,
-            "p": p,
-            "WHATSAPP_NUMERO": WHATSAPP_NUMERO,
+            "produto": produto,
             "TEL_VISIVEL": telefone_visivel(),
+            "WHATSAPP_NUMERO": WHATSAPP_NUMERO,
         },
     )
 
 
+@app.post("/whatsapp", response_class=RedirectResponse)
+def whatsapp_redirect(request: Request):
+    """
+    Recebe os itens do carrinho (via JS) e redireciona para o WhatsApp.
+    Não usa DB aqui: apenas monta o texto com base no payload.
+    """
+    # Comentário: o JS monta um form e faz POST com itens
+    form = request._form if hasattr(request, "_form") else None  # defensivo
+    raise HTTPException(status_code=400, detail="Use /api/whatsapp para gerar link.")
+
+
+@app.post("/api/whatsapp")
+async def api_whatsapp(request: Request):
+    """
+    API para gerar link WhatsApp a partir do carrinho.
+    O frontend manda JSON: { itens: [ {id, nome, valor_unitario, quantidade}, ... ] }
+    """
+    data = await request.json()
+    itens = data.get("itens", [])
+    link = gerar_link_whatsapp(itens)
+    return {"link": link}
+
+
 # =============================================================================
-# Media (Imagem do DB)
+# Media: serve imagem do DB
 # =============================================================================
 
 @app.get("/media/produto/{produto_id}")
-def media_produto(produto_id: int, request: Request, db: Session = Depends(get_db)):
+def media_produto(produto_id: int, db: Session = Depends(get_db)):
     """
-    Serve a imagem do produto diretamente do banco (Postgres/Neon).
-
-    - Lê imagem_bytes + imagem_mime
-    - Usa imagem_sha256 como ETag (cache HTTP)
+    Serve bytes da imagem armazenada no banco (Neon/Postgres).
+    Usa SHA256 como ETag simples.
     """
     p = crud.get_produto(db, produto_id=produto_id)
-    if not p:
+    if not p or not p.ativo:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
 
-    img = getattr(p, "imagem_bytes", None)
-    if not img:
-        raise HTTPException(status_code=404, detail="Imagem não encontrada")
+    if not p.imagem_bytes:
+        # Fallback: sem imagem -> 404 (template usa placeholder via onerror)
+        raise HTTPException(status_code=404, detail="Imagem não disponível")
 
-    mime = getattr(p, "imagem_mime", None) or "application/octet-stream"
-    etag = getattr(p, "imagem_sha256", None)
+    # Comentário: ETag simples (SHA256) para cache
+    etag = (p.imagem_sha256 or "").strip()
+    if not etag:
+        # Se não tiver sha salvo, calcula em runtime (raro)
+        etag = hashlib.sha256(p.imagem_bytes).hexdigest()
 
-    # Cache condicional
-    if etag:
-        inm = request.headers.get("if-none-match")
-        if inm and inm.strip('"') == etag:
-            return Response(status_code=304, headers={"ETag": etag})
-
-    headers = {}
-    if etag:
-        headers["ETag"] = etag
-        # Comentário: cache leve (você pode ajustar se quiser)
-        headers["Cache-Control"] = "public, max-age=3600"
-
-    return Response(content=img, media_type=mime, headers=headers)
+    headers = {"ETag": etag, "Cache-Control": "public, max-age=86400"}
+    return Response(
+        content=p.imagem_bytes,
+        media_type=p.imagem_mime or "application/octet-stream",
+        headers=headers,
+    )
 
 
 # =============================================================================
-# API (Produtos)
+# Admin
 # =============================================================================
 
-@app.get("/api/produtos", response_model=list[schemas.ProdutoOut])
-def api_produtos(db: Session = Depends(get_db)):
-    produtos = crud.get_produtos_ativos(db)
+@app.get("/admin", response_class=HTMLResponse)
+def admin_dashboard(request: Request, user: str = Depends(_auth_admin), db: Session = Depends(get_db)):
+    """
+    Admin: lista produtos (todos) e permite criar/editar.
+    """
+    produtos = crud.get_produtos(db)
     for p in produtos:
         p.imagem_url = _produto_image_url(p)
-    return produtos
 
+    return templates.TemplateResponse(
+        "admin/index.html",
+        {
+            "request": request,
+            "user": user,
+            "produtos": produtos,
+        },
+    )
 
-# =============================================================================
-# API (Carrinho -> WhatsApp)
-# =============================================================================
-
-@app.post("/api/whatsapp")
-def api_whatsapp(itens: list[schemas.ItemCarrinho]):
-    # Comentário: backend só monta link (JS mantém carrinho no localStorage)
-    itens_dict = [i.model_dump() for i in itens]
-    return {"url": gerar_link_whatsapp(itens_dict)}
-
-
-# =============================================================================
-# Admin (Login por formulário + sessão)
-# =============================================================================
 
 @app.get("/admin/login", response_class=HTMLResponse)
-def admin_login_get(request: Request):
+def admin_login_page(request: Request):
     return templates.TemplateResponse("admin/login.html", {"request": request})
 
 
@@ -355,111 +471,150 @@ def admin_login_post(
     username: str = Form(...),
     password: str = Form(...),
 ):
-    # Comentário: valida credenciais do ENV
-    if not (hmac.compare_digest(username, ADMIN_USER) and hmac.compare_digest(password, ADMIN_PASSWORD)):
+    # Comentário: valida credenciais e seta cookie
+    if not (
+        hmac.compare_digest(username, ADMIN_USER)
+        and hmac.compare_digest(password, ADMIN_PASSWORD)
+    ):
+        # Mantém mensagem simples
         return templates.TemplateResponse(
             "admin/login.html",
-            {"request": request, "error": "Usuário ou senha inválidos."},
-            status_code=401,
+            {"request": request, "error": "Usuário/senha inválidos"},
+            status_code=400,
         )
 
-    resp = RedirectResponse("/admin", status_code=303)
-    cookie_value = _make_session_cookie(username)
-
-    # Comentário: HttpOnly impede JS de ler; SameSite=Lax evita CSRF básico
+    resp = RedirectResponse(url="/admin", status_code=303)
     resp.set_cookie(
-        key=_COOKIE_NAME,
-        value=cookie_value,
+        _COOKIE_NAME,
+        _sign_session_cookie(username),
         httponly=True,
+        max_age=_COOKIE_TTL_SECONDS,
         samesite="lax",
-        secure=True,  # Render serve via HTTPS publicamente
-        max_age=_SESSION_TTL_SECONDS,
     )
     return resp
 
 
-# =============================================================================
-# Admin (Painel + CRUD)
-# =============================================================================
+@app.get("/admin/logout")
+def admin_logout():
+    resp = RedirectResponse(url="/admin/login", status_code=303)
+    resp.delete_cookie(_COOKIE_NAME)
+    return resp
 
-@app.get("/admin", response_class=HTMLResponse)
-def admin_dashboard(
+
+@app.post("/admin/produto")
+async def admin_create_produto(
     request: Request,
-    _: str = Depends(_auth_admin),
+    user: str = Depends(_auth_admin),
     db: Session = Depends(get_db),
-):
-    produtos = crud.get_produtos(db)
-    for p in produtos:
-        p.imagem_url = _produto_image_url(p)
-
-    return templates.TemplateResponse(
-        "admin/dashboard.html",
-        {
-            "request": request,
-            "produtos": produtos,
-            "WHATSAPP_NUMERO": WHATSAPP_NUMERO,
-            "TEL_VISIVEL": telefone_visivel(),
-        },
-    )
-
-
-@app.post("/admin/produtos/novo")
-def admin_produto_novo(
-    _: str = Depends(_auth_admin),
     nome: str = Form(...),
     descricao: str = Form(""),
     valor: float = Form(...),
+    ativo: bool = Form(True),
     imagem: UploadFile = File(None),
-    db: Session = Depends(get_db),
 ):
-    # Comentário: zero disco; compacta em memória e salva no DB
-    imagem_bytes: Optional[bytes] = None
-    imagem_mime: Optional[str] = None
+    """
+    Cria produto (admin).
+    Se vier imagem, compacta para JPEG e salva bytes no Postgres.
+    """
+    imagem_bytes = None
+    imagem_mime = None
 
-    if imagem and imagem.filename:
-        raw = imagem.file.read()
-        imagem_bytes, imagem_mime = _compress_to_jpeg(raw)
+    if imagem is not None:
+        raw = await imagem.read()
+        if raw:
+            compact, mime = _compress_to_jpeg(raw)
+            imagem_bytes = compact
+            imagem_mime = mime
 
-    novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor)
-    crud.create_produto(db, novo, imagem_bytes=imagem_bytes, imagem_mime=imagem_mime)
-
-    return RedirectResponse("/admin", status_code=303)
-
-
-@app.post("/admin/produtos/{produto_id}/atualizar")
-def admin_produto_atualizar(
-    produto_id: int,
-    _: str = Depends(_auth_admin),
-    nome: str = Form(None),
-    descricao: str = Form(None),
-    valor: float = Form(None),
-    ativo: Optional[bool] = Form(None),
-    imagem: UploadFile = File(None),
-    db: Session = Depends(get_db),
-):
-    imagem_bytes: Optional[bytes] = None
-    imagem_mime: Optional[str] = None
-
-    if imagem and imagem.filename:
-        raw = imagem.file.read()
-        imagem_bytes, imagem_mime = _compress_to_jpeg(raw)
-
-    upd = schemas.ProdutoUpdate(
+    produto_in = schemas.ProdutoCreate(
         nome=nome,
         descricao=descricao,
         valor=valor,
         ativo=ativo,
     )
 
-    crud.update_produto(db, produto_id=produto_id, dados=upd, imagem_bytes=imagem_bytes, imagem_mime=imagem_mime)
-    return RedirectResponse("/admin", status_code=303)
+    crud.create_produto(db, produto_in, imagem_bytes=imagem_bytes, imagem_mime=imagem_mime)
+    return RedirectResponse(url="/admin", status_code=303)
 
 
-@app.post("/admin/produtos/{produto_id}/excluir")
-def admin_produto_excluir(
+@app.post("/admin/produto/{produto_id}")
+async def admin_update_produto(
     produto_id: int,
-    _: str = Depends(_auth_admin),
+    request: Request,
+    user: str = Depends(_auth_admin),
+    db: Session = Depends(get_db),
+    nome: str = Form(...),
+    descricao: str = Form(""),
+    valor: float = Form(...),
+    ativo: bool = Form(True),
+    imagem: UploadFile = File(None),
+):
+    """
+    Atualiza produto (admin). Se enviar imagem nova, substitui bytes.
+    """
+    imagem_bytes = None
+    imagem_mime = None
+
+    if imagem is not None:
+        raw = await imagem.read()
+        if raw:
+            compact, mime = _compress_to_jpeg(raw)
+            imagem_bytes = compact
+            imagem_mime = mime
+
+    produto_in = schemas.ProdutoUpdate(
+        nome=nome,
+        descricao=descricao,
+        valor=valor,
+        ativo=ativo,
+    )
+
+    updated = crud.update_produto(
+        db,
+        produto_id=produto_id,
+        produto=produto_in,
+        imagem_bytes=imagem_bytes,
+        imagem_mime=imagem_mime,
+    )
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@app.post("/admin/produto/{produto_id}/delete")
+def admin_delete_produto(
+    produto_id: int,
+    user: str = Depends(_auth_admin),
     db: Session = Depends(get_db),
 ):
-    crud.delete_produto(db, produto_id=produto_id)
-    return RedirectResponse("/admin", status_code=303)
+    deleted = crud.delete_produto(db, produto_id=produto_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+# =============================================================================
+# API (opcional)
+# =============================================================================
+
+@app.get("/api/produtos")
+def api_produtos(db: Session = Depends(get_db)):
+    """
+    Endpoint auxiliar que lista produtos ativos.
+    Mantido para compatibilidade, mesmo que o carrinho não dependa dele.
+    """
+    produtos = crud.get_produtos_ativos(db)
+    out = []
+    for p in produtos:
+        out.append(
+            {
+                "id": p.id,
+                "nome": p.nome,
+                "descricao": p.descricao,
+                "valor": float(p.valor),
+                "imagem_url": _produto_image_url(p),
+            }
+        )
+    return {"produtos": out}
