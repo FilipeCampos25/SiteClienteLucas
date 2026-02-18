@@ -19,10 +19,7 @@ REGRAS:
 
 from __future__ import annotations
 
-import base64
-import hmac
-import hashlib
-import time
+import os
 import io
 from typing import Generator, Optional
 
@@ -37,10 +34,10 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from PIL import Image, ImageOps
 
@@ -71,6 +68,12 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SECRET_KEY", "change-this-secret-key"),
+    same_site="lax",
+    https_only=False,
 )
 
 # Static e templates
@@ -146,59 +149,28 @@ def _compress_to_jpeg(raw: bytes) -> tuple[bytes, str]:
 
 
 # =============================================================================
-# Admin Auth: cookie assinado + fallback HTTP Basic
+# Admin Auth: sessão (sem HTTP Basic)
 # =============================================================================
 
-_basic = HTTPBasic()
-
-
-def _sign_session(user: str, secret: str, ttl_seconds: int = 60 * 60 * 12) -> str:
+def _admin_credentials() -> tuple[str, str]:
     """
-    Cria cookie de sessão simples, assinado.
-    Formato: base64("user:exp:signature_hex")
+    Credenciais do admin priorizando env vars.
+    Fallback seguro: senha vazia/default desabilita login.
     """
-    exp = int(time.time()) + ttl_seconds
-    msg = f"{user}:{exp}".encode("utf-8")
-    sig = hmac.new(secret.encode("utf-8"), msg, hashlib.sha256).hexdigest()
-    raw = f"{user}:{exp}:{sig}".encode("utf-8")
-    return base64.urlsafe_b64encode(raw).decode("utf-8")
+    user = (os.getenv("ADMIN_USER") or ADMIN_USER or "admin").strip()
+    password = (os.getenv("ADMIN_PASS") or os.getenv("ADMIN_PASSWORD") or ADMIN_PASSWORD or "").strip()
+    if password == "troque_essa_senha":
+        password = ""
+    return user, password
 
 
-def _verify_session(token: str, secret: str) -> bool:
-    """Valida cookie assinado e expiração."""
-    try:
-        raw = base64.urlsafe_b64decode(token.encode("utf-8")).decode("utf-8")
-        user, exp_s, sig = raw.split(":", 2)
-        exp = int(exp_s)
-        if exp < int(time.time()):
-            return False
-
-        msg = f"{user}:{exp}".encode("utf-8")
-        expected = hmac.new(secret.encode("utf-8"), msg, hashlib.sha256).hexdigest()
-        return hmac.compare_digest(expected, sig) and user == ADMIN_USER
-    except Exception:
-        return False
+def _is_admin_authed(request: Request) -> bool:
+    return request.session.get("admin_authed") is True
 
 
-def _auth_admin(
-    request: Request,
-    credentials: Optional[HTTPBasicCredentials] = Depends(_basic),
-) -> str:
-    """
-    Autenticação do admin:
-    1) Se existe cookie de sessão "admin_session" válido -> ok
-    2) Senão, fallback para HTTP Basic
-    """
-    # 1) Cookie de sessão
-    token = request.cookies.get("admin_session")
-    if token and _verify_session(token, ADMIN_PASSWORD):
-        return ADMIN_USER
-
-    # 2) Fallback: Basic Auth
-    if credentials is not None:
-        if credentials.username == ADMIN_USER and credentials.password == ADMIN_PASSWORD:
-            return ADMIN_USER
-
+def _auth_admin(request: Request) -> str:
+    if _is_admin_authed(request):
+        return request.session.get("admin_user", "admin")
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
 
@@ -307,6 +279,8 @@ def api_whatsapp(produto_id: int = Form(...), db: Session = Depends(get_db)):
 
 @app.get("/admin/login", response_class=HTMLResponse)
 def admin_login_get(request: Request):
+    if _is_admin_authed(request):
+        return RedirectResponse("/admin", status_code=303)
     return templates.TemplateResponse("admin/login.html", {"request": request})
 
 
@@ -316,34 +290,29 @@ def admin_login_post(
     username: str = Form(...),
     password: str = Form(...),
 ):
-    # Comentário: valida credenciais e seta cookie assinado
-    if username != ADMIN_USER or password != ADMIN_PASSWORD:
-        # Mantém resposta simples sem mexer em layout
+    # Comentário: valida credenciais e marca sessão no cookie assinado do SessionMiddleware
+    admin_user, admin_pass = _admin_credentials()
+    if not admin_pass or username != admin_user or password != admin_pass:
         return templates.TemplateResponse(
             "admin/login.html",
             {"request": request, "error": "Usuário ou senha inválidos"},
-            status_code=401,
+            status_code=200,
         )
 
-    token = _sign_session(ADMIN_USER, ADMIN_PASSWORD)
+    request.session["admin_authed"] = True
+    request.session["admin_user"] = admin_user
     resp = RedirectResponse("/admin", status_code=303)
-    resp.set_cookie(
-        key="admin_session",
-        value=token,
-        httponly=True,
-        samesite="lax",
-        secure=False,  # Comentário: Render pode estar atrás de proxy TLS; secure depende da config
-        max_age=60 * 60 * 12,
-    )
     return resp
 
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_dashboard(
     request: Request,
-    _: str = Depends(_auth_admin),
     db: Session = Depends(get_db),
 ):
+    if not _is_admin_authed(request):
+        return RedirectResponse("/admin/login", status_code=303)
+
     produtos = crud.list_produtos(db, apenas_ativos=False)
 
     view = []
@@ -363,6 +332,12 @@ def admin_dashboard(
         "admin/dashboard.html",
         {"request": request, "produtos": view},
     )
+
+
+@app.get("/admin/logout")
+def admin_logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/admin/login", status_code=303)
 
 
 @app.post("/admin/produtos/novo")
