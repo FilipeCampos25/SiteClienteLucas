@@ -578,55 +578,69 @@ body {
 .pagination {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: 10px 14px;
-  border-radius: 9999px;
-  background: var(--branco);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--cinza-medio);
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.08);
+  border: 1px solid #e6e9ef;
   flex-wrap: wrap;
   justify-content: center;
 }
 
-.page-btn {
+.pagination .page-btn,
+.pagination a.page-btn,
+.pagination span.page-btn {
   min-width: 40px;
   height: 40px;
-  padding: 0 12px;
-  border-radius: 9999px;
-  border: 1px solid var(--cinza-medio);
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #dde2ea;
   background: var(--branco);
   color: var(--cinza-escuro);
   font-weight: 600;
-  text-decoration: none;
+  font-size: 0.95rem;
+  text-decoration: none !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: var(--transition-fast);
+  line-height: 1;
+  transition: all 0.2s ease;
 }
 
-.page-btn:hover {
-  border-color: var(--laranja);
-  color: var(--laranja);
-  box-shadow: var(--shadow-xs);
-  transform: translateY(-1px);
+.pagination a.page-btn:hover {
+  border-color: #ffc69f;
+  color: var(--laranja-escuro);
+  background: #fff7f1;
+  box-shadow: 0 6px 16px rgba(255, 98, 0, 0.16);
+  transform: translateY(-2px);
 }
 
-.page-btn.active {
-  background: var(--laranja);
-  border-color: var(--laranja);
+.pagination .page-btn.active {
+  background: linear-gradient(180deg, #ff7a1f 0%, #ff6200 100%);
+  border-color: #ff6200;
   color: var(--branco);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 18px rgba(255, 98, 0, 0.3);
 }
 
-.page-btn.disabled {
+.pagination .page-btn.disabled {
   opacity: 0.45;
   pointer-events: none;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #9ca3af;
 }
 
 .page-ellipsis {
-  color: var(--cinza-texto);
+  color: #9aa3b2;
   font-weight: 700;
   padding: 0 6px;
+  user-select: none;
+}
+
+.pagination a.page-btn:focus-visible {
+  outline: 2px solid #ffd6ba;
+  outline-offset: 2px;
 }
 
 .pagination-nav {
