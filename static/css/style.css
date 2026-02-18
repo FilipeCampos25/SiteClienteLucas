@@ -427,7 +427,7 @@ body {
 
 .grid-produtos {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--spacing-lg);
 }
 
@@ -1535,7 +1535,7 @@ body {
   }
 
   .grid-produtos {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--spacing-md);
   }
 
@@ -1588,7 +1588,7 @@ body {
   }
 
   .grid-produtos {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .card-image-container {

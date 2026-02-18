@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import io
+import math
 from typing import Generator, Optional
 
 from fastapi import (
@@ -28,6 +29,7 @@ from fastapi import (
     Depends,
     HTTPException,
     Request,
+    Query,
     status,
     Form,
     File,
@@ -148,6 +150,33 @@ def _compress_to_jpeg(raw: bytes) -> tuple[bytes, str]:
         return raw, "application/octet-stream"
 
 
+def _build_paginacao(total_paginas: int, pagina_atual: int) -> list[Optional[int]]:
+    """Gera sequência de páginas; None representa reticências."""
+    if total_paginas <= 0:
+        return []
+    if total_paginas <= 7:
+        return list(range(1, total_paginas + 1))
+
+    paginas = {
+        1,
+        pagina_atual - 1,
+        pagina_atual,
+        pagina_atual + 1,
+        total_paginas - 1,
+        total_paginas,
+    }
+    paginas_validas = sorted(p for p in paginas if 1 <= p <= total_paginas)
+
+    resultado: list[Optional[int]] = []
+    anterior: Optional[int] = None
+    for p in paginas_validas:
+        if anterior is not None and p - anterior > 1:
+            resultado.append(None)
+        resultado.append(p)
+        anterior = p
+    return resultado
+
+
 # =============================================================================
 # Admin Auth: sessão (sem HTTP Basic)
 # =============================================================================
@@ -179,8 +208,27 @@ def _auth_admin(request: Request) -> str:
 # =============================================================================
 
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request, db: Session = Depends(get_db)):
-    produtos = crud.list_produtos(db, apenas_ativos=True)
+def index(
+    request: Request,
+    page: int = Query(1, ge=1),
+    db: Session = Depends(get_db),
+):
+    per_page = 20
+    base_query = db.query(models.Produto).filter(models.Produto.ativo.is_(True))
+    total_itens = base_query.count()
+    total_paginas = math.ceil(total_itens / per_page) if total_itens > 0 else 0
+
+    if total_paginas > 0 and page > total_paginas:
+        return RedirectResponse(url=f"/?page={total_paginas}#produtos", status_code=303)
+
+    offset = (page - 1) * per_page
+    produtos = (
+        base_query
+        .order_by(models.Produto.id.desc())
+        .limit(per_page)
+        .offset(offset)
+        .all()
+    )
 
     # Comentário: injeta URL de imagem em cada item para o template
     view = []
@@ -200,6 +248,9 @@ def index(request: Request, db: Session = Depends(get_db)):
         {
             "request": request,
             "produtos": view,
+            "pagina_atual": page,
+            "total_paginas": total_paginas,
+            "paginacao": _build_paginacao(total_paginas, page),
             # PATCH MÍNIMO:
             # telefone_visivel() no seu utils.py NÃO recebe parâmetro.
             # Ela já lê WHATSAPP_NUMERO do config.py internamente.
