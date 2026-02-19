@@ -22,7 +22,7 @@ from __future__ import annotations
 import os
 import io
 import math
-from typing import Generator, Optional
+from typing import Generator, Optional, List
 
 from fastapi import (
     FastAPI,
@@ -278,7 +278,15 @@ def produto_detalhe(produto_id: int, request: Request, db: Session = Depends(get
             },
             # PATCH MÍNIMO:
             "whatsapp_numero": telefone_visivel(),
-            "whatsapp_link": gerar_link_whatsapp(WHATSAPP_NUMERO, p.nome),
+            "whatsapp_link": gerar_link_whatsapp(
+                [
+                    {
+                        "nome": p.nome,
+                        "quantidade": 1,
+                        "valor_unitario": float(p.valor or 0),
+                    }
+                ]
+            ),
         },
     )
 
@@ -316,14 +324,10 @@ def api_produtos(db: Session = Depends(get_db)):
     ]
 
 
-from typing import List
-from schemas import ItemCarrinho
-from utils import gerar_link_whatsapp
-
 @app.post("/api/whatsapp")
-def api_whatsapp(itens: List[ItemCarrinho]):
-    # converte pydantic -> dict pro utils.py (que usa item["campo"])
-    itens_dict = [i.model_dump() for i in itens]
+def api_whatsapp(itens: List[schemas.ItemCarrinho]):
+    # Compatível com Pydantic v1 (dict) e v2 (model_dump)
+    itens_dict = [i.model_dump() if hasattr(i, "model_dump") else i.dict() for i in itens]
     return {"url": gerar_link_whatsapp(itens_dict)}
 
 
