@@ -316,12 +316,15 @@ def api_produtos(db: Session = Depends(get_db)):
     ]
 
 
+from typing import List
+from schemas import ItemCarrinho
+from utils import gerar_link_whatsapp
+
 @app.post("/api/whatsapp")
-def api_whatsapp(produto_id: int = Form(...), db: Session = Depends(get_db)):
-    p = crud.get_produto(db, produto_id=produto_id)
-    if not p or not p.ativo:
-        raise HTTPException(status_code=404, detail="Produto não encontrado")
-    return {"url": gerar_link_whatsapp(WHATSAPP_NUMERO, p.nome)}
+def api_whatsapp(itens: List[ItemCarrinho]):
+    # converte pydantic -> dict pro utils.py (que usa item["campo"])
+    itens_dict = [i.model_dump() for i in itens]
+    return {"url": gerar_link_whatsapp(itens_dict)}
 
 
 # =============================================================================
