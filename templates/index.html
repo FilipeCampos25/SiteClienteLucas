@@ -4,37 +4,38 @@
 {% block body_class %}home-ref{% endblock %}
 
 {% block content %}
-<section class="hero-split">
-  <div class="hero-split__left">
-    <div class="hero-split__leftInner">
-      <p class="kicker kicker--on-dark">Catálogo de produtos</p>
-      <h1 class="hero-split__title">
-        ONDE TEM AÇO,<br>
-        TEM SOLUÇÃO.
-      </h1>
-      <p class="hero-split__lead">
-        Cantoneiras e perfis metálicos para obra, serralheria e indústria com atendimento rápido.
-      </p>
-      <div class="btn-row">
-        <button class="btn btn--primary" type="button" onclick="document.getElementById('produtos').scrollIntoView({behavior: 'smooth'})">
-          Explorar Produtos
-        </button>
-        <a class="btn btn--light" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">
-          Fale Conosco
-        </a>
+<section class="hero-home">
+  <div class="neo-container">
+    <div class="hero-split">
+      <div class="hero-split__left">
+        <div class="hero-split__leftInner">
+          <p class="kicker kicker--on-dark">Catálogo de produtos</p>
+          <h1 class="hero-split__title">
+            ONDE TEM AÇO,<br>
+            TEM SOLUÇÃO.
+          </h1>
+          <p class="hero-split__lead">
+            Cantoneiras e perfis metálicos para obra, serralheria e indústria com atendimento rápido.
+          </p>
+          <div class="btn-row">
+            <button class="btn btn--primary" type="button" onclick="document.getElementById('produtos').scrollIntoView({behavior: 'smooth'})">
+              Explorar Produtos
+            </button>
+            <a class="btn btn--light" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">
+              Fale Conosco
+            </a>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="hero-split__badge">
-      <div class="map-placeholder" aria-hidden="true"></div>
-    </div>
-  </div>
 
-  <div class="hero-split__right">
-    <div class="hero-split__media placeholder-media" role="img" aria-label="Imagem destaque dos produtos"></div>
-    <div class="hero-split__overlayCard">
-      <p class="hero-split__overlayKicker">Atendimento</p>
-      <p class="hero-split__overlayText">Pedidos e orçamento com suporte via WhatsApp</p>
-      <a href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Iniciar conversa</a>
+      <div class="hero-split__right">
+        <div class="hero-split__media hero-split__media--watermark" role="img" aria-label="Imagem destaque dos produtos"></div>
+        <div class="hero-split__overlayCard">
+          <p class="hero-split__overlayKicker">Atendimento</p>
+          <p class="hero-split__overlayText">Pedidos e orçamento com suporte via WhatsApp</p>
+          <a href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Iniciar conversa</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -132,12 +133,6 @@
           <h3 class="card-title">{{ p.nome }}</h3>
           <div class="card-actions">
             <a href="/produto/{{ p.id }}" class="btn-view">Ver Detalhes</a>
-
-            {# ===========================================================
-               FIX CARRINHO DEFINITIVO:
-               - Passa id (número), nome e valor para o JS
-               - Assim o carrinho NÃO depende de /api/produtos para renderizar
-               =========================================================== #}
             <button
               class="btn-primary btn-add-cart"
               data-id="{{ p.id }}"

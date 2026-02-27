@@ -81,6 +81,12 @@ app.add_middleware(
 # Static e templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+templates.env.globals.update(
+    WHATSAPP_NUMERO=WHATSAPP_NUMERO or "",
+    WHATSAPP_DISPLAY=telefone_visivel(),
+    WHATSAPP_LINK=gerar_link_whatsapp([]),
+    LOGO_URL="/static/images/logomarca.png",
+)
 
 
 # =============================================================================

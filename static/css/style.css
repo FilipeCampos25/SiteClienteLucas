@@ -2607,3 +2607,145 @@ body.home-ref .site-footer-new .footer__copy {
     align-items: flex-start;
   }
 }
+
+/* ===== PATCH: HOME HERO + PRODUTO CONSISTENTE ===== */
+body.home-ref .hero-home {
+  background: #ffffff;
+  padding: 22px 0 18px;
+}
+
+body.home-ref .hero-home .hero-split {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  min-height: 500px;
+  border: 1px solid var(--ref-gray-200);
+}
+
+body.home-ref .hero-home .hero-split__left {
+  background: var(--ref-blue-900);
+}
+
+body.home-ref .hero-home .hero-split__leftInner {
+  padding: 64px 40px;
+}
+
+body.home-ref .hero-home .hero-split__right {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #edf2f8 0%, #f8fbff 100%);
+}
+
+body.home-ref .hero-home .hero-split__media {
+  min-height: 500px;
+}
+
+body.home-ref .hero-home .hero-split__media--watermark {
+  position: relative;
+}
+
+body.home-ref .hero-home .hero-split__media--watermark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 148, 0, 0.12), rgba(255, 148, 0, 0.04)),
+    url("/static/images/logomarca.png") center / min(72%, 420px) no-repeat;
+  opacity: 0.24;
+}
+
+body.home-ref .hero-home .hero-split__overlayCard {
+  left: 20px;
+  bottom: 20px;
+  max-width: 320px;
+}
+
+.produto-page {
+  padding: 36px 0;
+  background: #ffffff;
+}
+
+.produto-container {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.produto-gallery {
+  background: #ffffff;
+  border: 1px solid var(--cinza-medio);
+  padding: 14px;
+}
+
+.produto-image-wrapper {
+  width: 100%;
+  min-height: 360px;
+  background: #f7f8fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.produto-image {
+  max-width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+}
+
+.produto-info {
+  background: #ffffff;
+  border: 1px solid var(--cinza-medio);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.produto-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  background: var(--laranja-claro);
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+
+.produto-description h3 {
+  margin-bottom: 6px;
+}
+
+.produto-actions {
+  flex-wrap: wrap;
+}
+
+.produto-actions .btn-secondary,
+.produto-actions .btn-add-cart-large {
+  min-height: 44px;
+}
+
+@media (max-width: 1024px) {
+  body.home-ref .hero-home .hero-split {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  body.home-ref .hero-home .hero-split__leftInner {
+    padding: 44px 24px;
+  }
+
+  body.home-ref .hero-home .hero-split__media {
+    min-height: 360px;
+  }
+
+  body.home-ref .hero-home .hero-split__overlayCard {
+    position: static;
+    margin: 16px;
+    max-width: none;
+  }
+
+  .produto-container {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}

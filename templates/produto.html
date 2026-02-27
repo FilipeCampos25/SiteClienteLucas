@@ -1,9 +1,13 @@
 <!-- templates/produto.html -->
-{% extends "base.html" %}
+{% extends "base_new.html" %}
+
+{% block body_class %}home-ref{% endblock %}
 
 {% block content %}
+{% set p = produto %}
+
 <section class="produto-page">
-  <div class="produto-container">
+  <div class="neo-container produto-container">
     <div class="produto-gallery">
       <div class="produto-image-wrapper">
         <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="produto-image" onerror="this.src='/static/images/placeholder.png'">
@@ -27,11 +31,6 @@
 
       <div class="produto-actions">
         <a href="/#produtos" class="btn-secondary">← Voltar</a>
-
-        {# ===========================================================
-           FIX CARRINHO DEFINITIVO:
-           - Passa id, nome e valor direto para o JS
-           =========================================================== #}
         <button
           class="btn-primary btn-add-cart-large"
           data-id="{{ p.id }}"
@@ -55,19 +54,21 @@
 </section>
 
 <section class="related-section">
-  <h2 class="section-title">Você Também Pode Se Interessar</h2>
-  <p class="section-subtitle">Navegue por nossa coleção completa</p>
-  <div class="related-placeholder">
-    <a href="/#produtos" class="btn-primary">Ver Todos os Produtos</a>
+  <div class="neo-container">
+    <h2 class="section-title">Você Também Pode Se Interessar</h2>
+    <p class="section-subtitle">Navegue por nossa coleção completa</p>
+    <div class="related-placeholder">
+      <a href="/#produtos" class="btn-primary">Ver Todos os Produtos</a>
+    </div>
   </div>
 </section>
 
 <section class="final-cta-section">
-  <div class="cta-wrapper">
+  <div class="neo-container cta-wrapper">
     <h2 class="cta-title">Dúvidas sobre este produto?</h2>
     <p class="cta-description">Nosso time de especialistas está pronto para ajudar</p>
     <div class="cta-buttons">
-      <a href="{{ WHATSAPP_LINK }}" target="_blank" class="btn-whatsapp-large">
+      <a href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener" class="btn-whatsapp-large">
         💬 WhatsApp
       </a>
       <a href="tel:+{{ WHATSAPP_NUMERO }}" class="btn-phone-large">
