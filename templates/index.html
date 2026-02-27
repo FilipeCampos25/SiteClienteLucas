@@ -1,151 +1,206 @@
 <!-- templates/index.html -->
-{% extends "base.html" %}
+{% extends "base_new.html" %}
+
+{% block body_class %}home-ref{% endblock %}
 
 {% block content %}
-<!-- ===== HERO SECTION PREMIUM ===== -->
-<section class="hero-section">
-  <div class="hero-content">
-    <div class="hero-text">
-      <h1 class="hero-title">Cantoneiras e Perfis Metálicos Premium</h1>
-      <p class="hero-subtitle">Qualidade, durabilidade e confiança em cada produto</p>
-      <p class="hero-description">Fornecemos soluções metálicas de excelência para sua obra. Entrega rápida e atendimento personalizado.</p>
-      <div class="hero-cta">
-        <button class="btn-primary" onclick="document.getElementById('produtos').scrollIntoView({behavior: 'smooth'})">
+<section class="hero-split">
+  <div class="hero-split__left">
+    <div class="hero-split__leftInner">
+      <p class="kicker kicker--on-dark">Catálogo de produtos</p>
+      <h1 class="hero-split__title">
+        ONDE TEM AÇO,<br>
+        TEM SOLUÇÃO.
+      </h1>
+      <p class="hero-split__lead">
+        Cantoneiras e perfis metálicos para obra, serralheria e indústria com atendimento rápido.
+      </p>
+      <div class="btn-row">
+        <button class="btn btn--primary" type="button" onclick="document.getElementById('produtos').scrollIntoView({behavior: 'smooth'})">
           Explorar Produtos
         </button>
-        <a href="{{ WHATSAPP_LINK }}" target="_blank" class="btn-secondary">
+        <a class="btn btn--light" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">
           Fale Conosco
         </a>
       </div>
     </div>
-    <div class="hero-image">
-      <div class="hero-placeholder">
-        <svg width="100%" height="100%" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="400" height="300" fill="#F5F5F5"/>
-          <rect x="50" y="50" width="300" height="200" fill="#FF6200" opacity="0.1" rx="8"/>
-          <text x="200" y="160" font-family="Arial" font-size="24" fill="#999" text-anchor="middle">Sua Imagem Aqui</text>
-        </svg>
-      </div>
+    <div class="hero-split__badge">
+      <div class="map-placeholder" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div class="hero-split__right">
+    <div class="hero-split__media placeholder-media" role="img" aria-label="Imagem destaque dos produtos"></div>
+    <div class="hero-split__overlayCard">
+      <p class="hero-split__overlayKicker">Atendimento</p>
+      <p class="hero-split__overlayText">Pedidos e orçamento com suporte via WhatsApp</p>
+      <a href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Iniciar conversa</a>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO DE DIFERENCIAIS ===== -->
-<section class="differentials-section">
-  <h2 class="section-title">Por Que Escolher a Cantoneira Fácil?</h2>
-  <p class="section-subtitle">Diferenciais que fazem a diferença na sua obra</p>
-  <div class="differentials-grid">
-    <div class="differential-card">
-      <div class="card-icon">🏆</div>
-      <h3 class="card-title">Qualidade Premium</h3>
-      <p class="card-description">Materiais certificados e testados para máxima durabilidade</p>
+<section id="sobre" class="split-content">
+  <div class="split-content__left">
+    <div class="split-content__leftArt">
+      <div class="art-block placeholder-media" aria-hidden="true"></div>
     </div>
-    <div class="differential-card">
-      <div class="card-icon">🚚</div>
-      <h3 class="card-title">Entrega Rápida</h3>
-      <p class="card-description">Logística eficiente para receber seu pedido no prazo</p>
+  </div>
+
+  <div class="split-content__right">
+    <div class="split-content__rightInner">
+      <h2 class="heading-xl">O BRASIL NÃO<br>PODE PARAR</h2>
+      <p class="muted">
+        A Cantoneira Fácil atende com foco em agilidade, orientação técnica e boa disponibilidade de produtos,
+        ajudando sua operação a manter ritmo e previsibilidade.
+      </p>
     </div>
-    <div class="differential-card">
-      <div class="card-icon">💰</div>
-      <h3 class="card-title">Melhor Custo-Benefício</h3>
-      <p class="card-description">Preços competitivos sem abrir mão da qualidade</p>
-    </div>
-    <div class="differential-card">
-      <div class="card-icon">🛠️</div>
-      <h3 class="card-title">Atendimento Especializado</h3>
-      <p class="card-description">Equipe pronta para tirar dúvidas e ajudar na escolha</p>
+  </div>
+
+  <div class="split-content__accentLine" aria-hidden="true"></div>
+</section>
+
+<section class="sectors">
+  <div class="neo-container">
+    <h2 class="heading-section">
+      ESTAMOS PRESENTES NOS<br>
+      PRINCIPAIS SETORES DA<br>
+      CONSTRUÇÃO E INDÚSTRIA
+    </h2>
+
+    <div class="sectors__grid">
+      <figure class="sector-card">
+        <div class="sector-card__thumb placeholder-media"></div>
+        <figcaption class="sector-card__label">Construção Civil</figcaption>
+      </figure>
+      <figure class="sector-card">
+        <div class="sector-card__thumb placeholder-media"></div>
+        <figcaption class="sector-card__label">Serralheria</figcaption>
+      </figure>
+      <figure class="sector-card">
+        <div class="sector-card__thumb placeholder-media"></div>
+        <figcaption class="sector-card__label">Indústria</figcaption>
+      </figure>
+      <figure class="sector-card">
+        <div class="sector-card__thumb placeholder-media"></div>
+        <figcaption class="sector-card__label">Reformas</figcaption>
+      </figure>
     </div>
   </div>
 </section>
 
-<!-- ===== SEÇÃO DE PRODUTOS ===== -->
-<section id="produtos" class="produtos-section">
-  <h2 class="section-title">Nossos Produtos</h2>
-  <p class="section-subtitle">Explore nossa linha completa de cantoneiras e perfis metálicos</p>
-
-  <div class="grid-produtos" id="produtosGrid">
-    {% for p in produtos %}
-    <div class="card-produto">
-      <div class="card-image-container">
-        <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="card-image" onerror="this.src='/static/images/placeholder.png'">
-        <div class="card-badge">R$ {{ '%.2f' % p.valor }}</div>
+<section class="services-products">
+  <div class="neo-container services-products__inner">
+    <div class="services-products__text">
+      <p class="kicker">Serviços e produtos</p>
+      <h2 class="heading-lg">
+        CONTE COM A NOSSA<br>
+        EXPERIÊNCIA PARA A<br>
+        FORÇA DA SUA OBRA
+      </h2>
+      <p class="muted">
+        Consulte medidas, disponibilidade e condições de atendimento para comprar com mais segurança.
+      </p>
+      <div class="btn-row">
+        <a class="btn btn--primary" href="/#produtos">Conheça nossos produtos</a>
+        <a class="btn btn--outline" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Solicitar orçamento</a>
       </div>
-      <div class="card-content">
-        <h3 class="card-title">{{ p.nome }}</h3>
-        <div class="card-actions">
-          <a href="/produto/{{ p.id }}" class="btn-view">Ver Detalhes</a>
+    </div>
 
-          {# ===========================================================
-             FIX CARRINHO DEFINITIVO:
-             - Passa id (número), nome e valor para o JS
-             - Assim o carrinho NÃO depende de /api/produtos para renderizar
-             =========================================================== #}
-          <button
-            class="btn-primary btn-add-cart"
-            data-id="{{ p.id }}"
-            data-nome="{{ p.nome }}"
-            data-valor="{{ p.valor }}"
-            onclick="adicionarCarrinho(this.dataset.id, this.dataset.nome, this.dataset.valor)"
-          >
-            Adicionar
-          </button>
+    <div class="services-products__mediaWrap">
+      <div class="services-products__media placeholder-media" role="img" aria-label="Imagem institucional de serviços"></div>
+      <div class="services-products__mediaBg" aria-hidden="true"></div>
+    </div>
+  </div>
+</section>
+
+<section id="produtos" class="products-modern">
+  <div class="neo-container">
+    <div class="products-modern__header">
+      <p class="kicker">Produtos</p>
+      <h2 class="heading-section">CATÁLOGO DE PRODUTOS</h2>
+      <p class="muted">Explore nossa linha de cantoneiras e perfis metálicos.</p>
+    </div>
+
+    <div class="grid-produtos" id="produtosGrid">
+      {% for p in produtos %}
+      <div class="card-produto">
+        <div class="card-image-container">
+          <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="card-image" onerror="this.src='/static/images/placeholder.png'">
+          <div class="card-badge">R$ {{ '%.2f' % p.valor }}</div>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">{{ p.nome }}</h3>
+          <div class="card-actions">
+            <a href="/produto/{{ p.id }}" class="btn-view">Ver Detalhes</a>
+
+            {# ===========================================================
+               FIX CARRINHO DEFINITIVO:
+               - Passa id (número), nome e valor para o JS
+               - Assim o carrinho NÃO depende de /api/produtos para renderizar
+               =========================================================== #}
+            <button
+              class="btn-primary btn-add-cart"
+              data-id="{{ p.id }}"
+              data-nome="{{ p.nome }}"
+              data-valor="{{ p.valor }}"
+              onclick="adicionarCarrinho(this.dataset.id, this.dataset.nome, this.dataset.valor)"
+            >
+              Adicionar
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-    {% endfor %}
-  </div>
-
-  {% if total_paginas and total_paginas > 1 %}
-  <div class="pagination-wrapper">
-    <div class="pagination">
-      {% if pagina_atual > 1 %}
-      <a class="page-btn" href="/?page={{ pagina_atual - 1 }}#produtos">←</a>
-      {% else %}
-      <span class="page-btn disabled">←</span>
-      {% endif %}
-
-      {% for p in paginacao %}
-        {% if p is none %}
-          <span class="page-ellipsis">…</span>
-        {% else %}
-          {% if p == pagina_atual %}
-            <span class="page-btn active">{{ p }}</span>
-          {% else %}
-            <a class="page-btn" href="/?page={{ p }}#produtos">{{ p }}</a>
-          {% endif %}
-        {% endif %}
       {% endfor %}
-
-      {% if pagina_atual < total_paginas %}
-      <a class="page-btn" href="/?page={{ pagina_atual + 1 }}#produtos">→</a>
-      {% else %}
-      <span class="page-btn disabled">→</span>
-      {% endif %}
     </div>
+
+    {% if total_paginas and total_paginas > 1 %}
+    <div class="pagination-wrapper">
+      <div class="pagination">
+        {% if pagina_atual > 1 %}
+        <a class="page-btn" href="/?page={{ pagina_atual - 1 }}#produtos">←</a>
+        {% else %}
+        <span class="page-btn disabled">←</span>
+        {% endif %}
+
+        {% for p in paginacao %}
+          {% if p is none %}
+            <span class="page-ellipsis">…</span>
+          {% else %}
+            {% if p == pagina_atual %}
+              <span class="page-btn active">{{ p }}</span>
+            {% else %}
+              <a class="page-btn" href="/?page={{ p }}#produtos">{{ p }}</a>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+
+        {% if pagina_atual < total_paginas %}
+        <a class="page-btn" href="/?page={{ pagina_atual + 1 }}#produtos">→</a>
+        {% else %}
+        <span class="page-btn disabled">→</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
   </div>
-  {% endif %}
 </section>
 
-<!-- ===== SEÇÃO SOBRE ===== -->
-<section id="sobre" class="about-section">
-  <h2 class="section-title">Sobre Nós</h2>
-  <p class="section-subtitle">Conheça nossa história e compromisso com qualidade</p>
-  <div class="about-content">
-    <p>
-      A Cantoneira Fácil nasceu com o objetivo de fornecer cantoneiras e perfis metálicos com qualidade,
-      atendimento humano e foco na satisfação do cliente.
+<section class="statement">
+  <div class="neo-container">
+    <h2 class="heading-lg">
+      FAZEMOS DO AÇO A BASE PARA TIRAR PROJETOS DO PAPEL E MANTER SUA OPERAÇÃO EM MOVIMENTO
+    </h2>
+    <p class="muted">
+      Atendimento rápido, suporte pelo WhatsApp e catálogo organizado para facilitar sua compra.
     </p>
+    <a class="btn btn--primary" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Saiba Mais</a>
   </div>
 </section>
 
-<!-- ===== SEÇÃO CONTATO ===== -->
-<section id="contato" class="contact-section">
-  <h2 class="section-title">Contato</h2>
-  <p class="section-subtitle">Fale com a gente pelo WhatsApp</p>
-  <div class="contact-actions">
-    <a href="{{ WHATSAPP_LINK }}" target="_blank" class="btn-whatsapp-large">
-      💬 Falar no WhatsApp
-    </a>
+<section id="contato" class="cta-band">
+  <div class="neo-container cta-band__inner">
+    <h3 class="cta-band__title">É AÇO QUE VOCÊ QUER? FALE COM A CANTONEIRA FÁCIL!</h3>
+    <a class="btn btn--ghost" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Fale Conosco</a>
   </div>
 </section>
 {% endblock %}
