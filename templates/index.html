@@ -29,7 +29,13 @@
       </div>
 
       <div class="hero-split__right">
-        <div class="hero-split__media hero-split__media--watermark" role="img" aria-label="Imagem destaque dos produtos"></div>
+      <div class="hero-split__media" aria-label="Marca e identidade visual">
+        <img
+          src="{{ LOGO_URL or '/static/images/logomarca.png' }}"
+          alt="Logo Cantoneira Fácil"
+          class="hero-watermark-img"
+        >
+      </div>
         <div class="hero-split__overlayCard">
           <p class="hero-split__overlayKicker">Atendimento</p>
           <p class="hero-split__overlayText">Pedidos e orçamento com suporte via WhatsApp</p>
