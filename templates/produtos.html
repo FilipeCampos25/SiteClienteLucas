@@ -1,0 +1,71 @@
+{% extends "base_new.html" %}
+
+{% block body_class %}home-ref{% endblock %}
+
+{% block content %}
+<section id="produtos" class="products-modern">
+  <div class="section-container">
+    <div class="products-modern__header">
+      <p class="kicker">Produtos</p>
+      <h2 class="heading-section">CATÁLOGO DE PRODUTOS</h2>
+      <p class="muted">Explore nossa linha de cantoneiras e perfis metálicos.</p>
+    </div>
+
+    <div class="grid-produtos" id="produtosGrid">
+      {% for p in produtos %}
+      <div class="card-produto">
+        <div class="card-image-container">
+          <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="card-image" onerror="this.src='/static/images/placeholder.png'">
+          <div class="card-badge">R$ {{ '%.2f' % p.valor }}</div>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">{{ p.nome }}</h3>
+          <div class="card-actions">
+            <a href="/produto/{{ p.id }}" class="btn-view">Ver Detalhes</a>
+            <button
+              class="btn-primary btn-add-cart"
+              data-id="{{ p.id }}"
+              data-nome="{{ p.nome }}"
+              data-valor="{{ p.valor }}"
+              onclick="adicionarCarrinho(this.dataset.id, this.dataset.nome, this.dataset.valor)"
+            >
+              Adicionar
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if total_paginas and total_paginas > 1 %}
+    <div class="pagination-wrapper">
+      <div class="pagination">
+        {% if pagina_atual > 1 %}
+        <a class="page-btn" href="/produtos?page={{ pagina_atual - 1 }}#produtos">←</a>
+        {% else %}
+        <span class="page-btn disabled">←</span>
+        {% endif %}
+
+        {% for p in paginacao %}
+          {% if p is none %}
+            <span class="page-ellipsis">…</span>
+          {% else %}
+            {% if p == pagina_atual %}
+              <span class="page-btn active">{{ p }}</span>
+            {% else %}
+              <a class="page-btn" href="/produtos?page={{ p }}#produtos">{{ p }}</a>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+
+        {% if pagina_atual < total_paginas %}
+        <a class="page-btn" href="/produtos?page={{ pagina_atual + 1 }}#produtos">→</a>
+        {% else %}
+        <span class="page-btn disabled">→</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

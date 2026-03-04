@@ -1,0 +1,107 @@
+{% extends "base_new.html" %}
+
+{% block body_class %}home-ref{% endblock %}
+
+{% block content %}
+<section class="hero-home">
+  <div class="section-container">
+    <div class="hero-split">
+      <div class="hero-split__left">
+        <div class="hero-split__leftInner">
+          <p class="kicker kicker--on-dark">Catálogo de produtos</p>
+          <h1 class="hero-split__title">
+            ONDE TEM AÇO,<br>
+            TEM SOLUÇÃO.
+          </h1>
+          <p class="hero-split__lead">
+            Cantoneiras e perfis metálicos para obra, serralheria e indústria com atendimento rápido.
+          </p>
+          <div class="btn-row">
+            <a class="btn btn--primary" href="/produtos">Explorar Produtos</a>
+            <a class="btn btn--light" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Fale Conosco</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-split__right">
+        <div class="hero-split__media" aria-label="Marca e identidade visual">
+          <img
+            src="{{'/static/images/placeholder.png' }}"
+            alt="Logo Cantoneira Fácil"
+            class="hero-watermark-img"
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sectors">
+  <div class="section-container">
+    <h2 class="heading-section">
+      ESTAMOS PRESENTES NOS<br>
+      PRINCIPAIS SETORES DA<br>
+      CONSTRUÇÃO E INDÚSTRIA
+    </h2>
+
+    <div class="sectors__grid">
+      <figure class="sector-card">
+        <div class="sector-card__thumb placeholder-media"></div>
+        <figcaption class="sector-card__label">Construção Civil</figcaption>
+      </figure>
+      <figure class="sector-card">
+        <div class="sector-card__thumb placeholder-media"></div>
+        <figcaption class="sector-card__label">Serralheria</figcaption>
+      </figure>
+      <figure class="sector-card">
+        <div class="sector-card__thumb placeholder-media"></div>
+        <figcaption class="sector-card__label">Indústria</figcaption>
+      </figure>
+      <figure class="sector-card">
+        <div class="sector-card__thumb placeholder-media"></div>
+        <figcaption class="sector-card__label">Reformas</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="services-products">
+  <div class="section-container services-products__inner">
+    <div class="services-products__text">
+      <p class="kicker">Serviços e produtos</p>
+      <h2 class="heading-lg">
+        CONTE COM A NOSSA<br>
+        EXPERIÊNCIA PARA A<br>
+        FORÇA DA SUA OBRA
+      </h2>
+      <p class="muted">
+        Consulte medidas, disponibilidade e condições de atendimento para comprar com mais segurança.
+      </p>
+      <div class="btn-row">
+        <a class="btn btn--primary" href="/produtos">Conheça nossos produtos</a>
+        <a class="btn btn--outline" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Solicitar orçamento</a>
+      </div>
+    </div>
+
+    <div class="services-products__mediaWrap">
+      <div class="services-products__media placeholder-media" role="img" aria-label="Imagem institucional de serviços"></div>
+      <div class="services-products__mediaBg" aria-hidden="true"></div>
+    </div>
+  </div>
+</section>
+
+<section class="statement">
+  <div class="section-container">
+    <h2 class="heading-lg">
+      FAZEMOS DO AÇO A BASE PARA TIRAR PROJETOS DO PAPEL E MANTER SUA OPERAÇÃO EM MOVIMENTO
+    </h2>
+    <p class="muted">
+      Atendimento rápido, suporte pelo WhatsApp e catálogo organizado para facilitar sua compra.
+    </p>
+    <div class="btn-row">
+      <a class="btn btn--primary" href="/quem-somos">Quem Somos</a>
+      <a class="btn btn--outline" href="/contato">Contato</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

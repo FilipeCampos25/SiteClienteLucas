@@ -1441,8 +1441,8 @@ body {
 
 /* ===== FOOTER ===== */
 .footer {
-  background: var(--cinza-escuro);
-  color: var(--branco);
+  background: var(--branco);
+  color: var(--cinza-escuro);
   padding: var(--spacing-2xl) 0;
   margin-top: auto;
 }
@@ -2614,6 +2614,7 @@ body.home-ref .hero-home {
   padding: 22px 0 18px;
 }
 
+
 body.home-ref .hero-home .hero-split {
   display: grid;
   grid-template-columns: 1fr 1.2fr;
@@ -2749,3 +2750,4 @@ body.home-ref .hero-home .hero-split__overlayCard {
     gap: 20px;
   }
 }
+

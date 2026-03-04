@@ -1,0 +1,45 @@
+{% extends "base_new.html" %}
+
+{% block body_class %}home-ref{% endblock %}
+
+{% block content %}
+<section class="split-content">
+  <div class="section-container split-content__layout">
+    <div class="split-content__left">
+      <div class="split-content__leftArt">
+        <div class="art-block placeholder-media" aria-hidden="true">
+          <div class="hero-split__overlayCard">
+            <p class="hero-split__overlayKicker">Atendimento</p>
+            <p class="hero-split__overlayText">Pedidos e orçamento com suporte via WhatsApp</p>
+            <a href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Iniciar conversa</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="split-content__right">
+      <div class="split-content__rightInner">
+        <h2 class="heading-xl">O BRASIL NÃO<br>PODE PARAR</h2>
+        <p class="muted">
+          A Cantoneira Fácil atende com foco em agilidade, orientação técnica e boa disponibilidade de produtos,
+          ajudando sua operação a manter ritmo e previsibilidade.
+        </p>
+      </div>
+    </div>
+
+    <div class="split-content__accentLine" aria-hidden="true"></div>
+  </div>
+</section>
+
+<section class="statement">
+  <div class="section-container">
+    <h2 class="heading-lg">
+      HISTÓRIA, ATENDIMENTO PRÓXIMO E COMPROMISSO COM A QUALIDADE
+    </h2>
+    <p class="muted">
+      Nosso foco é oferecer soluções em perfis metálicos com rapidez, clareza e suporte técnico para sua obra.
+    </p>
+    <a class="btn btn--primary" href="/contato">Fale com a equipe</a>
+  </div>
+</section>
+{% endblock %}

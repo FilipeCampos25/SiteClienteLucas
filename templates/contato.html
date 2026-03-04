@@ -1,0 +1,41 @@
+{% extends "base_new.html" %}
+
+{% block body_class %}home-ref{% endblock %}
+
+{% block content %}
+<section class="statement">
+  <div class="section-container">
+    <h2 class="heading-lg">
+      E A&Ccedil;O QUE VOC&Ecirc; QUER? FALE COM A CANTONEIRA F&Aacute;CIL!
+    </h2>
+    <p class="muted">
+      Nossa equipe est&aacute; pronta para atender seu pedido, tirar d&uacute;vidas e montar seu or&ccedil;amento.
+    </p>
+    <a class="btn btn--primary" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Fale Conosco</a>
+  </div>
+</section>
+
+<section class="contact-map">
+  <div class="section-container">
+    <h3 class="heading-lg">LOCALIZA&Ccedil;&Atilde;O DA LOJA</h3>
+    <p class="muted">Troque o link abaixo para a posi&ccedil;&atilde;o da loja do seu cliente.</p>
+    <div class="contact-map__frame">
+      {# Troque latitude/longitude no q=... para o endereco da loja #}
+      <iframe
+        title="Mapa da loja"
+        src="https://www.google.com/maps?q=-23.55052,-46.633308&z=15&output=embed"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        allowfullscreen>
+      </iframe>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="section-container cta-band__inner">
+    <h3 class="cta-band__title">ATENDIMENTO R&Aacute;PIDO POR WHATSAPP E TELEFONE</h3>
+    <a class="btn btn--ghost" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Iniciar conversa</a>
+  </div>
+</section>
+{% endblock %}

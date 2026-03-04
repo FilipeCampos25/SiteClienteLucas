@@ -214,7 +214,29 @@ def _auth_admin(request: Request) -> str:
 # =============================================================================
 
 @app.get("/", response_class=HTMLResponse)
-def index(
+def home(request: Request):
+    return templates.TemplateResponse(
+        "home.html",
+        {
+            "request": request,
+            "whatsapp_numero": telefone_visivel(),
+        },
+    )
+
+
+@app.get("/quem-somos", response_class=HTMLResponse)
+def quem_somos(request: Request):
+    return templates.TemplateResponse(
+        "quem_somos.html",
+        {
+            "request": request,
+            "whatsapp_numero": telefone_visivel(),
+        },
+    )
+
+
+@app.get("/produtos", response_class=HTMLResponse)
+def produtos(
     request: Request,
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
@@ -225,7 +247,7 @@ def index(
     total_paginas = math.ceil(total_itens / per_page) if total_itens > 0 else 0
 
     if total_paginas > 0 and page > total_paginas:
-        return RedirectResponse(url=f"/?page={total_paginas}#produtos", status_code=303)
+        return RedirectResponse(url=f"/produtos?page={total_paginas}#produtos", status_code=303)
 
     offset = (page - 1) * per_page
     produtos = (
@@ -250,7 +272,7 @@ def index(
         )
 
     return templates.TemplateResponse(
-        "index.html",
+        "produtos.html",
         {
             "request": request,
             "produtos": view,
@@ -260,6 +282,17 @@ def index(
             # PATCH MÍNIMO:
             # telefone_visivel() no seu utils.py NÃO recebe parâmetro.
             # Ela já lê WHATSAPP_NUMERO do config.py internamente.
+            "whatsapp_numero": telefone_visivel(),
+        },
+    )
+
+
+@app.get("/contato", response_class=HTMLResponse)
+def contato(request: Request):
+    return templates.TemplateResponse(
+        "contato.html",
+        {
+            "request": request,
             "whatsapp_numero": telefone_visivel(),
         },
     )

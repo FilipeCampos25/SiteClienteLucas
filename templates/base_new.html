@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cantoneira Fácil - Catálogo</title>
   <link rel="icon" type="image/png" href="/static/images/ico.png">
-  <link rel="stylesheet" href="/static/css/site.css">
+  <link rel="stylesheet" href="/static/css/site.css?v=3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -25,9 +25,9 @@
       <nav class="nav site-nav" id="siteNav" aria-label="Menu principal">
         <ul class="nav-list">
           <li><a href="/" class="nav__link">Home</a></li>
-          <li><a href="/#sobre" class="nav__link">Quem Somos</a></li>
-          <li><a href="/#produtos" class="nav__link is-active">Produtos</a></li>
-          <li><a href="/#contato" class="nav__link">Contato</a></li>
+          <li><a href="/quem-somos" class="nav__link">Quem Somos</a></li>
+          <li><a href="/produtos" class="nav__link is-active">Produtos</a></li>
+          <li><a href="/contato" class="nav__link">Contato</a></li>
         </ul>
       </nav>
 
@@ -80,16 +80,16 @@
         <p class="footer__desc">Catálogo de produtos com atendimento direto e rápido para sua obra.</p>
         <div class="footer__social">
           <a href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener" aria-label="WhatsApp">W</a>
-          <a href="/#produtos" aria-label="Produtos">P</a>
-          <a href="/#contato" aria-label="Contato">C</a>
+          <a href="/produtos" aria-label="Produtos">P</a>
+          <a href="/contato" aria-label="Contato">C</a>
         </div>
       </div>
 
       <nav class="footer__links" aria-label="Links do rodapé">
         <a href="/">Home</a>
-        <a href="/#sobre">Quem Somos</a>
-        <a href="/#produtos">Produtos</a>
-        <a href="/#contato">Contato</a>
+        <a href="/quem-somos">Quem Somos</a>
+        <a href="/produtos">Produtos</a>
+        <a href="/contato">Contato</a>
       </nav>
 
       <div class="footer__certs">
@@ -100,7 +100,7 @@
     </div>
 
     <div class="neo-container footer__bottom">
-      <a href="/#sobre" class="footer__privacy">Política de Privacidade</a>
+      <a href="/quem-somos" class="footer__privacy">Política de Privacidade</a>
       <small class="footer__copy">Todos os direitos reservados © 2026</small>
     </div>
   </footer>
