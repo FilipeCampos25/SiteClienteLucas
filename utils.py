@@ -5,7 +5,7 @@ def gerar_link_whatsapp(itens):
     if not itens:
         return f"https://wa.me/{WHATSAPP_NUMERO}"
 
-    texto = "Olá! Tenho interesse nos seguintes itens da Cantoneira Fácil:\n\n"
+    texto = "Olá! Tenho interesse nos seguintes itens da Casa das Cantoneiras:\n\n"
     total = 0.0
 
     for item in itens:

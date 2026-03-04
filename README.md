@@ -1,4 +1,4 @@
-Cantoneira Fácil — entrega pronta para deploy (versão simplificada)
+Casa das Cantoneiras — entrega pronta para deploy (versão simplificada)
 ------------------------------------------------------------
 Estrutura mínima do projeto. Configure variáveis de ambiente em .env antes de rodar.
 - DATABASE_URL (ex: postgresql://user:pass@host:port/dbname) — se não definido, usa SQLite local.

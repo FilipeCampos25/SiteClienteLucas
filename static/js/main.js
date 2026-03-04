@@ -144,9 +144,14 @@ function mostrarCarrinho() {
 
     html += `
       <li class="carrinho-item">
-        <span>${quantidade}x ${nome}</span>
-        <span>R$ ${subtotal.toFixed(2)}</span>
-        <button class="btn-remove" onclick="removerDoCarrinho(${Number(item.id)})">Remover</button>
+        <div class="carrinho-item__row">
+          <span class="carrinho-item__nome">${quantidade}x ${nome}</span>
+          <span class="carrinho-item__preco">R$ ${subtotal.toFixed(2)}</span>
+        </div>
+
+        <button class="btn-remove carrinho-item__remove" onclick="removerDoCarrinho(${Number(item.id)})">
+          Remover
+        </button>
       </li>
     `;
 

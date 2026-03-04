@@ -11,12 +11,25 @@
       <p class="muted">Explore nossa linha de cantoneiras e perfis metálicos.</p>
     </div>
 
+    <div class="product-filters">
+      <a href="/produtos#produtos" class="filter-chip {% if not tipo_atual %}active{% endif %}">Todos</a>
+      {% for t in tipos_produto %}
+      <a
+        href="/produtos?tipo={{ t.id }}#produtos"
+        class="filter-chip {% if tipo_atual == t.id %}active{% endif %}"
+      >
+        {{ t.label }}
+      </a>
+      {% endfor %}
+    </div>
+
     <div class="grid-produtos" id="produtosGrid">
       {% for p in produtos %}
       <div class="card-produto">
         <div class="card-image-container">
           <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="card-image" onerror="this.src='/static/images/placeholder.png'">
           <div class="card-badge">R$ {{ '%.2f' % p.valor }}</div>
+          <div class="card-type">{{ p.tipo_label }}</div>
         </div>
         <div class="card-content">
           <h3 class="card-title">{{ p.nome }}</h3>
@@ -41,7 +54,7 @@
     <div class="pagination-wrapper">
       <div class="pagination">
         {% if pagina_atual > 1 %}
-        <a class="page-btn" href="/produtos?page={{ pagina_atual - 1 }}#produtos">←</a>
+        <a class="page-btn" href="/produtos?page={{ pagina_atual - 1 }}{% if tipo_atual %}&tipo={{ tipo_atual }}{% endif %}#produtos">←</a>
         {% else %}
         <span class="page-btn disabled">←</span>
         {% endif %}
@@ -53,13 +66,13 @@
             {% if p == pagina_atual %}
               <span class="page-btn active">{{ p }}</span>
             {% else %}
-              <a class="page-btn" href="/produtos?page={{ p }}#produtos">{{ p }}</a>
+              <a class="page-btn" href="/produtos?page={{ p }}{% if tipo_atual %}&tipo={{ tipo_atual }}{% endif %}#produtos">{{ p }}</a>
             {% endif %}
           {% endif %}
         {% endfor %}
 
         {% if pagina_atual < total_paginas %}
-        <a class="page-btn" href="/produtos?page={{ pagina_atual + 1 }}#produtos">→</a>
+        <a class="page-btn" href="/produtos?page={{ pagina_atual + 1 }}{% if tipo_atual %}&tipo={{ tipo_atual }}{% endif %}#produtos">→</a>
         {% else %}
         <span class="page-btn disabled">→</span>
         {% endif %}

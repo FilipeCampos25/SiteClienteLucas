@@ -130,6 +130,7 @@ def create_produto(
         nome=produto.nome,
         descricao=(produto.descricao or "").strip(),
         valor=float(produto.valor),
+        tipo=(produto.tipo or "cantoneira").strip().lower(),
         ativo=True,
     )
 
@@ -184,6 +185,8 @@ def update_produto(
         p.descricao = dados.descricao
     if dados.valor is not None:
         p.valor = float(dados.valor)
+    if dados.tipo is not None:
+        p.tipo = (dados.tipo or "cantoneira").strip().lower()
     if dados.ativo is not None:
         p.ativo = bool(dados.ativo)
 

@@ -57,12 +57,20 @@ from config import (
 )
 from utils import gerar_link_whatsapp, telefone_visivel
 
+TIPOS_PRODUTO = ("cantoneira", "instalacao", "kits", "prateleiras")
+TIPOS_LABEL = {
+    "cantoneira": "Cantoneira",
+    "instalacao": "Instalação",
+    "kits": "Kits",
+    "prateleiras": "Prateleiras",
+}
+
 
 # =============================================================================
 # App
 # =============================================================================
 
-app = FastAPI(title="Cantoneira Fácil")
+app = FastAPI(title="Casa das Cantoneiras")
 
 app.add_middleware(
     CORSMiddleware,
@@ -239,15 +247,26 @@ def quem_somos(request: Request):
 def produtos(
     request: Request,
     page: int = Query(1, ge=1),
+    tipo: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
+    tipo_filtro = (tipo or "").strip().lower() or None
+    if tipo_filtro and tipo_filtro not in TIPOS_PRODUTO:
+        raise HTTPException(status_code=400, detail="Tipo de produto inválido")
+
     per_page = 20
     base_query = db.query(models.Produto).filter(models.Produto.ativo.is_(True))
+    if tipo_filtro:
+        base_query = base_query.filter(models.Produto.tipo == tipo_filtro)
+
     total_itens = base_query.count()
     total_paginas = math.ceil(total_itens / per_page) if total_itens > 0 else 0
 
     if total_paginas > 0 and page > total_paginas:
-        return RedirectResponse(url=f"/produtos?page={total_paginas}#produtos", status_code=303)
+        qs = f"?page={total_paginas}"
+        if tipo_filtro:
+            qs += f"&tipo={tipo_filtro}"
+        return RedirectResponse(url=f"/produtos{qs}#produtos", status_code=303)
 
     offset = (page - 1) * per_page
     produtos = (
@@ -267,6 +286,8 @@ def produtos(
                 "nome": p.nome,
                 "descricao": p.descricao,
                 "valor": p.valor,
+                "tipo": p.tipo,
+                "tipo_label": TIPOS_LABEL.get(p.tipo, "Outros"),
                 "imagem_url": _produto_image_url(p),
             }
         )
@@ -279,6 +300,8 @@ def produtos(
             "pagina_atual": page,
             "total_paginas": total_paginas,
             "paginacao": _build_paginacao(total_paginas, page),
+            "tipo_atual": tipo_filtro,
+            "tipos_produto": [{"id": t, "label": TIPOS_LABEL[t]} for t in TIPOS_PRODUTO],
             # PATCH MÍNIMO:
             # telefone_visivel() no seu utils.py NÃO recebe parâmetro.
             # Ela já lê WHATSAPP_NUMERO do config.py internamente.
@@ -357,6 +380,7 @@ def api_produtos(db: Session = Depends(get_db)):
             "nome": p.nome,
             "descricao": p.descricao,
             "valor": p.valor,
+            "tipo": p.tipo,
             "imagem_url": _produto_image_url(p),
         }
         for p in produtos
@@ -421,13 +445,19 @@ def admin_dashboard(
                 "descricao": p.descricao,
                 "valor": p.valor,
                 "ativo": p.ativo,
+                "tipo": p.tipo,
+                "tipo_label": TIPOS_LABEL.get(p.tipo, "Outros"),
                 "imagem_url": _produto_image_url(p),
             }
         )
 
     return templates.TemplateResponse(
         "admin/dashboard.html",
-        {"request": request, "produtos": view},
+        {
+            "request": request,
+            "produtos": view,
+            "tipos_produto": [{"id": t, "label": TIPOS_LABEL[t]} for t in TIPOS_PRODUTO],
+        },
     )
 
 
@@ -443,6 +473,7 @@ def admin_produto_novo(
     nome: str = Form(...),
     descricao: str = Form(""),
     valor: float = Form(...),
+    tipo: str = Form("cantoneira"),
     imagem: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
@@ -454,7 +485,12 @@ def admin_produto_novo(
         raw = imagem.file.read()
         imagem_bytes, imagem_mime = _compress_to_jpeg(raw)
 
-    novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor)
+    novo = schemas.ProdutoCreate(
+        nome=nome,
+        descricao=descricao,
+        valor=valor,
+        tipo=(tipo or "cantoneira").strip().lower(),
+    )
     crud.create_produto(db, novo, imagem_bytes=imagem_bytes, imagem_mime=imagem_mime)
 
     return RedirectResponse("/admin", status_code=303)
@@ -467,6 +503,7 @@ def admin_produto_atualizar(
     nome: str = Form(None),
     descricao: str = Form(None),
     valor: float = Form(None),
+    tipo: Optional[str] = Form(None),
     ativo: Optional[bool] = Form(None),
     imagem: UploadFile = File(None),
     db: Session = Depends(get_db),
@@ -482,6 +519,7 @@ def admin_produto_atualizar(
         nome=nome,
         descricao=descricao,
         valor=valor,
+        tipo=(tipo or "").strip().lower() or None,
         ativo=ativo,
     )
 
@@ -523,6 +561,7 @@ def admin_produto_novo_alias(
     nome: str = Form(...),
     descricao: str = Form(""),
     valor: float = Form(...),
+    tipo: str = Form("cantoneira"),
     imagem: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
@@ -537,7 +576,12 @@ def admin_produto_novo_alias(
         raw = imagem.file.read()
         imagem_bytes, imagem_mime = _compress_to_jpeg(raw)
 
-    novo = schemas.ProdutoCreate(nome=nome, descricao=descricao, valor=valor)
+    novo = schemas.ProdutoCreate(
+        nome=nome,
+        descricao=descricao,
+        valor=valor,
+        tipo=(tipo or "cantoneira").strip().lower(),
+    )
     crud.create_produto(db, novo, imagem_bytes=imagem_bytes, imagem_mime=imagem_mime)
 
     return RedirectResponse("/admin", status_code=303)
@@ -550,6 +594,7 @@ def admin_produto_atualizar_alias(
     nome: str = Form(None),
     descricao: str = Form(None),
     valor: float = Form(None),
+    tipo: Optional[str] = Form(None),
     ativo: Optional[bool] = Form(None),
     imagem: UploadFile = File(None),
     db: Session = Depends(get_db),
@@ -569,6 +614,7 @@ def admin_produto_atualizar_alias(
         nome=nome,
         descricao=descricao,
         valor=valor,
+        tipo=(tipo or "").strip().lower() or None,
         ativo=ativo,
     )
 
@@ -590,6 +636,7 @@ def admin_produto_method_override(
     nome: str = Form(None),
     descricao: str = Form(None),
     valor: float = Form(None),
+    tipo: Optional[str] = Form(None),
     ativo: Optional[bool] = Form(None),
     imagem: UploadFile = File(None),
     db: Session = Depends(get_db),
@@ -607,6 +654,7 @@ def admin_produto_method_override(
             nome=nome,
             descricao=descricao,
             valor=valor,
+            tipo=tipo,
             ativo=ativo,
             imagem=imagem,
             db=db,

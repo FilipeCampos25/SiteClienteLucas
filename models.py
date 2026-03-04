@@ -8,6 +8,7 @@ class Produto(Base):
 
     nome = Column(String(120), nullable=False)
     descricao = Column(Text)
+    tipo = Column(String(32), nullable=False, server_default="cantoneira")
 
     # Numeric no Postgres vira Decimal na leitura; convertemos no schema de saída
     valor = Column(Numeric(20, 2), nullable=False)
