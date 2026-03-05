@@ -306,5 +306,5 @@ function toggleNavMenu() {
 
 window.addEventListener("resize", () => {
   const nav = document.getElementById("siteNav");
-  if (nav && window.innerWidth > 800) nav.classList.remove("open");
+  if (nav && window.innerWidth > 1020) nav.classList.remove("open");
 });
