@@ -678,3 +678,11 @@ def admin_produto_excluir_alias(
     """
     crud.delete_produto(db, produto_id=produto_id)
     return Response(status_code=204)
+
+# main.py
+templates.env.globals.update(
+    WHATSAPP_NUMERO=WHATSAPP_NUMERO or "",
+    WHATSAPP_DISPLAY=telefone_visivel(),
+    WHATSAPP_LINK=gerar_link_whatsapp([]),
+    LOGO_URL="/static/images/logomarca.png",
+)

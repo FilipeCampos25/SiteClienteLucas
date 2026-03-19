@@ -52,3 +52,34 @@ def gerar_link_whatsapp_text(texto):
     if not WHATSAPP_NUMERO:
         return '#'
     return f"https://wa.me/{WHATSAPP_NUMERO}?text={quote_plus(texto)}"
+
+# utils.py
+from urllib.parse import quote_plus
+
+from config import WHATSAPP_NUMERO
+
+
+def _whatsapp_numero_limpo() -> str:
+    return ''.join(ch for ch in (WHATSAPP_NUMERO or '') if ch.isdigit())
+
+
+def gerar_link_whatsapp(itens):
+    numero = _whatsapp_numero_limpo()
+    if not numero:
+        return '#'
+
+    if not itens:
+        return f"https://wa.me/{numero}"
+
+    texto = "Olá! Tenho interesse nos seguintes itens da Casa das Cantoneiras:\n\n"
+    total = 0.0
+
+    for item in itens:
+        qtd = item["quantidade"]
+        valor_un = float(item["valor_unitario"])
+        subtotal = qtd * valor_un
+        total += subtotal
+        texto += f"• {qtd}x {item['nome']} - R$ {valor_un:.2f}/un → R$ {subtotal:.2f}\n"
+
+    texto += f"\nTotal estimado: R$ {total:.2f}\n\nPode me passar orçamento com frete e prazo de entrega?\nObrigado!"
+    return f"https://wa.me/{numero}?text={quote_plus(texto)}"

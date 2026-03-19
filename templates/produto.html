@@ -17,36 +17,22 @@
     <div class="produto-info">
       <h2 class="produto-title">{{ p.nome }}</h2>
 
-      <div class="produto-price">
-        <span class="price-label">Preço:</span>
-        <span class="price-value">R$ {{ '%.2f' % p.valor }}</span>
-      </div>
-
       {% if p.descricao %}
       <div class="produto-description">
-        <h3>Descrição</h3>
+        <h3>DescriÃƒÂ§ÃƒÂ£o</h3>
         <p>{{ p.descricao }}</p>
       </div>
       {% endif %}
 
       <div class="produto-actions">
-        <a href="/produtos" class="btn-secondary">← Voltar</a>
-        <button
-          class="btn-primary btn-add-cart-large"
-          data-id="{{ p.id }}"
-          data-nome="{{ p.nome }}"
-          data-valor="{{ p.valor }}"
-          onclick="adicionarCarrinho(this.dataset.id, this.dataset.nome, this.dataset.valor)"
-        >
-          🛒 Adicionar ao Carrinho
-        </button>
+        <a href="/produtos" class="btn-secondary">Ã¢â€ Â Voltar</a>
       </div>
 
       <div class="security-badge">
         <p class="security-text">
-          <span>✓</span> Compra Segura |
-          <span>🔒</span> Dados Protegidos |
-          <span>💳</span> Múltiplas Formas de Pagamento
+          <span>Ã¢Å“â€œ</span> Atendimento Especializado |
+          <span>Ã°Å¸â€â€™</span> Dados Protegidos |
+          <span>Ã°Å¸â€™Â³</span> Suporte via WhatsApp
         </p>
       </div>
     </div>
@@ -55,8 +41,8 @@
 
 <section class="related-section">
   <div class="neo-container">
-    <h2 class="section-title">Você Também Pode Se Interessar</h2>
-    <p class="section-subtitle">Navegue por nossa coleção completa</p>
+    <h2 class="section-title">VocÃƒÂª TambÃƒÂ©m Pode Se Interessar</h2>
+    <p class="section-subtitle">Navegue por nossa coleÃƒÂ§ÃƒÂ£o completa</p>
     <div class="related-placeholder">
       <a href="/produtos" class="btn-primary">Ver Todos os Produtos</a>
     </div>
@@ -65,14 +51,14 @@
 
 <section class="final-cta-section">
   <div class="neo-container cta-wrapper">
-    <h2 class="cta-title">Dúvidas sobre este produto?</h2>
-    <p class="cta-description">Nosso time de especialistas está pronto para ajudar</p>
+    <h2 class="cta-title">DÃƒÂºvidas sobre este produto?</h2>
+    <p class="cta-description">Nosso time de especialistas estÃƒÂ¡ pronto para ajudar</p>
     <div class="cta-buttons">
       <a href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener" class="btn-whatsapp-large">
-        💬 WhatsApp
+        Ã°Å¸â€™Â¬ WhatsApp
       </a>
       <a href="tel:+{{ WHATSAPP_NUMERO }}" class="btn-phone-large">
-        ☎️ Ligar
+        Ã¢ËœÅ½Ã¯Â¸Â Ligar
       </a>
     </div>
   </div>
