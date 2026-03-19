@@ -19,20 +19,32 @@
 
       {% if p.descricao %}
       <div class="produto-description">
-        <h3>DescriÃƒÂ§ÃƒÂ£o</h3>
+        <h3>Descricao</h3>
         <p>{{ p.descricao }}</p>
       </div>
       {% endif %}
 
       <div class="produto-actions">
-        <a href="/produtos" class="btn-secondary">Ã¢â€ Â Voltar</a>
+        <a
+          href="{{ p.catalogo_url if p.catalogo_url else '#' }}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn-primary {% if not p.catalogo_url %}btn-view--disabled{% endif %}"
+          {% if not p.catalogo_url %}aria-disabled="true" tabindex="-1"{% endif %}
+        >
+          Abrir catalogo (PDF)
+        </a>
+        <a href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener" class="btn-secondary">
+          Falar no WhatsApp
+        </a>
+        <a href="/produtos" class="btn-secondary">Voltar</a>
       </div>
 
       <div class="security-badge">
         <p class="security-text">
-          <span>Ã¢Å“â€œ</span> Atendimento Especializado |
-          <span>Ã°Å¸â€â€™</span> Dados Protegidos |
-          <span>Ã°Å¸â€™Â³</span> Suporte via WhatsApp
+          <span>Catalogo atualizado</span> |
+          <span>Atendimento especializado</span> |
+          <span>Suporte via WhatsApp</span>
         </p>
       </div>
     </div>
@@ -41,24 +53,24 @@
 
 <section class="related-section">
   <div class="neo-container">
-    <h2 class="section-title">VocÃƒÂª TambÃƒÂ©m Pode Se Interessar</h2>
-    <p class="section-subtitle">Navegue por nossa coleÃƒÂ§ÃƒÂ£o completa</p>
+    <h2 class="section-title">Voce tambem pode se interessar</h2>
+    <p class="section-subtitle">Navegue por nossa colecao completa</p>
     <div class="related-placeholder">
-      <a href="/produtos" class="btn-primary">Ver Todos os Produtos</a>
+      <a href="/produtos" class="btn-primary">Ver todos os produtos</a>
     </div>
   </div>
 </section>
 
 <section class="final-cta-section">
   <div class="neo-container cta-wrapper">
-    <h2 class="cta-title">DÃƒÂºvidas sobre este produto?</h2>
-    <p class="cta-description">Nosso time de especialistas estÃƒÂ¡ pronto para ajudar</p>
+    <h2 class="cta-title">Precisa de ajuda com este catalogo?</h2>
+    <p class="cta-description">Nosso time esta pronto para orientar voce no WhatsApp.</p>
     <div class="cta-buttons">
       <a href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener" class="btn-whatsapp-large">
-        Ã°Å¸â€™Â¬ WhatsApp
+        WhatsApp
       </a>
       <a href="tel:+{{ WHATSAPP_NUMERO }}" class="btn-phone-large">
-        Ã¢ËœÅ½Ã¯Â¸Â Ligar
+        Ligar
       </a>
     </div>
   </div>

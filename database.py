@@ -69,3 +69,22 @@ def init_db():
                     "ADD COLUMN tipo VARCHAR(32) NOT NULL DEFAULT 'cantoneira'"
                 )
             )
+    if "catalogo_url" not in colunas:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE produtos ADD COLUMN catalogo_url VARCHAR(500)"))
+    if "resumo_curto" not in colunas:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE produtos ADD COLUMN resumo_curto VARCHAR(255)"))
+    if "ordem_exibicao" not in colunas:
+        with engine.begin() as conn:
+            conn.execute(
+                text("ALTER TABLE produtos ADD COLUMN ordem_exibicao INTEGER NOT NULL DEFAULT 0")
+            )
+    if "destaque_home" not in colunas:
+        default_false = "false" if engine.dialect.name == "postgresql" else "0"
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    f"ALTER TABLE produtos ADD COLUMN destaque_home BOOLEAN NOT NULL DEFAULT {default_false}"
+                )
+            )

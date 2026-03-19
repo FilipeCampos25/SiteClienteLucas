@@ -58,7 +58,7 @@ def get_produtos(db: Session) -> List[models.Produto]:
     """Lista todos os produtos (admin)."""
     return (
         db.query(models.Produto)
-        .order_by(models.Produto.id.desc())
+        .order_by(models.Produto.ordem_exibicao.asc(), models.Produto.id.desc())
         .all()
     )
 
@@ -68,7 +68,7 @@ def get_produtos_ativos(db: Session) -> List[models.Produto]:
     return (
         db.query(models.Produto)
         .filter(models.Produto.ativo.is_(True))
-        .order_by(models.Produto.id.desc())
+        .order_by(models.Produto.destaque_home.desc(), models.Produto.ordem_exibicao.asc(), models.Produto.id.desc())
         .all()
     )
 
@@ -129,6 +129,10 @@ def create_produto(
     novo = models.Produto(
         nome=produto.nome,
         descricao=(produto.descricao or "").strip(),
+        catalogo_url=(produto.catalogo_url or "").strip() or None,
+        resumo_curto=(produto.resumo_curto or "").strip() or None,
+        ordem_exibicao=int(produto.ordem_exibicao or 0),
+        destaque_home=bool(produto.destaque_home),
         valor=float(produto.valor),
         tipo=(produto.tipo or "cantoneira").strip().lower(),
         ativo=True,
@@ -183,6 +187,14 @@ def update_produto(
         p.nome = dados.nome
     if dados.descricao is not None:
         p.descricao = dados.descricao
+    if dados.catalogo_url is not None:
+        p.catalogo_url = (dados.catalogo_url or "").strip() or None
+    if dados.resumo_curto is not None:
+        p.resumo_curto = (dados.resumo_curto or "").strip() or None
+    if dados.ordem_exibicao is not None:
+        p.ordem_exibicao = int(dados.ordem_exibicao)
+    if dados.destaque_home is not None:
+        p.destaque_home = bool(dados.destaque_home)
     if dados.valor is not None:
         p.valor = float(dados.valor)
     if dados.tipo is not None:

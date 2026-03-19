@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, func, Text, LargeBinary
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime, func, Text, LargeBinary, text
 from database import Base
 
 class Produto(Base):
@@ -8,6 +8,10 @@ class Produto(Base):
 
     nome = Column(String(120), nullable=False)
     descricao = Column(Text)
+    catalogo_url = Column(String(500), nullable=True)
+    resumo_curto = Column(String(255), nullable=True)
+    ordem_exibicao = Column(Integer, nullable=False, default=0, server_default="0")
+    destaque_home = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     tipo = Column(String(32), nullable=False, server_default="cantoneira")
 
     # Numeric no Postgres vira Decimal na leitura; convertemos no schema de saída

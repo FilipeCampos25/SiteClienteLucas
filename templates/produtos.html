@@ -32,8 +32,19 @@
         </div>
         <div class="card-content">
           <h3 class="card-title">{{ p.nome }}</h3>
-          <div class="card-actions">
-            <a href="/produto/{{ p.id }}" class="btn-view">Ver cat&aacute;logo</a>
+          <p class="card-summary">
+            {{ p.resumo_curto if p.resumo_curto else "Consulte o catalogo completo para ver especificacoes, medidas e detalhes tecnicos deste item." }}
+          </p>
+          <div class="card-actions card-actions--catalog">
+            <a
+              href="{{ p.catalogo_url if p.catalogo_url else '#' }}"
+              class="btn-view {% if not p.catalogo_url %}btn-view--disabled{% endif %}"
+              target="_blank"
+              rel="noopener noreferrer"
+              {% if not p.catalogo_url %}aria-disabled="true" tabindex="-1"{% endif %}
+            >
+              Ver cat&aacute;logo
+            </a>
           </div>
         </div>
       </div>

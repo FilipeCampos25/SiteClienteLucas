@@ -8,6 +8,10 @@ TIPOS_PRODUTO = ("cantoneira", "instalacao", "kits", "prateleiras")
 class ProdutoBase(BaseModel):
     nome: str
     descricao: Optional[str] = None
+    catalogo_url: Optional[str] = None
+    resumo_curto: Optional[str] = None
+    ordem_exibicao: int = 0
+    destaque_home: bool = False
     valor: float
     tipo: str = "cantoneira"
 
@@ -24,6 +28,10 @@ class ProdutoCreate(ProdutoBase):
 class ProdutoUpdate(BaseModel):
     nome: Optional[str] = None
     descricao: Optional[str] = None
+    catalogo_url: Optional[str] = None
+    resumo_curto: Optional[str] = None
+    ordem_exibicao: Optional[int] = None
+    destaque_home: Optional[bool] = None
     valor: Optional[float] = None
     tipo: Optional[str] = None
     imagem_url: Optional[str] = None
