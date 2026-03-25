@@ -6,44 +6,37 @@
 <section id="produtos" class="products-modern">
   <div class="section-container">
     <div class="products-modern__header">
-      <p class="kicker">Produtos</p>
-      <h2 class="heading-section">CATÁLOGO DE PRODUTOS</h2>
-      <p class="muted">Explore nossa linha de cantoneiras e perfis metálicos.</p>
-    </div>
-
-    <div class="product-filters">
-      <a href="/produtos#produtos" class="filter-chip {% if not tipo_atual %}active{% endif %}">Todos</a>
-      {% for t in tipos_produto %}
-      <a
-        href="/produtos?tipo={{ t.id }}#produtos"
-        class="filter-chip {% if tipo_atual == t.id %}active{% endif %}"
-      >
-        {{ t.label }}
-      </a>
-      {% endfor %}
+      <p class="kicker">Catalogo tecnico</p>
+      <h2 class="heading-section">LINHA DE PRODUTOS</h2>
+      <p class="muted">Consulte nossa selecao de cantoneiras e perfis metalicos e abra o catalogo ou a ficha de cada item.</p>
     </div>
 
     <div class="grid-produtos" id="produtosGrid">
       {% for p in produtos %}
+      {% set destino = p.catalogo_url if p.catalogo_url else '/produto/' ~ p.id %}
+      {% set externo = p.catalogo_url %}
       <div class="card-produto">
         <div class="card-image-container">
-          <img src="{{ p.imagem_url }}" alt="{{ p.nome }}" class="card-image" onerror="this.src='/static/images/placeholder.png'">
-          <div class="card-type">{{ p.tipo_label }}</div>
+          <img
+            src="{{ p.imagem_url or '/static/images/placeholder.png' }}"
+            alt="{{ p.nome }}"
+            class="card-image"
+            onerror="this.src='/static/images/placeholder.png'"
+          >
         </div>
         <div class="card-content">
           <h3 class="card-title">{{ p.nome }}</h3>
           <p class="card-summary">
-            {{ p.resumo_curto if p.resumo_curto else "Consulte o catalogo completo para ver especificacoes, medidas e detalhes tecnicos deste item." }}
+            {{ p.resumo_curto if p.resumo_curto else "Consulte o catalogo ou a ficha do item para ver especificacoes e aplicacoes deste produto." }}
           </p>
           <div class="card-actions card-actions--catalog">
             <a
-              href="{{ p.catalogo_url if p.catalogo_url else '#' }}"
-              class="btn-view {% if not p.catalogo_url %}btn-view--disabled{% endif %}"
-              target="_blank"
-              rel="noopener noreferrer"
-              {% if not p.catalogo_url %}aria-disabled="true" tabindex="-1"{% endif %}
+              href="{{ destino }}"
+              class="btn-catalog"
+              {% if externo %}target="_blank"{% endif %}
+              {% if externo %}rel="noopener noreferrer"{% endif %}
             >
-              Ver cat&aacute;logo
+              Ver catalogo
             </a>
           </div>
         </div>
@@ -55,27 +48,27 @@
     <div class="pagination-wrapper">
       <div class="pagination">
         {% if pagina_atual > 1 %}
-        <a class="page-btn" href="/produtos?page={{ pagina_atual - 1 }}{% if tipo_atual %}&tipo={{ tipo_atual }}{% endif %}#produtos">←</a>
+        <a class="page-btn" href="/produtos?page={{ pagina_atual - 1 }}#produtos">Anterior</a>
         {% else %}
-        <span class="page-btn disabled">←</span>
+        <span class="page-btn disabled">Anterior</span>
         {% endif %}
 
         {% for p in paginacao %}
           {% if p is none %}
-            <span class="page-ellipsis">…</span>
+            <span class="page-ellipsis">...</span>
           {% else %}
             {% if p == pagina_atual %}
               <span class="page-btn active">{{ p }}</span>
             {% else %}
-              <a class="page-btn" href="/produtos?page={{ p }}{% if tipo_atual %}&tipo={{ tipo_atual }}{% endif %}#produtos">{{ p }}</a>
+              <a class="page-btn" href="/produtos?page={{ p }}#produtos">{{ p }}</a>
             {% endif %}
           {% endif %}
         {% endfor %}
 
         {% if pagina_atual < total_paginas %}
-        <a class="page-btn" href="/produtos?page={{ pagina_atual + 1 }}{% if tipo_atual %}&tipo={{ tipo_atual }}{% endif %}#produtos">→</a>
+        <a class="page-btn" href="/produtos?page={{ pagina_atual + 1 }}#produtos">Proxima</a>
         {% else %}
-        <span class="page-btn disabled">→</span>
+        <span class="page-btn disabled">Proxima</span>
         {% endif %}
       </div>
     </div>

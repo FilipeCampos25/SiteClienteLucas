@@ -1,13 +1,11 @@
-<!-- templates/dashboard.html -->
 {% extends "base.html" %}
 
 {% block content %}
-<!-- ===== CABEÇALHO DO PAINEL ===== -->
 <section class="admin-header">
   <div class="admin-header-content">
     <div>
       <h1 class="admin-title">Painel Administrativo</h1>
-      <p class="admin-subtitle">Gerencie seus produtos e configurações</p>
+      <p class="admin-subtitle">Gerencie produtos, imagens e catalogos em PDF.</p>
     </div>
     <div class="admin-stats">
       <div class="stat-badge">
@@ -18,61 +16,48 @@
   </div>
 </section>
 
-<!-- ===== SEÇÃO DE CRIAR PRODUTO ===== -->
 <section class="admin-section">
   <div class="admin-card">
     <div class="card-header">
       <h2 class="card-title">
-        <span class="card-icon">➕</span>
+        <span class="card-icon">+</span>
         Criar Novo Produto
       </h2>
     </div>
-    
+
     <form method="post" action="/admin/produto" class="admin-form" enctype="multipart/form-data">
       <div class="form-grid">
         <div class="form-group">
           <label for="nome" class="form-label">Nome do Produto *</label>
-          <input 
-            type="text" 
-            id="nome" 
-            name="nome" 
-            class="form-input" 
-            placeholder="Ex: Cantoneira de Aço 20x20" 
+          <input
+            type="text"
+            id="nome"
+            name="nome"
+            class="form-input"
+            placeholder="Ex: Cantoneira de Aco 20x20"
             required
           >
-        </div>
-
-        <div class="form-group">
-          <label for="valor" class="form-label">Valor (R$) *</label>
-          <input 
-            type="number" 
-            id="valor" 
-            name="valor" 
-            class="form-input" 
-            placeholder="0.00" 
-            step="0.01" 
-            required
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="tipo" class="form-label">Tipo *</label>
-          <select id="tipo" name="tipo" class="form-input" required>
-            {% for t in tipos_produto %}
-            <option value="{{ t.id }}">{{ t.label }}</option>
-            {% endfor %}
-          </select>
         </div>
 
         <div class="form-group form-group-full">
-          <label class="form-label">Imagem do Produto *</label>
+          <label for="resumo_curto" class="form-label">Resumo Curto</label>
+          <textarea
+            id="resumo_curto"
+            name="resumo_curto"
+            class="form-textarea"
+            placeholder="Resumo para exibicao na listagem de produtos"
+            rows="3"
+          ></textarea>
+        </div>
+
+        <div class="form-group form-group-full">
+          <label class="form-label">Imagem do Produto</label>
           <label class="upload-area">
-            <input 
-              type="file" 
+            <input
+              type="file"
               name="imagem"
               accept="image/png,image/jpeg"
               class="upload-input"
-              required
               onchange="updateUploadPreview(this, 'create-preview', 'create-upload-label')"
             >
             <span class="upload-content">
@@ -87,14 +72,22 @@
         </div>
 
         <div class="form-group form-group-full">
-          <label for="descricao" class="form-label">Descrição</label>
-          <textarea 
-            id="descricao" 
-            name="descricao" 
-            class="form-textarea" 
-            placeholder="Descreva as características do produto..."
-            rows="4"
-          ></textarea>
+          <label class="form-label">Catalogo em PDF *</label>
+          <label class="upload-area upload-area-compact">
+            <input
+              type="file"
+              name="catalogo_pdf"
+              accept="application/pdf,.pdf"
+              class="upload-input"
+              required
+              onchange="updateFileLabel(this, 'create-pdf-label')"
+            >
+            <span class="upload-content">
+              <span class="upload-title">Selecionar PDF do catalogo</span>
+              <span class="upload-subtitle">Somente PDF</span>
+              <span id="create-pdf-label" class="upload-filename">Nenhum arquivo selecionado</span>
+            </span>
+          </label>
         </div>
       </div>
       <button type="submit" class="btn-save">Criar Produto</button>
@@ -102,16 +95,15 @@
   </div>
 </section>
 
-<!-- ===== SEÇÃO DE LISTA DE PRODUTOS ===== -->
 <section class="admin-section">
   <div class="admin-card">
     <div class="card-header">
       <h2 class="card-title">
-        <span class="card-icon">📦</span>
+        <span class="card-icon">#</span>
         Lista de Produtos
       </h2>
     </div>
-    
+
     {% if produtos %}
     <div class="table-responsive">
       <table class="admin-table">
@@ -119,10 +111,8 @@
           <tr>
             <th>ID</th>
             <th>Nome</th>
-            <th>Tipo</th>
-            <th>Valor</th>
-            <th>Ativo</th>
-            <th>Ações</th>
+            <th>Catalogo</th>
+            <th>Acoes</th>
           </tr>
         </thead>
         <tbody>
@@ -130,58 +120,52 @@
           <tr id="row-{{ p.id }}">
             <td>#{{ p.id }}</td>
             <td>{{ p.nome }}</td>
-            <td>{{ p.tipo_label }}</td>
-            <td>R$ {{ '%.2f' % p.valor }}</td>
-            <td>{{ 'Sim' if p.ativo else 'Não' }}</td>
+            <td>
+              {% if p.catalogo_url %}
+              <a href="{{ p.catalogo_url }}" target="_blank" rel="noopener">
+                {{ p.catalogo_nome_arquivo or 'Abrir PDF' }}
+              </a>
+              {% else %}
+              Sem PDF
+              {% endif %}
+            </td>
             <td>
               <button class="btn-edit" onclick="toggleEditForm('{{ p.id }}')">Editar</button>
               <button class="btn-delete" onclick="confirmDelete('{{ p.id }}')">Excluir</button>
             </td>
           </tr>
           <tr id="edit-row-{{ p.id }}" class="edit-row" style="display: none;">
-            <td colspan="6">
+            <td colspan="4">
               <form method="post" action="/admin/produto/{{ p.id }}" class="edit-form" enctype="multipart/form-data">
                 <input type="hidden" name="_method" value="PUT">
                 <div class="form-grid">
                   <div class="form-group">
                     <label for="edit-nome-{{ p.id }}" class="form-label">Nome</label>
-                    <input 
-                      type="text" 
-                      id="edit-nome-{{ p.id }}" 
-                      name="nome" 
-                      value="{{ p.nome }}" 
-                      class="form-input" 
+                    <input
+                      type="text"
+                      id="edit-nome-{{ p.id }}"
+                      name="nome"
+                      value="{{ p.nome }}"
+                      class="form-input"
                       required
                     >
                   </div>
 
-                  <div class="form-group">
-                    <label for="edit-valor-{{ p.id }}" class="form-label">Valor (R$)</label>
-                    <input 
-                      type="number" 
-                      id="edit-valor-{{ p.id }}" 
-                      name="valor" 
-                      value="{{ p.valor }}" 
-                      class="form-input" 
-                      step="0.01" 
-                      required
-                    >
-                  </div>
-
-                  <div class="form-group">
-                    <label for="edit-tipo-{{ p.id }}" class="form-label">Tipo</label>
-                    <select id="edit-tipo-{{ p.id }}" name="tipo" class="form-input" required>
-                      {% for t in tipos_produto %}
-                      <option value="{{ t.id }}" {% if p.tipo == t.id %}selected{% endif %}>{{ t.label }}</option>
-                      {% endfor %}
-                    </select>
+                  <div class="form-group form-group-full">
+                    <label for="edit-resumo-curto-{{ p.id }}" class="form-label">Resumo Curto</label>
+                    <textarea
+                      id="edit-resumo-curto-{{ p.id }}"
+                      name="resumo_curto"
+                      class="form-textarea"
+                      rows="3"
+                    >{{ p.resumo_curto or '' }}</textarea>
                   </div>
 
                   <div class="form-group form-group-full">
                     <label class="form-label">Trocar imagem (opcional)</label>
                     <label class="upload-area upload-area-compact">
-                      <input 
-                        type="file" 
+                      <input
+                        type="file"
                         name="imagem"
                         accept="image/png,image/jpeg"
                         class="upload-input"
@@ -199,27 +183,29 @@
                   </div>
 
                   <div class="form-group form-group-full">
-                    <label for="edit-descricao-{{ p.id }}" class="form-label">Descrição</label>
-                    <textarea 
-                      id="edit-descricao-{{ p.id }}" 
-                      name="descricao" 
-                      class="form-textarea" 
-                      rows="3"
-                    >{{ p.descricao }}</textarea>
+                    <label class="form-label">Trocar catalogo em PDF (opcional)</label>
+                    <label class="upload-area upload-area-compact">
+                      <input
+                        type="file"
+                        name="catalogo_pdf"
+                        accept="application/pdf,.pdf"
+                        class="upload-input"
+                        onchange="updateFileLabel(this, 'edit-pdf-label-{{ p.id }}')"
+                      >
+                      <span class="upload-content">
+                        <span class="upload-title">Selecionar novo PDF</span>
+                        <span class="upload-subtitle">Mantem o catalogo atual se nao escolher</span>
+                        <span id="edit-pdf-label-{{ p.id }}" class="upload-filename">
+                          {{ p.catalogo_nome_arquivo or 'Nenhum arquivo selecionado' }}
+                        </span>
+                      </span>
+                    </label>
                   </div>
                 </div>
 
                 <div class="edit-form-actions">
-                  <button type="submit" class="btn-save">
-                    ✓ Salvar Alterações
-                  </button>
-                  <button 
-                    type="button" 
-                    class="btn-cancel" 
-                    onclick="toggleEditForm('{{ p.id }}')"
-                  >
-                    ✕ Cancelar
-                  </button>
+                  <button type="submit" class="btn-save">Salvar Alteracoes</button>
+                  <button type="button" class="btn-cancel" onclick="toggleEditForm('{{ p.id }}')">Cancelar</button>
                 </div>
               </form>
             </td>
@@ -230,20 +216,19 @@
     </div>
     {% else %}
     <div class="empty-state-admin">
-      <div class="empty-icon">📦</div>
+      <div class="empty-icon">#</div>
       <p class="empty-title">Nenhum produto cadastrado</p>
-      <p class="empty-text">Crie seu primeiro produto usando o formulário acima</p>
+      <p class="empty-text">Crie seu primeiro produto usando o formulario acima</p>
     </div>
     {% endif %}
   </div>
 </section>
 
-<!-- ===== SCRIPT ===== -->
 <script>
 function toggleEditForm(id) {
   const editRow = document.getElementById('edit-row-' + id);
   const productRow = document.getElementById('row-' + id);
-  
+
   if (editRow.style.display === 'none') {
     editRow.style.display = 'table-row';
     productRow.style.opacity = '0.5';
@@ -257,7 +242,6 @@ function toggleEditForm(id) {
 
 function confirmDelete(id) {
   if (confirm('Tem certeza que deseja excluir este produto?')) {
-    // Envie uma requisição DELETE para /admin/produto/{id}
     fetch(`/admin/produto/${id}`, { method: 'DELETE' })
       .then(response => {
         if (response.ok) {
@@ -269,14 +253,19 @@ function confirmDelete(id) {
   }
 }
 
-function updateUploadPreview(input, previewId, labelId) {
+function updateFileLabel(input, labelId) {
   const label = document.getElementById(labelId);
-  const preview = document.getElementById(previewId);
   const file = input.files && input.files[0];
-
   if (label) {
     label.textContent = file ? file.name : 'Nenhum arquivo selecionado';
   }
+}
+
+function updateUploadPreview(input, previewId, labelId) {
+  updateFileLabel(input, labelId);
+
+  const preview = document.getElementById(previewId);
+  const file = input.files && input.files[0];
 
   if (!preview) return;
   if (!file) {
