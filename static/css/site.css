@@ -63,6 +63,7 @@ body{
 .section-container{
   width: min(100% - 32px, var(--container));
   margin-inline: auto;
+  text-align: center;
 }
 
 img{ max-width: 100%; height: auto; display: block; }
@@ -147,6 +148,7 @@ button{ cursor: pointer; }
   background: transparent;
   border-color: rgba(16,17,20,0.18);
   color: var(--text);
+  width: 12%;
 }
 .btn--outline:hover{
   border-color: rgba(16,17,20,0.28);
@@ -202,10 +204,12 @@ button{ cursor: pointer; }
 
 .btn-row{
   display: flex;
+  flex-direction: column;
   flex-wrap: wrap;
   gap: 12px;
   margin-top: var(--space-5);
-  justify-content: center;   /* <- ISSO centraliza */
+  justify-content: center;
+  align-items: center;
 }
 
 /* ---------- 6) Header (novo) ---------- */
@@ -885,9 +889,15 @@ button{ cursor: pointer; }
 .statement .heading-lg{
   max-width: 60ch;
 }
+.statement .section-container{
+  text-align: center;
+}
 .statement .muted{
   margin: 10px 0 16px;
   max-width: 62ch;
+}
+.statement .btn--primary{
+  margin-inline: auto;
 }
 
 .cta-band{
@@ -1666,7 +1676,7 @@ section.contact-map .contact-map__frame iframe{
   }
 
   .hero-split__right{
-    min-height: 230px;
+    min-height: 290px;
   }
 
   .heading-section,
@@ -1680,7 +1690,11 @@ section.contact-map .contact-map__frame iframe{
     grid-template-columns: 1fr;
   }
 
-  .services-gallery__grid,
+  .services-gallery__grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
   .home-catalogos__grid{
     grid-template-columns: 1fr;
   }
