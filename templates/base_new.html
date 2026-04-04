@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Casa das Cantoneiras - Catálogo</title>
   <link rel="icon" type="image/png" href="/static/images/ico.png?v=20260304">
-  <link rel="stylesheet" href="/static/css/site.css?v=4">
+  <link rel="stylesheet" href="/static/css/site.css?v=5">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -35,7 +35,7 @@
         <img src="{{ LOGO_URL or '/static/images/logomarca.png' }}" alt="Logo Casa das Cantoneiras" class="brand__img">
         <span class="brand__copy">
           <span class="brand__logo">CASA DAS CANTONEIRAS</span>
-          <span class="brand__tag">SOLUÇÕES EM PERFIS METÁLICOS</span>
+          <span class="brand__tag">SOLUÇÕES EM PRODUTOS PARA FIXAÇÃO</span>
         </span>
       </a>
 
@@ -47,9 +47,41 @@
           <li><a href="/contato" class="nav__link">Contato</a></li>
         </ul>
       </nav>
-
       <div class="header-shell__actions">
-        <a class="btn btn--header-ghost" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">WhatsApp</a>
+        {% if WHATSAPP_LINK %}
+        <a
+          class="header-social-link"
+          href="{{ WHATSAPP_LINK }}"
+          target="_blank"
+          rel="noopener"
+          aria-label="WhatsApp"
+          title="WhatsApp"
+        >
+          <img
+            src="/static/images/mobile-147084050-removebg-preview.png"
+            alt="WhatsApp"
+            class="header-social-link__icon header-social-link__icon--whatsapp"
+            width="34"
+            height="34"
+          >
+        </a>
+        {% endif %}
+        <a
+          class="header-social-link"
+          href="https://www.instagram.com/casa_dascantoneiras?igsh=NWJvNnRsNXc2cTR4"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Instagram"
+          title="Instagram"
+        >
+          <img
+            src="/static/images/Instagram_icon.png"
+            alt="Instagram"
+            class="header-social-link__icon"
+            width="32"
+            height="32"
+          >
+        </a>
 
         <button class="nav-toggle" type="button" aria-label="Abrir menu" onclick="toggleNavMenu()">
           <span class="hamburger" aria-hidden="true"></span>
@@ -84,11 +116,6 @@
         <a href="/contato">Contato</a>
       </nav>
 
-      <div class="footer__certs">
-        <div class="placeholder-cert">Atendimento Rápido</div>
-        <div class="placeholder-cert">Catalogo Atualizado</div>
-        <div class="placeholder-cert">Suporte WhatsApp</div>
-      </div>
     </div>
 
     <div class="neo-container footer__bottom">
