@@ -5,7 +5,7 @@
   <div class="admin-header-content">
     <div>
       <h1 class="admin-title">Painel Administrativo</h1>
-      <p class="admin-subtitle">Gerencie produtos, imagens e catalogos em PDF.</p>
+      <p class="admin-subtitle">Gerencie produtos e imagens da vitrine.</p>
     </div>
     <div class="admin-stats">
       <div class="stat-badge">
@@ -39,14 +39,29 @@
           >
         </div>
 
+        <div class="form-group">
+          <label for="categoria_slug" class="form-label">Tipo *</label>
+          <select
+            id="categoria_slug"
+            name="categoria_slug"
+            class="form-input"
+            required
+          >
+            <option value="">Selecione o tipo</option>
+            {% for categoria in categorias %}
+            <option value="{{ categoria.slug }}">{{ categoria.nome_exibicao }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
         <div class="form-group form-group-full">
-          <label for="resumo_curto" class="form-label">Resumo Curto</label>
+          <label for="resumo_curto" class="form-label">Descricao</label>
           <textarea
             id="resumo_curto"
             name="resumo_curto"
             class="form-textarea"
-            placeholder="Resumo para exibicao na listagem de produtos"
-            rows="3"
+            placeholder="Descricao exibida no card e na pagina do produto"
+            rows="5"
           ></textarea>
         </div>
 
@@ -71,24 +86,6 @@
           </div>
         </div>
 
-        <div class="form-group form-group-full">
-          <label class="form-label">Catalogo em PDF *</label>
-          <label class="upload-area upload-area-compact">
-            <input
-              type="file"
-              name="catalogo_pdf"
-              accept="application/pdf,.pdf"
-              class="upload-input"
-              required
-              onchange="updateFileLabel(this, 'create-pdf-label')"
-            >
-            <span class="upload-content">
-              <span class="upload-title">Selecionar PDF do catalogo</span>
-              <span class="upload-subtitle">Somente PDF</span>
-              <span id="create-pdf-label" class="upload-filename">Nenhum arquivo selecionado</span>
-            </span>
-          </label>
-        </div>
       </div>
       <button type="submit" class="btn-save">Criar Produto</button>
     </form>
@@ -111,7 +108,7 @@
           <tr>
             <th>ID</th>
             <th>Nome</th>
-            <th>Catalogo</th>
+            <th>Tipo</th>
             <th>Acoes</th>
           </tr>
         </thead>
@@ -120,15 +117,7 @@
           <tr id="row-{{ p.id }}">
             <td>#{{ p.id }}</td>
             <td>{{ p.nome }}</td>
-            <td>
-              {% if p.catalogo_url %}
-              <a href="{{ p.catalogo_url }}" target="_blank" rel="noopener">
-                {{ p.catalogo_nome_arquivo or 'Abrir PDF' }}
-              </a>
-              {% else %}
-              Sem PDF
-              {% endif %}
-            </td>
+            <td>{{ p.categoria_nome_exibicao or 'Sem tipo' }}</td>
             <td>
               <button class="btn-edit" onclick="toggleEditForm('{{ p.id }}')">Editar</button>
               <button class="btn-delete" onclick="confirmDelete('{{ p.id }}')">Excluir</button>
@@ -151,13 +140,30 @@
                     >
                   </div>
 
+                  <div class="form-group">
+                    <label for="edit-categoria-slug-{{ p.id }}" class="form-label">Tipo</label>
+                    <select
+                      id="edit-categoria-slug-{{ p.id }}"
+                      name="categoria_slug"
+                      class="form-input"
+                      required
+                    >
+                      <option value="">Selecione o tipo</option>
+                      {% for categoria in categorias %}
+                      <option value="{{ categoria.slug }}" {% if categoria.slug == p.categoria_slug %}selected{% endif %}>
+                        {{ categoria.nome_exibicao }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+
                   <div class="form-group form-group-full">
-                    <label for="edit-resumo-curto-{{ p.id }}" class="form-label">Resumo Curto</label>
+                    <label for="edit-resumo-curto-{{ p.id }}" class="form-label">Descricao</label>
                     <textarea
                       id="edit-resumo-curto-{{ p.id }}"
                       name="resumo_curto"
                       class="form-textarea"
-                      rows="3"
+                      rows="5"
                     >{{ p.resumo_curto or '' }}</textarea>
                   </div>
 
@@ -180,26 +186,6 @@
                     <div class="upload-preview">
                       <img id="edit-preview-{{ p.id }}" class="upload-preview-img is-visible" src="{{ p.imagem_url }}" alt="Preview da imagem atual" onerror="this.style.display='none'">
                     </div>
-                  </div>
-
-                  <div class="form-group form-group-full">
-                    <label class="form-label">Trocar catalogo em PDF (opcional)</label>
-                    <label class="upload-area upload-area-compact">
-                      <input
-                        type="file"
-                        name="catalogo_pdf"
-                        accept="application/pdf,.pdf"
-                        class="upload-input"
-                        onchange="updateFileLabel(this, 'edit-pdf-label-{{ p.id }}')"
-                      >
-                      <span class="upload-content">
-                        <span class="upload-title">Selecionar novo PDF</span>
-                        <span class="upload-subtitle">Mantem o catalogo atual se nao escolher</span>
-                        <span id="edit-pdf-label-{{ p.id }}" class="upload-filename">
-                          {{ p.catalogo_nome_arquivo or 'Nenhum arquivo selecionado' }}
-                        </span>
-                      </span>
-                    </label>
                   </div>
                 </div>
 

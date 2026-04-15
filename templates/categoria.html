@@ -1,0 +1,73 @@
+{% extends "base_new.html" %}
+
+{% block body_class %}home-ref{% endblock %}
+
+{% block content %}
+<section class="category-page">
+  <div class="section-container">
+    <div class="category-page__hero">
+      <p class="kicker">Categoria</p>
+      <h1 class="heading-section">{{ categoria.nome_exibicao }}</h1>
+      <p class="muted">
+        {% if produtos %}
+        Confira os produtos disponiveis nesta categoria e abra os detalhes de cada item.
+        {% else %}
+        Esta pagina ja esta pronta para receber produtos dessa categoria pelo painel administrativo.
+        {% endif %}
+      </p>
+    </div>
+
+    {% if produtos %}
+    <section class="products-modern category-products">
+      <div class="grid-produtos" id="produtosGrid">
+        {% for p in produtos %}
+        <div class="card-produto">
+          <div class="card-image-container">
+            <img
+              src="{{ p.imagem_url or '/static/images/placeholder.png' }}"
+              alt="{{ p.nome }}"
+              class="card-image"
+              onerror="this.src='/static/images/placeholder.png'"
+            >
+          </div>
+          <div class="card-content">
+            <h3 class="card-title">{{ p.nome }}</h3>
+            <p class="card-summary">
+              {{ p.resumo_curto if p.resumo_curto else "Descricao em breve para este produto." }}
+            </p>
+            <div class="card-actions card-actions--single">
+              <a href="/produto/{{ p.id }}" class="btn-product">Ver detalhes</a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% else %}
+    <div class="category-empty-state">
+      <div class="category-empty-state__media">
+        <img
+          src="{{ categoria.imagem_url }}"
+          alt="{{ categoria.nome_exibicao }}"
+          class="category-empty-state__image"
+        >
+      </div>
+
+      <div class="category-empty-state__content">
+        <h2 class="section-title">Nenhum produto cadastrado ainda</h2>
+        <p class="section-subtitle">
+          Quando essa categoria for abastecida pelo admin, os produtos passarao a aparecer aqui.
+        </p>
+
+        <div class="produto-actions">
+          <a href="/produtos" class="btn-product">Ver todos os produtos</a>
+          <a href="{{ whatsapp_link }}" target="_blank" rel="noopener" class="btn-secondary">
+            Falar no WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

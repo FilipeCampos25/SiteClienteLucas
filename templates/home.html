@@ -75,13 +75,42 @@
   </div>
 </section>
 
+<section class="home-categories">
+  <div class="section-container">
+    <div class="home-categories__divider" aria-hidden="true"></div>
+
+    <div class="home-categories__header">
+      <p class="kicker">Categorias</p>
+      <h2 class="heading-section">ESCOLHA UMA LINHA</h2>
+      <p class="muted">Selecione uma categoria para acessar a pagina dedicada e preparar a futura organizacao dos produtos.</p>
+    </div>
+
+    <div class="home-categories__grid">
+      {% for categoria in categorias_home %}
+      <a href="/categorias/{{ categoria.slug }}" class="home-category-card">
+        <span class="home-category-card__frame">
+          <img
+            src="{{ categoria.imagem_url }}"
+            alt="{{ categoria.nome_exibicao }}"
+            class="home-category-card__image"
+          >
+        </span>
+        <span class="home-category-card__label">{{ categoria.nome_exibicao }}</span>
+      </a>
+      {% endfor %}
+    </div>
+
+    <div class="home-categories__divider home-categories__divider--bottom" aria-hidden="true"></div>
+  </div>
+</section>
+
 <section class="statement">
   <div class="section-container">
     <h2 class="heading-lg">
       FAZEMOS DO ALUMÍNIO A BASE PARA TIRAR PROJETOS DO PAPEL E MANTER SUA OPERACAO EM MOVIMENTO
     </h2>
     <p class="muted">
-      Atendimento rapido, suporte pelo WhatsApp e catalogo organizado para facilitar sua consulta.
+      Atendimento rapido, suporte pelo WhatsApp e uma linha completa de produtos para facilitar sua consulta.
     </p>
     <div class="btn-row">
       <a class="btn btn--primary" href="/quem-somos">Quem Somos</a>

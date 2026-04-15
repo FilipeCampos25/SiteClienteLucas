@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import io
-import math
 import os
 from typing import Generator, List, Optional
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -46,6 +45,34 @@ templates.env.globals.update(
     LOGO_URL="/static/images/logomarca.png",
 )
 
+CATEGORIAS_HOME = [
+    {
+        "slug": "cantoneiras-de-aluminio",
+        "nome": "Cantoneiras de Aluminio",
+        "nome_exibicao": "Cantoneiras de Alum\u00ednio",
+        "imagem_url": "/static/images/img3.jpeg",
+    },
+    {
+        "slug": "kits-para-montagem",
+        "nome": "Kits para montagem",
+        "nome_exibicao": "Kits para montagem",
+        "imagem_url": "/static/images/img5.jpeg",
+    },
+    {
+        "slug": "cantoneira-suporte-para-prateleira",
+        "nome": "Cantoneira suporte para prateleira",
+        "nome_exibicao": "Cantoneira Suporte para Prateleira",
+        "imagem_url": "/static/images/img6.jpeg",
+    },
+    {
+        "slug": "acessorios",
+        "nome": "Acessorios",
+        "nome_exibicao": "Acess\u00f3rios",
+        "imagem_url": "/static/images/img8.jpeg",
+    },
+]
+CATEGORIAS_POR_SLUG = {categoria["slug"]: categoria for categoria in CATEGORIAS_HOME}
+
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
@@ -71,17 +98,6 @@ def _produto_image_url(produto: models.Produto) -> str:
     return "/static/images/placeholder.png"
 
 
-def _produto_catalogo_url(produto: models.Produto) -> Optional[str]:
-    if getattr(produto, "catalogo_bytes", None):
-        return f"/media/produto/{produto.id}/catalogo"
-
-    url_externa = (getattr(produto, "catalogo_url", None) or "").strip()
-    if url_externa:
-        return url_externa
-
-    return None
-
-
 def _compress_to_jpeg(raw: bytes) -> tuple[bytes, str]:
     try:
         img = Image.open(io.BytesIO(raw))
@@ -94,40 +110,6 @@ def _compress_to_jpeg(raw: bytes) -> tuple[bytes, str]:
         return out.getvalue(), "image/jpeg"
     except Exception:
         return raw, "application/octet-stream"
-
-
-def _read_pdf(upload: Optional[UploadFile]) -> tuple[Optional[bytes], Optional[str], Optional[str]]:
-    if not upload or not upload.filename:
-        return None, None, None
-
-    raw = upload.file.read()
-    if not raw:
-        return None, None, None
-
-    mime = (upload.content_type or "").strip() or "application/pdf"
-    if mime != "application/pdf":
-        raise HTTPException(status_code=400, detail="Envie um arquivo PDF valido")
-
-    return raw, mime, upload.filename
-
-
-def _build_paginacao(total_paginas: int, pagina_atual: int) -> list[Optional[int]]:
-    if total_paginas <= 0:
-        return []
-    if total_paginas <= 7:
-        return list(range(1, total_paginas + 1))
-
-    paginas = {1, pagina_atual - 1, pagina_atual, pagina_atual + 1, total_paginas - 1, total_paginas}
-    paginas_validas = sorted(p for p in paginas if 1 <= p <= total_paginas)
-
-    resultado: list[Optional[int]] = []
-    anterior: Optional[int] = None
-    for pagina in paginas_validas:
-        if anterior is not None and pagina - anterior > 1:
-            resultado.append(None)
-        resultado.append(pagina)
-        anterior = pagina
-    return resultado
 
 
 def _admin_credentials() -> tuple[str, str]:
@@ -148,12 +130,44 @@ def _auth_admin(request: Request) -> str:
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
 
+def _get_categoria(slug: str) -> dict[str, str]:
+    categoria = CATEGORIAS_POR_SLUG.get(slug)
+    if categoria:
+        return categoria
+    raise HTTPException(status_code=404, detail="Categoria nao encontrada")
+
+
+def _normalizar_categoria_slug(categoria_slug: Optional[str], *, required: bool) -> Optional[str]:
+    slug = (categoria_slug or "").strip()
+    if not slug:
+        if required:
+            raise HTTPException(status_code=400, detail="Selecione um tipo de produto")
+        return None
+    if slug not in CATEGORIAS_POR_SLUG:
+        raise HTTPException(status_code=400, detail="Tipo de produto invalido")
+    return slug
+
+
+def _produto_view(produto: models.Produto) -> dict[str, Optional[str]]:
+    categoria = CATEGORIAS_POR_SLUG.get((getattr(produto, "categoria_slug", None) or "").strip())
+    return {
+        "id": produto.id,
+        "nome": produto.nome,
+        "resumo_curto": produto.resumo_curto,
+        "imagem_url": _produto_image_url(produto),
+        "categoria_slug": produto.categoria_slug,
+        "categoria_nome_exibicao": categoria["nome_exibicao"] if categoria else None,
+        "categoria_url": f"/categorias/{categoria['slug']}" if categoria else None,
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     return templates.TemplateResponse(
         "home.html",
         {
             "request": request,
+            "categorias_home": CATEGORIAS_HOME,
             "whatsapp_numero": telefone_visivel(),
         },
     )
@@ -170,33 +184,61 @@ def quem_somos(request: Request):
     )
 
 
+@app.get("/categorias/{slug}", response_class=HTMLResponse)
+def categoria_detalhe(slug: str, request: Request, db: Session = Depends(get_db)):
+    categoria = _get_categoria(slug)
+    produtos_db = crud.get_produtos(db, categoria_slug=slug)
+    whatsapp_link = gerar_link_whatsapp_text(
+        f"Ola! Tenho interesse na categoria {categoria['nome']}."
+    )
+    return templates.TemplateResponse(
+        "categoria.html",
+        {
+            "request": request,
+            "categoria": categoria,
+            "produtos": [_produto_view(produto) for produto in produtos_db],
+            "whatsapp_numero": telefone_visivel(),
+            "whatsapp_link": whatsapp_link,
+        },
+    )
+
+
 @app.get("/produtos", response_class=HTMLResponse)
 def produtos(
     request: Request,
-    page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
 ):
-    per_page = 20
-    base_query = db.query(models.Produto)
+    produtos_db = crud.get_produtos(db)
+    produtos_por_categoria: dict[str, list[dict[str, Optional[str]]]] = {}
+    produtos_sem_categoria: list[dict[str, Optional[str]]] = []
 
-    total_itens = base_query.count()
-    total_paginas = math.ceil(total_itens / per_page) if total_itens > 0 else 0
-
-    if total_paginas > 0 and page > total_paginas:
-        return RedirectResponse(url=f"/produtos?page={total_paginas}#produtos", status_code=303)
-
-    offset = (page - 1) * per_page
-    produtos_db = base_query.order_by(models.Produto.id.desc()).limit(per_page).offset(offset).all()
-
-    view = []
     for produto in produtos_db:
-        view.append(
+        produto_view = _produto_view(produto)
+        categoria_slug = (produto.categoria_slug or "").strip()
+        if categoria_slug in CATEGORIAS_POR_SLUG:
+            produtos_por_categoria.setdefault(categoria_slug, []).append(produto_view)
+        else:
+            produtos_sem_categoria.append(produto_view)
+
+    grupos_produtos = []
+    for categoria in CATEGORIAS_HOME:
+        itens = produtos_por_categoria.get(categoria["slug"], [])
+        if not itens:
+            continue
+        grupos_produtos.append(
             {
-                "id": produto.id,
-                "nome": produto.nome,
-                "catalogo_url": _produto_catalogo_url(produto),
-                "resumo_curto": produto.resumo_curto,
-                "imagem_url": _produto_image_url(produto),
+                "slug": categoria["slug"],
+                "nome_exibicao": categoria["nome_exibicao"],
+                "produtos": itens,
+            }
+        )
+
+    if produtos_sem_categoria:
+        grupos_produtos.append(
+            {
+                "slug": "sem-categoria",
+                "nome_exibicao": "Sem categoria",
+                "produtos": produtos_sem_categoria,
             }
         )
 
@@ -204,10 +246,8 @@ def produtos(
         "produtos.html",
         {
             "request": request,
-            "produtos": view,
-            "pagina_atual": page,
-            "total_paginas": total_paginas,
-            "paginacao": _build_paginacao(total_paginas, page),
+            "grupos_produtos": grupos_produtos,
+            "total_produtos": len(produtos_db),
         },
     )
 
@@ -234,13 +274,7 @@ def produto_detalhe(produto_id: int, request: Request, db: Session = Depends(get
         "produto.html",
         {
             "request": request,
-            "produto": {
-                "id": produto.id,
-                "nome": produto.nome,
-                "resumo_curto": produto.resumo_curto,
-                "catalogo_url": _produto_catalogo_url(produto),
-                "imagem_url": _produto_image_url(produto),
-            },
+            "produto": _produto_view(produto),
             "whatsapp_numero": telefone_visivel(),
             "whatsapp_link": whatsapp_link,
         },
@@ -257,32 +291,10 @@ def media_produto_imagem(produto_id: int, db: Session = Depends(get_db)):
     return Response(content=produto.imagem_bytes, media_type=mime)
 
 
-@app.get("/media/produto/{produto_id}/catalogo")
-def media_produto_catalogo(produto_id: int, db: Session = Depends(get_db)):
-    produto = crud.get_produto(db, produto_id=produto_id)
-    if not produto or not getattr(produto, "catalogo_bytes", None):
-        raise HTTPException(status_code=404, detail="Catalogo nao encontrado")
-
-    headers = {}
-    nome_arquivo = (produto.catalogo_nome_arquivo or f"catalogo-produto-{produto.id}.pdf").replace('"', "")
-    headers["Content-Disposition"] = f'inline; filename="{nome_arquivo}"'
-    mime = getattr(produto, "catalogo_mime", None) or "application/pdf"
-    return Response(content=produto.catalogo_bytes, media_type=mime, headers=headers)
-
-
 @app.get("/api/produtos")
 def api_produtos(db: Session = Depends(get_db)):
     produtos_db = crud.list_produtos(db, apenas_ativos=True)
-    return [
-        {
-            "id": produto.id,
-            "nome": produto.nome,
-            "catalogo_url": _produto_catalogo_url(produto),
-            "resumo_curto": produto.resumo_curto,
-            "imagem_url": _produto_image_url(produto),
-        }
-        for produto in produtos_db
-    ]
+    return [_produto_view(produto) for produto in produtos_db]
 
 
 @app.post("/api/whatsapp")
@@ -325,23 +337,13 @@ def admin_dashboard(
     if not _is_admin_authed(request):
         return RedirectResponse("/admin/login", status_code=303)
 
-    view = []
-    for produto in crud.get_produtos(db):
-        view.append(
-            {
-                "id": produto.id,
-                "nome": produto.nome,
-                "resumo_curto": produto.resumo_curto,
-                "catalogo_url": _produto_catalogo_url(produto),
-                "catalogo_nome_arquivo": produto.catalogo_nome_arquivo,
-                "imagem_url": _produto_image_url(produto),
-            }
-        )
+    view = [_produto_view(produto) for produto in crud.get_produtos(db)]
 
     return templates.TemplateResponse(
         "admin/dashboard.html",
         {
             "request": request,
+            "categorias": CATEGORIAS_HOME,
             "produtos": view,
         },
     )
@@ -356,22 +358,24 @@ def admin_logout(request: Request):
 def _create_produto_from_form(
     nome: str,
     resumo_curto: str,
+    categoria_slug: str,
 ) -> schemas.ProdutoCreate:
     return schemas.ProdutoCreate(
         nome=nome,
         resumo_curto=resumo_curto,
-        catalogo_url=None,
+        categoria_slug=_normalizar_categoria_slug(categoria_slug, required=True),
     )
 
 
 def _update_produto_from_form(
     nome: Optional[str],
     resumo_curto: Optional[str],
+    categoria_slug: Optional[str],
 ) -> schemas.ProdutoUpdate:
     return schemas.ProdutoUpdate(
         nome=nome,
         resumo_curto=resumo_curto,
-        catalogo_url=None,
+        categoria_slug=_normalizar_categoria_slug(categoria_slug, required=True),
     )
 
 
@@ -380,8 +384,8 @@ def admin_produto_novo(
     _: str = Depends(_auth_admin),
     nome: str = Form(...),
     resumo_curto: str = Form(""),
+    categoria_slug: str = Form(...),
     imagem: UploadFile = File(None),
-    catalogo_pdf: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
     imagem_bytes: Optional[bytes] = None
@@ -390,18 +394,11 @@ def admin_produto_novo(
         raw = imagem.file.read()
         imagem_bytes, imagem_mime = _compress_to_jpeg(raw)
 
-    catalogo_bytes, catalogo_mime, catalogo_nome_arquivo = _read_pdf(catalogo_pdf)
-    if not catalogo_bytes:
-        raise HTTPException(status_code=400, detail="Envie um catalogo em PDF")
-
     crud.create_produto(
         db,
-        _create_produto_from_form(nome, resumo_curto),
+        _create_produto_from_form(nome, resumo_curto, categoria_slug),
         imagem_bytes=imagem_bytes,
         imagem_mime=imagem_mime,
-        catalogo_bytes=catalogo_bytes,
-        catalogo_mime=catalogo_mime,
-        catalogo_nome_arquivo=catalogo_nome_arquivo,
     )
     return RedirectResponse("/admin", status_code=303)
 
@@ -412,8 +409,8 @@ def admin_produto_atualizar(
     _: str = Depends(_auth_admin),
     nome: str = Form(None),
     resumo_curto: str = Form(None),
+    categoria_slug: str = Form(None),
     imagem: UploadFile = File(None),
-    catalogo_pdf: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     imagem_bytes: Optional[bytes] = None
@@ -422,16 +419,12 @@ def admin_produto_atualizar(
         raw = imagem.file.read()
         imagem_bytes, imagem_mime = _compress_to_jpeg(raw)
 
-    catalogo_bytes, catalogo_mime, catalogo_nome_arquivo = _read_pdf(catalogo_pdf)
     crud.update_produto(
         db,
         produto_id=produto_id,
-        dados=_update_produto_from_form(nome, resumo_curto),
+        dados=_update_produto_from_form(nome, resumo_curto, categoria_slug),
         imagem_bytes=imagem_bytes,
         imagem_mime=imagem_mime,
-        catalogo_bytes=catalogo_bytes,
-        catalogo_mime=catalogo_mime,
-        catalogo_nome_arquivo=catalogo_nome_arquivo,
     )
     return RedirectResponse("/admin", status_code=303)
 
@@ -451,16 +444,16 @@ def admin_produto_novo_alias(
     _: str = Depends(_auth_admin),
     nome: str = Form(...),
     resumo_curto: str = Form(""),
+    categoria_slug: str = Form(...),
     imagem: UploadFile = File(None),
-    catalogo_pdf: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
     return admin_produto_novo(
         _=_,
         nome=nome,
         resumo_curto=resumo_curto,
+        categoria_slug=categoria_slug,
         imagem=imagem,
-        catalogo_pdf=catalogo_pdf,
         db=db,
     )
 
@@ -471,8 +464,8 @@ def admin_produto_atualizar_alias(
     _: str = Depends(_auth_admin),
     nome: str = Form(None),
     resumo_curto: str = Form(None),
+    categoria_slug: str = Form(None),
     imagem: UploadFile = File(None),
-    catalogo_pdf: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     return admin_produto_atualizar(
@@ -480,8 +473,8 @@ def admin_produto_atualizar_alias(
         _=_,
         nome=nome,
         resumo_curto=resumo_curto,
+        categoria_slug=categoria_slug,
         imagem=imagem,
-        catalogo_pdf=catalogo_pdf,
         db=db,
     )
 
@@ -493,8 +486,8 @@ def admin_produto_method_override(
     _method: Optional[str] = Form(None),
     nome: str = Form(None),
     resumo_curto: str = Form(None),
+    categoria_slug: str = Form(None),
     imagem: UploadFile = File(None),
-    catalogo_pdf: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     if (_method or "").strip().upper() == "PUT":
@@ -503,8 +496,8 @@ def admin_produto_method_override(
             _=_,
             nome=nome,
             resumo_curto=resumo_curto,
+            categoria_slug=categoria_slug,
             imagem=imagem,
-            catalogo_pdf=catalogo_pdf,
             db=db,
         )
 

@@ -31,7 +31,7 @@ function adicionarCarrinho(id, nome, valor) {
   void id;
   void nome;
   void valor;
-  mostrarNotificacao("Use o catalogo ou fale com a equipe no WhatsApp.");
+  mostrarNotificacao("Consulte os produtos e fale com a equipe no WhatsApp.");
 }
 
 function removerDoCarrinho(id) {
@@ -50,7 +50,7 @@ function mostrarCarrinho() {
 
   carrinhoItensEl.innerHTML = `
     <h3 class="modal-title">Atendimento comercial</h3>
-    <p class="empty-cart">Consulte o catalogo ou fale com a equipe pelo WhatsApp.</p>
+    <p class="empty-cart">Consulte os produtos ou fale com a equipe pelo WhatsApp.</p>
   `;
   modal.style.display = "flex";
 }
@@ -90,6 +90,13 @@ function buscarProdutos() {
     const titleEl = card.querySelector(".card-title");
     const title = titleEl ? titleEl.textContent.toLowerCase() : "";
     card.style.display = title.includes(input) ? "block" : "none";
+  });
+
+  const grupos = grid.querySelectorAll(".products-category-block");
+  grupos.forEach(grupo => {
+    const cardsDoGrupo = grupo.querySelectorAll(".card-produto");
+    const temVisivel = Array.from(cardsDoGrupo).some(card => card.style.display !== "none");
+    grupo.style.display = temVisivel ? "grid" : "none";
   });
 }
 

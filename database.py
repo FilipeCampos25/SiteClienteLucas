@@ -59,7 +59,7 @@ def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
         "id",
         "nome",
         "resumo_curto",
-        "catalogo_url",
+        "categoria_slug",
         "imagem_url",
         "imagem_mime",
         "imagem_bytes",
@@ -83,10 +83,7 @@ def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
                     id INTEGER NOT NULL PRIMARY KEY,
                     nome VARCHAR(120) NOT NULL,
                     resumo_curto TEXT,
-                    catalogo_url VARCHAR(500),
-                    catalogo_nome_arquivo VARCHAR(255),
-                    catalogo_mime VARCHAR(100),
-                    catalogo_bytes BLOB,
+                    categoria_slug VARCHAR(80),
                     imagem_url VARCHAR,
                     imagem_mime VARCHAR(64),
                     imagem_bytes BLOB,
@@ -114,10 +111,7 @@ def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
 def _postgres_sync_produtos(colunas: set[str]) -> None:
     alteracoes = {
         "resumo_curto": "TEXT",
-        "catalogo_url": "VARCHAR(500)",
-        "catalogo_nome_arquivo": "VARCHAR(255)",
-        "catalogo_mime": "VARCHAR(100)",
-        "catalogo_bytes": "BYTEA",
+        "categoria_slug": "VARCHAR(80)",
         "imagem_mime": "VARCHAR(64)",
         "imagem_bytes": "BYTEA",
         "imagem_sha256": "VARCHAR(64)",
@@ -129,7 +123,11 @@ def _postgres_sync_produtos(colunas: set[str]) -> None:
         with engine.begin() as conn:
             conn.execute(text(f"ALTER TABLE produtos ADD COLUMN {coluna} {ddl}"))
 
-    colunas_legadas = (
+    colunas_obsoletas = (
+        "catalogo_url",
+        "catalogo_nome_arquivo",
+        "catalogo_mime",
+        "catalogo_bytes",
         "descricao",
         "tipo",
         "valor",
@@ -137,7 +135,7 @@ def _postgres_sync_produtos(colunas: set[str]) -> None:
         "ordem_exibicao",
         "destaque_home",
     )
-    for coluna in colunas_legadas:
+    for coluna in colunas_obsoletas:
         if coluna not in colunas:
             continue
         with engine.begin() as conn:
@@ -158,10 +156,7 @@ def init_db():
         "id",
         "nome",
         "resumo_curto",
-        "catalogo_url",
-        "catalogo_nome_arquivo",
-        "catalogo_mime",
-        "catalogo_bytes",
+        "categoria_slug",
         "imagem_url",
         "imagem_mime",
         "imagem_bytes",
@@ -169,7 +164,11 @@ def init_db():
         "criado_em",
         "atualizado_em",
     }
-    colunas_legadas = {
+    colunas_obsoletas = {
+        "catalogo_url",
+        "catalogo_nome_arquivo",
+        "catalogo_mime",
+        "catalogo_bytes",
         "descricao",
         "tipo",
         "valor",
@@ -183,5 +182,5 @@ def init_db():
             _sqlite_rebuild_produtos(colunas)
         return
 
-    if (colunas_desejadas - colunas) or (colunas_legadas & colunas):
+    if (colunas_desejadas - colunas) or (colunas_obsoletas & colunas):
         _postgres_sync_produtos(colunas)

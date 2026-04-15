@@ -7,7 +7,7 @@ from pydantic import BaseModel
 class ProdutoBase(BaseModel):
     nome: str
     resumo_curto: Optional[str] = None
-    catalogo_url: Optional[str] = None
+    categoria_slug: Optional[str] = None
 
 
 class ProdutoCreate(ProdutoBase):
@@ -17,7 +17,7 @@ class ProdutoCreate(ProdutoBase):
 class ProdutoUpdate(BaseModel):
     nome: Optional[str] = None
     resumo_curto: Optional[str] = None
-    catalogo_url: Optional[str] = None
+    categoria_slug: Optional[str] = None
 
 
 class ProdutoOut(ProdutoBase):

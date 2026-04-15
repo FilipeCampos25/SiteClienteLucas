@@ -10,10 +10,7 @@ class Produto(Base):
 
     nome = Column(String(120), nullable=False)
     resumo_curto = Column(Text, nullable=True)
-    catalogo_url = Column(String(500), nullable=True)
-    catalogo_nome_arquivo = Column(String(255), nullable=True)
-    catalogo_mime = Column(String(100), nullable=True)
-    catalogo_bytes = Column(LargeBinary, nullable=True)
+    categoria_slug = Column(String(80), nullable=True)
 
     imagem_url = Column(String, nullable=True)
     imagem_mime = Column(String(64), nullable=True)

@@ -19,8 +19,11 @@ def get_produto(db: Session, *, produto_id: int) -> Optional[models.Produto]:
     return db.query(models.Produto).filter(models.Produto.id == produto_id).first()
 
 
-def get_produtos(db: Session) -> List[models.Produto]:
-    return db.query(models.Produto).order_by(models.Produto.id.desc()).all()
+def get_produtos(db: Session, *, categoria_slug: Optional[str] = None) -> List[models.Produto]:
+    query = db.query(models.Produto)
+    if categoria_slug:
+        query = query.filter(models.Produto.categoria_slug == categoria_slug)
+    return query.order_by(models.Produto.id.desc()).all()
 
 
 def get_produtos_home(db: Session, *, limite: int = 4) -> List[models.Produto]:
@@ -32,8 +35,13 @@ def get_produtos_home(db: Session, *, limite: int = 4) -> List[models.Produto]:
     )
 
 
-def list_produtos(db: Session, apenas_ativos: bool = True) -> List[models.Produto]:
-    return get_produtos(db)
+def list_produtos(
+    db: Session,
+    apenas_ativos: bool = True,
+    *,
+    categoria_slug: Optional[str] = None,
+) -> List[models.Produto]:
+    return get_produtos(db, categoria_slug=categoria_slug)
 
 
 def create_produto(
@@ -42,14 +50,11 @@ def create_produto(
     *,
     imagem_bytes: Optional[bytes] = None,
     imagem_mime: Optional[str] = None,
-    catalogo_bytes: Optional[bytes] = None,
-    catalogo_mime: Optional[str] = None,
-    catalogo_nome_arquivo: Optional[str] = None,
 ) -> models.Produto:
     novo = models.Produto(
         nome=produto.nome.strip(),
         resumo_curto=(produto.resumo_curto or "").strip() or None,
-        catalogo_url=(produto.catalogo_url or "").strip() or None,
+        categoria_slug=(produto.categoria_slug or "").strip() or None,
         imagem_url=PLACEHOLDER_IMAGE_URL,
     )
 
@@ -57,11 +62,6 @@ def create_produto(
         novo.imagem_bytes = imagem_bytes
         novo.imagem_mime = (imagem_mime or "").strip() or None
         novo.imagem_sha256 = _sha256_hex(imagem_bytes)
-
-    if catalogo_bytes:
-        novo.catalogo_bytes = catalogo_bytes
-        novo.catalogo_mime = (catalogo_mime or "").strip() or "application/pdf"
-        novo.catalogo_nome_arquivo = (catalogo_nome_arquivo or "").strip() or "catalogo.pdf"
 
     db.add(novo)
     db.commit()
@@ -76,9 +76,6 @@ def update_produto(
     dados: schemas.ProdutoUpdate,
     imagem_bytes: Optional[bytes] = None,
     imagem_mime: Optional[str] = None,
-    catalogo_bytes: Optional[bytes] = None,
-    catalogo_mime: Optional[str] = None,
-    catalogo_nome_arquivo: Optional[str] = None,
 ) -> Optional[models.Produto]:
     produto = get_produto(db, produto_id=produto_id)
     if not produto:
@@ -88,8 +85,8 @@ def update_produto(
         produto.nome = dados.nome.strip()
     if dados.resumo_curto is not None:
         produto.resumo_curto = (dados.resumo_curto or "").strip() or None
-    if dados.catalogo_url is not None:
-        produto.catalogo_url = (dados.catalogo_url or "").strip() or None
+    if dados.categoria_slug is not None:
+        produto.categoria_slug = (dados.categoria_slug or "").strip() or None
 
     if not produto.imagem_url:
         produto.imagem_url = PLACEHOLDER_IMAGE_URL
@@ -98,11 +95,6 @@ def update_produto(
         produto.imagem_bytes = imagem_bytes
         produto.imagem_mime = (imagem_mime or "").strip() or None
         produto.imagem_sha256 = _sha256_hex(imagem_bytes)
-
-    if catalogo_bytes:
-        produto.catalogo_bytes = catalogo_bytes
-        produto.catalogo_mime = (catalogo_mime or "").strip() or "application/pdf"
-        produto.catalogo_nome_arquivo = (catalogo_nome_arquivo or "").strip() or "catalogo.pdf"
 
     db.commit()
     db.refresh(produto)

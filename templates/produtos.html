@@ -6,71 +6,58 @@
 <section id="produtos" class="products-modern">
   <div class="section-container">
     <div class="products-modern__header">
-      <p class="kicker">Catalogo tecnico</p>
+      <p class="kicker">Linha de produtos</p>
       <h2 class="heading-section">LINHA DE PRODUTOS</h2>
-      <p class="muted">Consulte nossa selecao de cantoneiras e perfis metalicos e abra o catalogo ou a ficha de cada item.</p>
+      <p class="muted">Consulte {{ total_produtos }} produto(s) agrupado(s) por categoria e abra os detalhes de cada item.</p>
     </div>
 
-    <div class="grid-produtos" id="produtosGrid">
-      {% for p in produtos %}
-      {% set destino = p.catalogo_url if p.catalogo_url else '/produto/' ~ p.id %}
-      {% set externo = p.catalogo_url %}
-      <div class="card-produto">
-        <div class="card-image-container">
-          <img
-            src="{{ p.imagem_url or '/static/images/placeholder.png' }}"
-            alt="{{ p.nome }}"
-            class="card-image"
-            onerror="this.src='/static/images/placeholder.png'"
-          >
-        </div>
-        <div class="card-content">
-          <h3 class="card-title">{{ p.nome }}</h3>
-          <p class="card-summary">
-            {{ p.resumo_curto if p.resumo_curto else "Consulte o catalogo ou a ficha do item para ver especificacoes e aplicacoes deste produto." }}
-          </p>
-          <div class="card-actions card-actions--catalog">
-            <a
-              href="{{ destino }}"
-              class="btn-catalog"
-              {% if externo %}target="_blank"{% endif %}
-              {% if externo %}rel="noopener noreferrer"{% endif %}
-            >
-              Ver catalogo
-            </a>
+    {% if grupos_produtos %}
+    <div class="products-category-list" id="produtosGrid">
+      {% for grupo in grupos_produtos %}
+      <section id="categoria-{{ grupo.slug }}" class="products-category-block">
+        <div class="products-category-block__header">
+          <div>
+            <p class="kicker">Categoria</p>
+            <h3 class="products-category-block__title">{{ grupo.nome_exibicao }}</h3>
           </div>
         </div>
-      </div>
+
+        <div class="grid-produtos">
+          {% for p in grupo.produtos %}
+          <div class="card-produto">
+            <div class="card-image-container">
+              <img
+                src="{{ p.imagem_url or '/static/images/placeholder.png' }}"
+                alt="{{ p.nome }}"
+                class="card-image"
+                onerror="this.src='/static/images/placeholder.png'"
+              >
+            </div>
+            <div class="card-content">
+              <h3 class="card-title">{{ p.nome }}</h3>
+              <p class="card-summary">
+                {{ p.resumo_curto if p.resumo_curto else "Confira os detalhes, aplicacoes e atendimento comercial deste produto." }}
+              </p>
+              <div class="card-actions card-actions--single">
+                <a
+                  href="/produto/{{ p.id }}"
+                  class="btn-product"
+                >
+                  Ver detalhes
+                </a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+      </section>
       {% endfor %}
     </div>
-
-    {% if total_paginas and total_paginas > 1 %}
-    <div class="pagination-wrapper">
-      <div class="pagination">
-        {% if pagina_atual > 1 %}
-        <a class="page-btn" href="/produtos?page={{ pagina_atual - 1 }}#produtos">Anterior</a>
-        {% else %}
-        <span class="page-btn disabled">Anterior</span>
-        {% endif %}
-
-        {% for p in paginacao %}
-          {% if p is none %}
-            <span class="page-ellipsis">...</span>
-          {% else %}
-            {% if p == pagina_atual %}
-              <span class="page-btn active">{{ p }}</span>
-            {% else %}
-              <a class="page-btn" href="/produtos?page={{ p }}#produtos">{{ p }}</a>
-            {% endif %}
-          {% endif %}
-        {% endfor %}
-
-        {% if pagina_atual < total_paginas %}
-        <a class="page-btn" href="/produtos?page={{ pagina_atual + 1 }}#produtos">Proxima</a>
-        {% else %}
-        <span class="page-btn disabled">Proxima</span>
-        {% endif %}
-      </div>
+    {% else %}
+    <div class="products-empty-state">
+      <h3 class="section-title">Nenhum produto cadastrado</h3>
+      <p class="section-subtitle">Assim que os itens forem adicionados no painel administrativo, eles aparecerao aqui separados por categoria.</p>
     </div>
     {% endif %}
   </div>

@@ -16,33 +16,24 @@
     <div class="produto-info">
       <h2 class="produto-title">{{ p.nome }}</h2>
 
-      {% if p.resumo_curto %}
       <div class="produto-description">
-        <h3>Resumo</h3>
-        <p>{{ p.resumo_curto }}</p>
+        <h3>Descricao</h3>
+        <p>{{ p.resumo_curto if p.resumo_curto else "Descricao em breve para este produto." }}</p>
       </div>
-      {% endif %}
 
       <div class="produto-actions">
-        {% if p.catalogo_url %}
-        <a
-          href="{{ p.catalogo_url }}"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="btn-catalog"
-        >
-          Abrir catalogo
-        </a>
-        {% endif %}
-        <a href="{{ whatsapp_link }}" target="_blank" rel="noopener" class="btn-secondary">
+        <a href="{{ whatsapp_link }}" target="_blank" rel="noopener" class="btn-product">
           Falar no WhatsApp
         </a>
-        <a href="/produtos" class="btn-secondary">Voltar ao catalogo</a>
+        {% if p.categoria_url %}
+        <a href="{{ p.categoria_url }}" class="btn-secondary">Voltar para {{ p.categoria_nome_exibicao }}</a>
+        {% endif %}
+        <a href="/produtos" class="btn-secondary">Voltar aos produtos</a>
       </div>
 
       <div class="security-badge">
         <p class="security-text">
-          <span>Catalogo atualizado</span> |
+          <span>Produto sob consulta</span> |
           <span>Atendimento especializado</span> |
           <span>Suporte via WhatsApp</span>
         </p>
@@ -63,7 +54,7 @@
 
 <section class="final-cta-section">
   <div class="neo-container cta-wrapper">
-    <h2 class="cta-title">Precisa de ajuda com este catalogo?</h2>
+    <h2 class="cta-title">Precisa de ajuda com este produto?</h2>
     <p class="cta-description">Nosso time esta pronto para orientar voce no WhatsApp.</p>
     <div class="cta-buttons">
       <a href="{{ whatsapp_link }}" target="_blank" rel="noopener" class="btn-whatsapp-large">
