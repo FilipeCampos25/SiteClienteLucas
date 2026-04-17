@@ -220,7 +220,7 @@ button{ cursor: pointer; }
   background: rgba(255,255,255,0.82);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
-  padding: clamp(2px, 0.35vw, 6px) clamp(18px, 2vw, 32px);
+  padding: clamp(4px, 0.45vw, 8px) clamp(20px, 2vw, 32px);
 
 }
 
@@ -228,20 +228,20 @@ button{ cursor: pointer; }
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 0;
+  gap: 12px;
+  min-height: 54px;
+  padding: 2px 0;
 }
 
 .brand{
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 220px;
 }
 .brand__img{
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   object-fit: contain;
 }
 .brand__logo{
@@ -257,7 +257,7 @@ button{ cursor: pointer; }
 
 .site-nav .nav-list{
   display: flex;
-  gap: 10px;
+  gap: 12px;
   list-style: none;
   padding: 0;
   margin: 0;
@@ -268,7 +268,7 @@ button{ cursor: pointer; }
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(16,17,20,0.70);
-  padding: 6px 5px;
+  padding: 8px 6px;
   border-radius: 8px;
 }
 .nav__link:hover{
@@ -282,7 +282,7 @@ button{ cursor: pointer; }
 .header-shell__actions{
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .header-social-link{
@@ -297,25 +297,25 @@ button{ cursor: pointer; }
   transform: translateY(-1px);
 }
 .header-social-link--facebook{
-  margin-left: 4px;
+  margin-left: 8px;
 }
 .header-social-link__icon{
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
 }
 .header-social-link__icon--instagram{
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 .header-social-link__icon--facebook{
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 .header-social-link__icon--whatsapp{
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
 }
 
 .btn--header-ghost{
@@ -386,8 +386,8 @@ button{ cursor: pointer; }
   border: 1px solid rgba(16,17,20,0.14);
   background: #fff;
   border-radius: 10px;
-  height: 34px;
-  width: 38px;
+  height: 36px;
+  width: 40px;
   align-items: center;
   justify-content: center;
 }
@@ -1701,14 +1701,14 @@ section.contact-map .contact-map__frame iframe{
 /* ---------- 19) Responsividade Forte (mobile variados) ---------- */
 @media (max-width: 1020px){
   .site-header-new{
-    padding: 4px 0;
+    padding: 5px 0;
   }
 
   .header-shell__inner{
     grid-template-columns: 1fr auto;
-    gap: 6px;
-    min-height: 46px;
-    padding: 0;
+    gap: 8px;
+    min-height: 52px;
+    padding: 2px 0;
   }
 
   .header-shell__actions{
@@ -1881,17 +1881,17 @@ section.contact-map .contact-map__frame iframe{
   }
 
   .site-header-new{
-    padding: 2px 0;
+    padding: 3px 0;
   }
 
   .header-shell__inner{
-    min-height: 42px;
+    min-height: 48px;
   }
 
   .nav-toggle,
   .icon-btn{
-    width: 34px;
-    height: 32px;
+    width: 36px;
+    height: 34px;
   }
 
   .hero-split__leftInner{
