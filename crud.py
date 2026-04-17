@@ -15,6 +15,23 @@ def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _apply_image_data(
+    produto: models.Produto,
+    *,
+    image_bytes_attr: str,
+    image_mime_attr: str,
+    image_sha_attr: str,
+    image_bytes: Optional[bytes],
+    image_mime: Optional[str],
+) -> None:
+    if image_bytes is None:
+        return
+
+    setattr(produto, image_bytes_attr, image_bytes)
+    setattr(produto, image_mime_attr, (image_mime or "").strip() or None)
+    setattr(produto, image_sha_attr, _sha256_hex(image_bytes))
+
+
 def get_produto(db: Session, *, produto_id: int) -> Optional[models.Produto]:
     return db.query(models.Produto).filter(models.Produto.id == produto_id).first()
 
@@ -50,6 +67,8 @@ def create_produto(
     *,
     imagem_bytes: Optional[bytes] = None,
     imagem_mime: Optional[str] = None,
+    imagem_medidas_bytes: Optional[bytes] = None,
+    imagem_medidas_mime: Optional[str] = None,
 ) -> models.Produto:
     novo = models.Produto(
         nome=produto.nome.strip(),
@@ -58,10 +77,22 @@ def create_produto(
         imagem_url=PLACEHOLDER_IMAGE_URL,
     )
 
-    if imagem_bytes:
-        novo.imagem_bytes = imagem_bytes
-        novo.imagem_mime = (imagem_mime or "").strip() or None
-        novo.imagem_sha256 = _sha256_hex(imagem_bytes)
+    _apply_image_data(
+        novo,
+        image_bytes_attr="imagem_bytes",
+        image_mime_attr="imagem_mime",
+        image_sha_attr="imagem_sha256",
+        image_bytes=imagem_bytes,
+        image_mime=imagem_mime,
+    )
+    _apply_image_data(
+        novo,
+        image_bytes_attr="imagem_medidas_bytes",
+        image_mime_attr="imagem_medidas_mime",
+        image_sha_attr="imagem_medidas_sha256",
+        image_bytes=imagem_medidas_bytes,
+        image_mime=imagem_medidas_mime,
+    )
 
     db.add(novo)
     db.commit()
@@ -76,6 +107,8 @@ def update_produto(
     dados: schemas.ProdutoUpdate,
     imagem_bytes: Optional[bytes] = None,
     imagem_mime: Optional[str] = None,
+    imagem_medidas_bytes: Optional[bytes] = None,
+    imagem_medidas_mime: Optional[str] = None,
 ) -> Optional[models.Produto]:
     produto = get_produto(db, produto_id=produto_id)
     if not produto:
@@ -91,10 +124,22 @@ def update_produto(
     if not produto.imagem_url:
         produto.imagem_url = PLACEHOLDER_IMAGE_URL
 
-    if imagem_bytes:
-        produto.imagem_bytes = imagem_bytes
-        produto.imagem_mime = (imagem_mime or "").strip() or None
-        produto.imagem_sha256 = _sha256_hex(imagem_bytes)
+    _apply_image_data(
+        produto,
+        image_bytes_attr="imagem_bytes",
+        image_mime_attr="imagem_mime",
+        image_sha_attr="imagem_sha256",
+        image_bytes=imagem_bytes,
+        image_mime=imagem_mime,
+    )
+    _apply_image_data(
+        produto,
+        image_bytes_attr="imagem_medidas_bytes",
+        image_mime_attr="imagem_medidas_mime",
+        image_sha_attr="imagem_medidas_sha256",
+        image_bytes=imagem_medidas_bytes,
+        image_mime=imagem_medidas_mime,
+    )
 
     db.commit()
     db.refresh(produto)

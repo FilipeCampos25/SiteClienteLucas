@@ -66,9 +66,10 @@
           >
         </a>
         {% endif %}
+        {% if INSTAGRAM_URL %}
         <a
           class="header-social-link"
-          href="https://www.instagram.com/casa_dascantoneiras?igsh=NWJvNnRsNXc2cTR4"
+          href="{{ INSTAGRAM_URL }}"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Instagram"
@@ -77,11 +78,30 @@
           <img
             src="/static/images/Instagram_icon.png"
             alt="Instagram"
-            class="header-social-link__icon"
+            class="header-social-link__icon header-social-link__icon--instagram"
             width="32"
             height="32"
           >
         </a>
+        {% endif %}
+        {% if FACEBOOK_URL %}
+        <a
+          class="header-social-link header-social-link--facebook"
+          href="{{ FACEBOOK_URL }}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Facebook"
+          title="Facebook"
+        >
+          <img
+            src="/static/images/facebook_img.png"
+            alt="Facebook"
+            class="header-social-link__icon header-social-link__icon--facebook"
+            width="32"
+            height="32"
+          >
+        </a>
+        {% endif %}
 
         <button class="nav-toggle" type="button" aria-label="Abrir menu" onclick="toggleNavMenu()">
           <span class="hamburger" aria-hidden="true"></span>

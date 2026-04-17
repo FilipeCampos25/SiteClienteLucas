@@ -14,6 +14,11 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "troque_essa_senha")
 
 # WhatsApp
 WHATSAPP_NUMERO = os.getenv("WHATSAPP_NUMERO")
+INSTAGRAM_URL = os.getenv(
+    "INSTAGRAM_URL",
+    "https://www.instagram.com/casa_dascantoneiras?igsh=NWJvNnRsNXc2cTR4",
+).strip()
+FACEBOOK_URL = os.getenv("FACEBOOK_URL", "https://www.facebook.com/").strip()
 
 # CORS
 CORS_ORIGINS = [

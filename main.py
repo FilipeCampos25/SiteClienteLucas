@@ -16,7 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 import crud
 import models
 import schemas
-from config import ADMIN_PASSWORD, ADMIN_USER, CORS_ORIGINS, WHATSAPP_NUMERO
+from config import ADMIN_PASSWORD, ADMIN_USER, CORS_ORIGINS, FACEBOOK_URL, INSTAGRAM_URL, WHATSAPP_NUMERO
 from database import SessionLocal, init_db
 from utils import gerar_link_whatsapp, gerar_link_whatsapp_text, telefone_visivel
 
@@ -42,6 +42,8 @@ templates.env.globals.update(
     WHATSAPP_NUMERO=WHATSAPP_NUMERO or "",
     WHATSAPP_DISPLAY=telefone_visivel(),
     WHATSAPP_LINK=gerar_link_whatsapp([]),
+    INSTAGRAM_URL=INSTAGRAM_URL or "",
+    FACEBOOK_URL=FACEBOOK_URL or "",
     LOGO_URL="/static/images/logomarca.png",
 )
 
@@ -98,6 +100,12 @@ def _produto_image_url(produto: models.Produto) -> str:
     return "/static/images/placeholder.png"
 
 
+def _produto_medidas_image_url(produto: models.Produto) -> Optional[str]:
+    if getattr(produto, "imagem_medidas_bytes", None):
+        return f"/media/produto/{produto.id}/imagem-medidas"
+    return None
+
+
 def _compress_to_jpeg(raw: bytes) -> tuple[bytes, str]:
     try:
         img = Image.open(io.BytesIO(raw))
@@ -110,6 +118,17 @@ def _compress_to_jpeg(raw: bytes) -> tuple[bytes, str]:
         return out.getvalue(), "image/jpeg"
     except Exception:
         return raw, "application/octet-stream"
+
+
+def _load_uploaded_image(upload: Optional[UploadFile]) -> tuple[Optional[bytes], Optional[str]]:
+    if not upload or not upload.filename:
+        return None, None
+
+    raw = upload.file.read()
+    if not raw:
+        return None, None
+
+    return _compress_to_jpeg(raw)
 
 
 def _admin_credentials() -> tuple[str, str]:
@@ -155,6 +174,7 @@ def _produto_view(produto: models.Produto) -> dict[str, Optional[str]]:
         "nome": produto.nome,
         "resumo_curto": produto.resumo_curto,
         "imagem_url": _produto_image_url(produto),
+        "imagem_medidas_url": _produto_medidas_image_url(produto),
         "categoria_slug": produto.categoria_slug,
         "categoria_nome_exibicao": categoria["nome_exibicao"] if categoria else None,
         "categoria_url": f"/categorias/{categoria['slug']}" if categoria else None,
@@ -291,6 +311,16 @@ def media_produto_imagem(produto_id: int, db: Session = Depends(get_db)):
     return Response(content=produto.imagem_bytes, media_type=mime)
 
 
+@app.get("/media/produto/{produto_id}/imagem-medidas")
+def media_produto_imagem_medidas(produto_id: int, db: Session = Depends(get_db)):
+    produto = crud.get_produto(db, produto_id=produto_id)
+    if not produto or not getattr(produto, "imagem_medidas_bytes", None):
+        raise HTTPException(status_code=404, detail="Imagem de medidas nao encontrada")
+
+    mime = getattr(produto, "imagem_medidas_mime", None) or "application/octet-stream"
+    return Response(content=produto.imagem_medidas_bytes, media_type=mime)
+
+
 @app.get("/api/produtos")
 def api_produtos(db: Session = Depends(get_db)):
     produtos_db = crud.list_produtos(db, apenas_ativos=True)
@@ -386,19 +416,19 @@ def admin_produto_novo(
     resumo_curto: str = Form(""),
     categoria_slug: str = Form(...),
     imagem: UploadFile = File(None),
+    imagem_medidas: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
-    imagem_bytes: Optional[bytes] = None
-    imagem_mime: Optional[str] = None
-    if imagem and imagem.filename:
-        raw = imagem.file.read()
-        imagem_bytes, imagem_mime = _compress_to_jpeg(raw)
+    imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
+    imagem_medidas_bytes, imagem_medidas_mime = _load_uploaded_image(imagem_medidas)
 
     crud.create_produto(
         db,
         _create_produto_from_form(nome, resumo_curto, categoria_slug),
         imagem_bytes=imagem_bytes,
         imagem_mime=imagem_mime,
+        imagem_medidas_bytes=imagem_medidas_bytes,
+        imagem_medidas_mime=imagem_medidas_mime,
     )
     return RedirectResponse("/admin", status_code=303)
 
@@ -411,13 +441,11 @@ def admin_produto_atualizar(
     resumo_curto: str = Form(None),
     categoria_slug: str = Form(None),
     imagem: UploadFile = File(None),
+    imagem_medidas: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
-    imagem_bytes: Optional[bytes] = None
-    imagem_mime: Optional[str] = None
-    if imagem and imagem.filename:
-        raw = imagem.file.read()
-        imagem_bytes, imagem_mime = _compress_to_jpeg(raw)
+    imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
+    imagem_medidas_bytes, imagem_medidas_mime = _load_uploaded_image(imagem_medidas)
 
     crud.update_produto(
         db,
@@ -425,6 +453,8 @@ def admin_produto_atualizar(
         dados=_update_produto_from_form(nome, resumo_curto, categoria_slug),
         imagem_bytes=imagem_bytes,
         imagem_mime=imagem_mime,
+        imagem_medidas_bytes=imagem_medidas_bytes,
+        imagem_medidas_mime=imagem_medidas_mime,
     )
     return RedirectResponse("/admin", status_code=303)
 
@@ -446,6 +476,7 @@ def admin_produto_novo_alias(
     resumo_curto: str = Form(""),
     categoria_slug: str = Form(...),
     imagem: UploadFile = File(None),
+    imagem_medidas: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     return admin_produto_novo(
@@ -454,6 +485,7 @@ def admin_produto_novo_alias(
         resumo_curto=resumo_curto,
         categoria_slug=categoria_slug,
         imagem=imagem,
+        imagem_medidas=imagem_medidas,
         db=db,
     )
 
@@ -466,6 +498,7 @@ def admin_produto_atualizar_alias(
     resumo_curto: str = Form(None),
     categoria_slug: str = Form(None),
     imagem: UploadFile = File(None),
+    imagem_medidas: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     return admin_produto_atualizar(
@@ -475,6 +508,7 @@ def admin_produto_atualizar_alias(
         resumo_curto=resumo_curto,
         categoria_slug=categoria_slug,
         imagem=imagem,
+        imagem_medidas=imagem_medidas,
         db=db,
     )
 
@@ -488,6 +522,7 @@ def admin_produto_method_override(
     resumo_curto: str = Form(None),
     categoria_slug: str = Form(None),
     imagem: UploadFile = File(None),
+    imagem_medidas: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     if (_method or "").strip().upper() == "PUT":
@@ -498,6 +533,7 @@ def admin_produto_method_override(
             resumo_curto=resumo_curto,
             categoria_slug=categoria_slug,
             imagem=imagem,
+            imagem_medidas=imagem_medidas,
             db=db,
         )
 

@@ -64,6 +64,9 @@ def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
         "imagem_mime",
         "imagem_bytes",
         "imagem_sha256",
+        "imagem_medidas_mime",
+        "imagem_medidas_bytes",
+        "imagem_medidas_sha256",
         "criado_em",
         "atualizado_em",
     ]
@@ -88,6 +91,9 @@ def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
                     imagem_mime VARCHAR(64),
                     imagem_bytes BLOB,
                     imagem_sha256 VARCHAR(64),
+                    imagem_medidas_mime VARCHAR(64),
+                    imagem_medidas_bytes BLOB,
+                    imagem_medidas_sha256 VARCHAR(64),
                     criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
                     atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
@@ -115,6 +121,9 @@ def _postgres_sync_produtos(colunas: set[str]) -> None:
         "imagem_mime": "VARCHAR(64)",
         "imagem_bytes": "BYTEA",
         "imagem_sha256": "VARCHAR(64)",
+        "imagem_medidas_mime": "VARCHAR(64)",
+        "imagem_medidas_bytes": "BYTEA",
+        "imagem_medidas_sha256": "VARCHAR(64)",
         "atualizado_em": "TIMESTAMP DEFAULT NOW()",
     }
     for coluna, ddl in alteracoes.items():
@@ -161,6 +170,9 @@ def init_db():
         "imagem_mime",
         "imagem_bytes",
         "imagem_sha256",
+        "imagem_medidas_mime",
+        "imagem_medidas_bytes",
+        "imagem_medidas_sha256",
         "criado_em",
         "atualizado_em",
     }

@@ -5,65 +5,36 @@
 {% block content %}
 {% set p = produto %}
 
-<section class="produto-page">
-  <div class="neo-container produto-container">
-    <div class="produto-gallery">
-      <div class="produto-image-wrapper">
-        <img src="{{ p.imagem_url or '/static/images/placeholder.png' }}" alt="{{ p.nome }}" class="produto-image" onerror="this.src='/static/images/placeholder.png'">
-      </div>
+<section class="produto-page produto-page--gallery" aria-label="Galeria do produto">
+  <div class="neo-container produto-gallery-grid">
+    <div class="produto-gallery-item">
+      <img
+        src="{{ p.imagem_url or '/static/images/placeholder.png' }}"
+        alt="{{ p.nome }}"
+        class="produto-gallery-image produto-gallery-image--principal"
+        onerror="this.src='/static/images/placeholder.png'"
+      >
     </div>
 
-    <div class="produto-info">
-      <h2 class="produto-title">{{ p.nome }}</h2>
-
-      <div class="produto-description">
-        <h3>Descricao</h3>
-        <p>{{ p.resumo_curto if p.resumo_curto else "Descricao em breve para este produto." }}</p>
-      </div>
-
-      <div class="produto-actions">
-        <a href="{{ whatsapp_link }}" target="_blank" rel="noopener" class="btn-product">
-          Falar no WhatsApp
-        </a>
-        {% if p.categoria_url %}
-        <a href="{{ p.categoria_url }}" class="btn-secondary">Voltar para {{ p.categoria_nome_exibicao }}</a>
-        {% endif %}
-        <a href="/produtos" class="btn-secondary">Voltar aos produtos</a>
-      </div>
-
-      <div class="security-badge">
-        <p class="security-text">
-          <span>Produto sob consulta</span> |
-          <span>Atendimento especializado</span> |
-          <span>Suporte via WhatsApp</span>
-        </p>
-      </div>
+    <div class="produto-gallery-item">
+      <img
+        src="{{ p.imagem_medidas_url or '/static/images/placeholder.png' }}"
+        alt="Medidas de {{ p.nome }}"
+        class="produto-gallery-image produto-gallery-image--medidas"
+        onerror="this.src='/static/images/placeholder.png'"
+      >
     </div>
   </div>
 </section>
 
-<section class="related-section">
-  <div class="neo-container">
-    <h2 class="section-title">Voce tambem pode se interessar</h2>
-    <p class="section-subtitle">Navegue por nossa linha completa de produtos</p>
-    <div class="related-placeholder">
-      <a href="/produtos" class="btn-primary">Ver todos os produtos</a>
+<section class="produto-page produto-page--description" aria-label="Descricao do produto">
+  <div class="neo-container produto-description-shell">
+    <div class="produto-description-panel">
+      <p>{{ p.resumo_curto if p.resumo_curto else "Descricao em breve para este produto." }}</p>
     </div>
   </div>
 </section>
 
-<section class="final-cta-section">
-  <div class="neo-container cta-wrapper">
-    <h2 class="cta-title">Precisa de ajuda com este produto?</h2>
-    <p class="cta-description">Nosso time esta pronto para orientar voce no WhatsApp.</p>
-    <div class="cta-buttons">
-      <a href="{{ whatsapp_link }}" target="_blank" rel="noopener" class="btn-whatsapp-large">
-        WhatsApp
-      </a>
-      <a href="tel:+{{ WHATSAPP_NUMERO }}" class="btn-phone-large">
-        Ligar
-      </a>
-    </div>
-  </div>
-</section>
 {% endblock %}
+
+{% block pre_footer %}{% endblock %}

@@ -23,6 +23,7 @@ class ProdutoUpdate(BaseModel):
 class ProdutoOut(ProdutoBase):
     id: int
     imagem_url: Optional[str] = None
+    imagem_medidas_url: Optional[str] = None
     criado_em: Optional[datetime] = None
     atualizado_em: Optional[datetime] = None
 

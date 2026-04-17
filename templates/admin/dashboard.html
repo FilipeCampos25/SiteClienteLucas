@@ -65,8 +65,8 @@
           ></textarea>
         </div>
 
-        <div class="form-group form-group-full">
-          <label class="form-label">Imagem do Produto</label>
+        <div class="form-group">
+          <label class="form-label">Imagem principal</label>
           <label class="upload-area">
             <input
               type="file"
@@ -83,6 +83,27 @@
           </label>
           <div class="upload-preview">
             <img id="create-preview" class="upload-preview-img" alt="Preview da imagem" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Imagem de medidas</label>
+          <label class="upload-area">
+            <input
+              type="file"
+              name="imagem_medidas"
+              accept="image/png,image/jpeg"
+              class="upload-input"
+              onchange="updateUploadPreview(this, 'create-preview-medidas', 'create-upload-label-medidas')"
+            >
+            <span class="upload-content">
+              <span class="upload-title">Toque para escolher a imagem de medidas</span>
+              <span class="upload-subtitle">PNG ou JPG</span>
+              <span id="create-upload-label-medidas" class="upload-filename">Nenhum arquivo selecionado</span>
+            </span>
+          </label>
+          <div class="upload-preview">
+            <img id="create-preview-medidas" class="upload-preview-img" alt="Preview da imagem de medidas" />
           </div>
         </div>
 
@@ -167,8 +188,8 @@
                     >{{ p.resumo_curto or '' }}</textarea>
                   </div>
 
-                  <div class="form-group form-group-full">
-                    <label class="form-label">Trocar imagem (opcional)</label>
+                  <div class="form-group">
+                    <label class="form-label">Trocar imagem principal (opcional)</label>
                     <label class="upload-area upload-area-compact">
                       <input
                         type="file"
@@ -185,6 +206,33 @@
                     </label>
                     <div class="upload-preview">
                       <img id="edit-preview-{{ p.id }}" class="upload-preview-img is-visible" src="{{ p.imagem_url }}" alt="Preview da imagem atual" onerror="this.style.display='none'">
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Trocar imagem de medidas (opcional)</label>
+                    <label class="upload-area upload-area-compact">
+                      <input
+                        type="file"
+                        name="imagem_medidas"
+                        accept="image/png,image/jpeg"
+                        class="upload-input"
+                        onchange="updateUploadPreview(this, 'edit-preview-medidas-{{ p.id }}', 'edit-upload-label-medidas-{{ p.id }}')"
+                      >
+                      <span class="upload-content">
+                        <span class="upload-title">Selecionar nova imagem de medidas</span>
+                        <span class="upload-subtitle">Mantem a atual se nao escolher</span>
+                        <span id="edit-upload-label-medidas-{{ p.id }}" class="upload-filename">Nenhum arquivo selecionado</span>
+                      </span>
+                    </label>
+                    <div class="upload-preview">
+                      <img
+                        id="edit-preview-medidas-{{ p.id }}"
+                        class="upload-preview-img{% if p.imagem_medidas_url %} is-visible{% endif %}"
+                        src="{{ p.imagem_medidas_url or '' }}"
+                        alt="Preview da imagem de medidas atual"
+                        onerror="this.style.display='none'"
+                      >
                     </div>
                   </div>
                 </div>
