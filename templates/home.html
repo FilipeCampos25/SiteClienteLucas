@@ -54,7 +54,12 @@
             class="home-category-card__image"
           >
         </span>
-        <span class="home-category-card__label">{{ categoria.nome_exibicao }}</span>
+        <span class="home-category-card__label">
+          <span class="home-category-card__title">{{ categoria.nome_exibicao }}</span>
+          {% if categoria.subtitulo_exibicao %}
+          <span class="home-category-card__subtitle">{{ categoria.subtitulo_exibicao }}</span>
+          {% endif %}
+        </span>
       </a>
       {% endfor %}
     </div>

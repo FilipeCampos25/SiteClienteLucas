@@ -8,6 +8,9 @@
     <div class="category-page__hero">
       <p class="kicker">Categoria</p>
       <h1 class="heading-section">{{ categoria.nome_exibicao }}</h1>
+      {% if categoria.subtitulo_exibicao %}
+      <p class="category-page__subtitle">{{ categoria.subtitulo_exibicao }}</p>
+      {% endif %}
       <p class="muted">
         {% if produtos %}
         Confira os produtos disponiveis nesta categoria e abra os detalhes de cada item.
@@ -32,9 +35,6 @@
           </div>
           <div class="card-content">
             <h3 class="card-title">{{ p.nome }}</h3>
-            <p class="card-summary">
-              {{ p.resumo_curto if p.resumo_curto else "Descricao em breve para este produto." }}
-            </p>
             <div class="card-actions card-actions--single">
               <a href="/produto/{{ p.id }}" class="btn-product">Ver detalhes</a>
             </div>

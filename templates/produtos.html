@@ -8,7 +8,6 @@
     <div class="products-modern__header">
       <p class="kicker">Linha de produtos</p>
       <h2 class="heading-section">LINHA DE PRODUTOS</h2>
-      <p class="muted">Consulte {{ total_produtos }} produto(s) agrupado(s) por categoria e abra os detalhes de cada item.</p>
     </div>
 
     {% if grupos_produtos %}
@@ -19,6 +18,9 @@
           <div>
             <p class="kicker">Categoria</p>
             <h3 class="products-category-block__title">{{ grupo.nome_exibicao }}</h3>
+            {% if grupo.subtitulo_exibicao %}
+            <p class="products-category-block__subtitle">{{ grupo.subtitulo_exibicao }}</p>
+            {% endif %}
           </div>
         </div>
 
@@ -35,9 +37,6 @@
             </div>
             <div class="card-content">
               <h3 class="card-title">{{ p.nome }}</h3>
-              <p class="card-summary">
-                {{ p.resumo_curto if p.resumo_curto else "Confira os detalhes, aplicacoes e atendimento comercial deste produto." }}
-              </p>
               <div class="card-actions card-actions--single">
                 <a
                   href="/produto/{{ p.id }}"

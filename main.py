@@ -52,24 +52,28 @@ CATEGORIAS_HOME = [
         "slug": "cantoneiras-de-aluminio",
         "nome": "Cantoneiras de Aluminio",
         "nome_exibicao": "Cantoneiras de Alum\u00ednio",
+        "subtitulo_exibicao": "",
         "imagem_url": "/static/images/img3.jpeg",
     },
     {
         "slug": "kits-para-montagem",
-        "nome": "Kits para montagem",
-        "nome_exibicao": "Kits para montagem",
+        "nome": "Cantoneiras para Suporte",
+        "nome_exibicao": "Cantoneiras para Suporte",
+        "subtitulo_exibicao": "",
         "imagem_url": "/static/images/img5.jpeg",
     },
     {
         "slug": "cantoneira-suporte-para-prateleira",
-        "nome": "Cantoneira suporte para prateleira",
-        "nome_exibicao": "Cantoneira Suporte para Prateleira",
+        "nome": "Acessorios",
+        "nome_exibicao": "Acess\u00f3rios",
+        "subtitulo_exibicao": "Ferramentas",
         "imagem_url": "/static/images/img6.jpeg",
     },
     {
         "slug": "acessorios",
-        "nome": "Acessorios",
-        "nome_exibicao": "Acess\u00f3rios",
+        "nome": "Faca voce mesmo",
+        "nome_exibicao": "Fa\u00e7a voc\u00ea mesmo",
+        "subtitulo_exibicao": "",
         "imagem_url": "/static/images/img8.jpeg",
     },
 ]
@@ -249,6 +253,7 @@ def produtos(
             {
                 "slug": categoria["slug"],
                 "nome_exibicao": categoria["nome_exibicao"],
+                "subtitulo_exibicao": categoria.get("subtitulo_exibicao", ""),
                 "produtos": itens,
             }
         )
