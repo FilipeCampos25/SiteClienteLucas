@@ -15,8 +15,12 @@ def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _clean_optional_str(value: Optional[str]) -> Optional[str]:
+    return (value or "").strip() or None
+
+
 def _apply_image_data(
-    produto: models.Produto,
+    target: object,
     *,
     image_bytes_attr: str,
     image_mime_attr: str,
@@ -27,19 +31,323 @@ def _apply_image_data(
     if image_bytes is None:
         return
 
-    setattr(produto, image_bytes_attr, image_bytes)
-    setattr(produto, image_mime_attr, (image_mime or "").strip() or None)
-    setattr(produto, image_sha_attr, _sha256_hex(image_bytes))
+    setattr(target, image_bytes_attr, image_bytes)
+    setattr(target, image_mime_attr, _clean_optional_str(image_mime))
+    setattr(target, image_sha_attr, _sha256_hex(image_bytes))
+
+
+def _next_categoria_ordem(db: Session) -> int:
+    ultima = db.query(models.Categoria).order_by(models.Categoria.ordem_exibicao.desc(), models.Categoria.id.desc()).first()
+    return int(getattr(ultima, "ordem_exibicao", 0) or 0) + 1
+
+
+def _next_subcategoria_ordem(db: Session, categoria_slug: str) -> int:
+    ultima = (
+        db.query(models.Subcategoria)
+        .filter(models.Subcategoria.categoria_slug == categoria_slug)
+        .order_by(models.Subcategoria.ordem_exibicao.desc(), models.Subcategoria.id.desc())
+        .first()
+    )
+    return int(getattr(ultima, "ordem_exibicao", 0) or 0) + 1
+
+
+def list_categorias(db: Session) -> List[models.Categoria]:
+    return (
+        db.query(models.Categoria)
+        .order_by(models.Categoria.ordem_exibicao.asc(), models.Categoria.id.asc())
+        .all()
+    )
+
+
+def get_categoria(
+    db: Session,
+    *,
+    categoria_id: Optional[int] = None,
+    slug: Optional[str] = None,
+) -> Optional[models.Categoria]:
+    query = db.query(models.Categoria)
+    if categoria_id is not None:
+        return query.filter(models.Categoria.id == categoria_id).first()
+    if slug is not None:
+        return query.filter(models.Categoria.slug == slug).first()
+    return None
+
+
+def create_categoria(
+    db: Session,
+    dados: schemas.CategoriaCreate,
+    *,
+    imagem_bytes: Optional[bytes] = None,
+    imagem_mime: Optional[str] = None,
+) -> models.Categoria:
+    if get_categoria(db, slug=dados.slug):
+        raise ValueError("Ja existe uma categoria com esse slug")
+
+    categoria = models.Categoria(
+        slug=dados.slug.strip(),
+        nome=dados.nome.strip(),
+        nome_exibicao=dados.nome_exibicao.strip(),
+        subtitulo_exibicao=_clean_optional_str(dados.subtitulo_exibicao),
+        imagem_url=_clean_optional_str(dados.imagem_url) or PLACEHOLDER_IMAGE_URL,
+        ordem_exibicao=dados.ordem_exibicao if dados.ordem_exibicao is not None else _next_categoria_ordem(db),
+    )
+    _apply_image_data(
+        categoria,
+        image_bytes_attr="imagem_bytes",
+        image_mime_attr="imagem_mime",
+        image_sha_attr="imagem_sha256",
+        image_bytes=imagem_bytes,
+        image_mime=imagem_mime,
+    )
+    db.add(categoria)
+    db.commit()
+    db.refresh(categoria)
+    return categoria
+
+
+def update_categoria(
+    db: Session,
+    *,
+    categoria_id: int,
+    dados: schemas.CategoriaUpdate,
+    imagem_bytes: Optional[bytes] = None,
+    imagem_mime: Optional[str] = None,
+) -> Optional[models.Categoria]:
+    categoria = get_categoria(db, categoria_id=categoria_id)
+    if not categoria:
+        return None
+
+    slug_atual = categoria.slug
+    novo_slug = (dados.slug or "").strip() if dados.slug is not None else slug_atual
+    if novo_slug != slug_atual:
+        existente = get_categoria(db, slug=novo_slug)
+        if existente and existente.id != categoria.id:
+            raise ValueError("Ja existe uma categoria com esse slug")
+
+    if dados.slug is not None:
+        categoria.slug = novo_slug
+    if dados.nome is not None:
+        categoria.nome = dados.nome.strip()
+    if dados.nome_exibicao is not None:
+        categoria.nome_exibicao = dados.nome_exibicao.strip()
+    if dados.subtitulo_exibicao is not None:
+        categoria.subtitulo_exibicao = _clean_optional_str(dados.subtitulo_exibicao)
+    if dados.imagem_url is not None:
+        categoria.imagem_url = _clean_optional_str(dados.imagem_url) or PLACEHOLDER_IMAGE_URL
+    if dados.ordem_exibicao is not None:
+        categoria.ordem_exibicao = dados.ordem_exibicao
+    if not categoria.imagem_url:
+        categoria.imagem_url = PLACEHOLDER_IMAGE_URL
+    _apply_image_data(
+        categoria,
+        image_bytes_attr="imagem_bytes",
+        image_mime_attr="imagem_mime",
+        image_sha_attr="imagem_sha256",
+        image_bytes=imagem_bytes,
+        image_mime=imagem_mime,
+    )
+
+    if novo_slug != slug_atual:
+        (
+            db.query(models.Subcategoria)
+            .filter(models.Subcategoria.categoria_slug == slug_atual)
+            .update({models.Subcategoria.categoria_slug: novo_slug}, synchronize_session=False)
+        )
+        (
+            db.query(models.Produto)
+            .filter(models.Produto.categoria_slug == slug_atual)
+            .update({models.Produto.categoria_slug: novo_slug}, synchronize_session=False)
+        )
+
+    db.commit()
+    db.refresh(categoria)
+    return categoria
+
+
+def delete_categoria(db: Session, *, categoria_id: int) -> bool:
+    categoria = get_categoria(db, categoria_id=categoria_id)
+    if not categoria:
+        return False
+
+    slug = categoria.slug
+    (
+        db.query(models.Produto)
+        .filter(models.Produto.categoria_slug == slug)
+        .delete(synchronize_session=False)
+    )
+    (
+        db.query(models.Subcategoria)
+        .filter(models.Subcategoria.categoria_slug == slug)
+        .delete(synchronize_session=False)
+    )
+    db.delete(categoria)
+    db.commit()
+    return True
+
+
+def list_subcategorias(db: Session, *, categoria_slug: Optional[str] = None) -> List[models.Subcategoria]:
+    query = db.query(models.Subcategoria)
+    if categoria_slug:
+        query = query.filter(models.Subcategoria.categoria_slug == categoria_slug)
+    return query.order_by(
+        models.Subcategoria.categoria_slug.asc(),
+        models.Subcategoria.ordem_exibicao.asc(),
+        models.Subcategoria.id.asc(),
+    ).all()
+
+
+def get_subcategoria(
+    db: Session,
+    *,
+    subcategoria_id: Optional[int] = None,
+    categoria_slug: Optional[str] = None,
+    slug: Optional[str] = None,
+) -> Optional[models.Subcategoria]:
+    query = db.query(models.Subcategoria)
+    if subcategoria_id is not None:
+        return query.filter(models.Subcategoria.id == subcategoria_id).first()
+    if categoria_slug is not None and slug is not None:
+        return query.filter(
+            models.Subcategoria.categoria_slug == categoria_slug,
+            models.Subcategoria.slug == slug,
+        ).first()
+    return None
+
+
+def create_subcategoria(
+    db: Session,
+    dados: schemas.SubcategoriaCreate,
+    *,
+    imagem_bytes: Optional[bytes] = None,
+    imagem_mime: Optional[str] = None,
+) -> models.Subcategoria:
+    if get_subcategoria(db, categoria_slug=dados.categoria_slug, slug=dados.slug):
+        raise ValueError("Ja existe uma subcategoria com esse slug nessa categoria")
+
+    subcategoria = models.Subcategoria(
+        categoria_slug=dados.categoria_slug.strip(),
+        slug=dados.slug.strip(),
+        nome=dados.nome.strip(),
+        nome_exibicao=dados.nome_exibicao.strip(),
+        imagem_url=_clean_optional_str(dados.imagem_url) or PLACEHOLDER_IMAGE_URL,
+        ordem_exibicao=(
+            dados.ordem_exibicao
+            if dados.ordem_exibicao is not None
+            else _next_subcategoria_ordem(db, dados.categoria_slug.strip())
+        ),
+    )
+    _apply_image_data(
+        subcategoria,
+        image_bytes_attr="imagem_bytes",
+        image_mime_attr="imagem_mime",
+        image_sha_attr="imagem_sha256",
+        image_bytes=imagem_bytes,
+        image_mime=imagem_mime,
+    )
+    db.add(subcategoria)
+    db.commit()
+    db.refresh(subcategoria)
+    return subcategoria
+
+
+def update_subcategoria(
+    db: Session,
+    *,
+    subcategoria_id: int,
+    dados: schemas.SubcategoriaUpdate,
+    imagem_bytes: Optional[bytes] = None,
+    imagem_mime: Optional[str] = None,
+) -> Optional[models.Subcategoria]:
+    subcategoria = get_subcategoria(db, subcategoria_id=subcategoria_id)
+    if not subcategoria:
+        return None
+
+    categoria_atual = subcategoria.categoria_slug
+    slug_atual = subcategoria.slug
+    nova_categoria = (dados.categoria_slug or "").strip() if dados.categoria_slug is not None else categoria_atual
+    novo_slug = (dados.slug or "").strip() if dados.slug is not None else slug_atual
+
+    existente = get_subcategoria(db, categoria_slug=nova_categoria, slug=novo_slug)
+    if existente and existente.id != subcategoria.id:
+        raise ValueError("Ja existe uma subcategoria com esse slug nessa categoria")
+
+    if dados.categoria_slug is not None:
+        subcategoria.categoria_slug = nova_categoria
+    if dados.slug is not None:
+        subcategoria.slug = novo_slug
+    if dados.nome is not None:
+        subcategoria.nome = dados.nome.strip()
+    if dados.nome_exibicao is not None:
+        subcategoria.nome_exibicao = dados.nome_exibicao.strip()
+    if dados.imagem_url is not None:
+        subcategoria.imagem_url = _clean_optional_str(dados.imagem_url) or PLACEHOLDER_IMAGE_URL
+    if dados.ordem_exibicao is not None:
+        subcategoria.ordem_exibicao = dados.ordem_exibicao
+    if not subcategoria.imagem_url:
+        subcategoria.imagem_url = PLACEHOLDER_IMAGE_URL
+    _apply_image_data(
+        subcategoria,
+        image_bytes_attr="imagem_bytes",
+        image_mime_attr="imagem_mime",
+        image_sha_attr="imagem_sha256",
+        image_bytes=imagem_bytes,
+        image_mime=imagem_mime,
+    )
+
+    if categoria_atual != nova_categoria or slug_atual != novo_slug:
+        (
+            db.query(models.Produto)
+            .filter(
+                models.Produto.categoria_slug == categoria_atual,
+                models.Produto.subcategoria_slug == slug_atual,
+            )
+            .update(
+                {
+                    models.Produto.categoria_slug: nova_categoria,
+                    models.Produto.subcategoria_slug: novo_slug,
+                },
+                synchronize_session=False,
+            )
+        )
+
+    db.commit()
+    db.refresh(subcategoria)
+    return subcategoria
+
+
+def delete_subcategoria(db: Session, *, subcategoria_id: int) -> bool:
+    subcategoria = get_subcategoria(db, subcategoria_id=subcategoria_id)
+    if not subcategoria:
+        return False
+
+    (
+        db.query(models.Produto)
+        .filter(
+            models.Produto.categoria_slug == subcategoria.categoria_slug,
+            models.Produto.subcategoria_slug == subcategoria.slug,
+        )
+        .delete(synchronize_session=False)
+    )
+    db.delete(subcategoria)
+    db.commit()
+    return True
 
 
 def get_produto(db: Session, *, produto_id: int) -> Optional[models.Produto]:
     return db.query(models.Produto).filter(models.Produto.id == produto_id).first()
 
 
-def get_produtos(db: Session, *, categoria_slug: Optional[str] = None) -> List[models.Produto]:
+def get_produtos(
+    db: Session,
+    *,
+    categoria_slug: Optional[str] = None,
+    subcategoria_slug: Optional[str] = None,
+) -> List[models.Produto]:
     query = db.query(models.Produto)
     if categoria_slug:
         query = query.filter(models.Produto.categoria_slug == categoria_slug)
+    if subcategoria_slug:
+        query = query.filter(models.Produto.subcategoria_slug == subcategoria_slug)
     return query.order_by(models.Produto.id.desc()).all()
 
 
@@ -57,8 +365,13 @@ def list_produtos(
     apenas_ativos: bool = True,
     *,
     categoria_slug: Optional[str] = None,
+    subcategoria_slug: Optional[str] = None,
 ) -> List[models.Produto]:
-    return get_produtos(db, categoria_slug=categoria_slug)
+    return get_produtos(
+        db,
+        categoria_slug=categoria_slug,
+        subcategoria_slug=subcategoria_slug,
+    )
 
 
 def create_produto(
@@ -72,8 +385,9 @@ def create_produto(
 ) -> models.Produto:
     novo = models.Produto(
         nome=produto.nome.strip(),
-        resumo_curto=(produto.resumo_curto or "").strip() or None,
-        categoria_slug=(produto.categoria_slug or "").strip() or None,
+        resumo_curto=_clean_optional_str(produto.resumo_curto),
+        categoria_slug=_clean_optional_str(produto.categoria_slug),
+        subcategoria_slug=_clean_optional_str(produto.subcategoria_slug),
         imagem_url=PLACEHOLDER_IMAGE_URL,
     )
 
@@ -117,9 +431,11 @@ def update_produto(
     if dados.nome is not None:
         produto.nome = dados.nome.strip()
     if dados.resumo_curto is not None:
-        produto.resumo_curto = (dados.resumo_curto or "").strip() or None
+        produto.resumo_curto = _clean_optional_str(dados.resumo_curto)
     if dados.categoria_slug is not None:
-        produto.categoria_slug = (dados.categoria_slug or "").strip() or None
+        produto.categoria_slug = _clean_optional_str(dados.categoria_slug)
+    if dados.subcategoria_slug is not None:
+        produto.subcategoria_slug = _clean_optional_str(dados.subcategoria_slug)
 
     if not produto.imagem_url:
         produto.imagem_url = PLACEHOLDER_IMAGE_URL

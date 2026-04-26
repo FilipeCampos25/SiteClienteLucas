@@ -6,19 +6,58 @@
 <section class="category-page">
   <div class="section-container">
     <div class="category-page__hero">
-      <p class="kicker">Categoria</p>
+      <p class="kicker">{% if subcategoria_atual %}Subcatalogo{% else %}Categoria{% endif %}</p>
+      {% if subcategoria_atual %}
+      <p class="category-page__breadcrumb">
+        <a href="/categorias/{{ categoria.slug }}">{{ categoria.nome_exibicao }}</a>
+        {% if categoria.subtitulo_exibicao %}
+        <span>/ {{ categoria.subtitulo_exibicao }}</span>
+        {% endif %}
+      </p>
+      <h1 class="heading-section">{{ subcategoria_atual.nome_exibicao }}</h1>
+      {% else %}
       <h1 class="heading-section">{{ categoria.nome_exibicao }}</h1>
       {% if categoria.subtitulo_exibicao %}
       <p class="category-page__subtitle">{{ categoria.subtitulo_exibicao }}</p>
       {% endif %}
+      {% endif %}
       <p class="muted">
-        {% if produtos %}
+        {% if subcategoria_atual %}
+        Confira os produtos disponiveis nesta linha e abra os detalhes de cada item.
+        {% elif subcategorias %}
+        Escolha um subcatalogo para acessar os produtos internos desta linha.
+        {% elif produtos %}
         Confira os produtos disponiveis nesta categoria e abra os detalhes de cada item.
         {% else %}
         Esta pagina ja esta pronta para receber produtos dessa categoria pelo painel administrativo.
         {% endif %}
       </p>
     </div>
+
+    {% if subcategorias and not subcategoria_atual %}
+    <section class="category-subcatalog" aria-labelledby="subcatalogo-title">
+
+      <div class="home-categories__grid category-subcatalog__grid">
+        {% for subcategoria in subcategorias %}
+        <a
+          href="/categorias/{{ categoria.slug }}/subcategorias/{{ subcategoria.slug }}"
+          class="home-category-card category-subcatalog__card"
+        >
+          <span class="home-category-card__frame">
+            <img
+              src="{{ subcategoria.imagem_url }}"
+              alt="{{ subcategoria.nome_exibicao }}"
+              class="home-category-card__image"
+            >
+          </span>
+          <span class="home-category-card__label">
+            <span class="home-category-card__title">{{ subcategoria.nome_exibicao }}</span>
+          </span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
 
     {% if produtos %}
     <section class="products-modern category-products">
@@ -43,6 +82,23 @@
         {% endfor %}
       </div>
     </section>
+    {% elif subcategoria_atual %}
+    <div class="category-empty-notice">
+      <h2 class="section-title">Nenhum produto nesta subcategoria ainda</h2>
+      <p class="section-subtitle">
+        Assim que os itens forem vinculados a {{ subcategoria_atual.nome_exibicao }}, eles aparecerao aqui.
+      </p>
+      <div class="produto-actions">
+        <a href="/categorias/{{ categoria.slug }}" class="btn-product">Voltar para subcatalogos</a>
+      </div>
+    </div>
+    {% elif subcategorias %}
+    <div class="category-empty-notice">
+      <h2 class="section-title">Escolha um subcatalogo acima</h2>
+      <p class="section-subtitle">
+        Ao clicar em uma subcategoria, a proxima tela exibira somente os produtos vinculados a ela.
+      </p>
+    </div>
     {% else %}
     <div class="category-empty-state">
       <div class="category-empty-state__media">

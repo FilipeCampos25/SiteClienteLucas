@@ -3,62 +3,44 @@
 {% block body_class %}home-ref{% endblock %}
 
 {% block content %}
-<section id="produtos" class="products-modern">
+<section id="produtos" class="home-categories">
   <div class="section-container">
-    <div class="products-modern__header">
+    <div class="home-categories__divider" aria-hidden="true"></div>
+
+    <div class="home-categories__header">
       <p class="kicker">Linha de produtos</p>
-      <h2 class="heading-section">LINHA DE PRODUTOS</h2>
+      <h2 class="heading-section">ESCOLHA UMA LINHA</h2>
+      <p class="muted">Selecione uma categoria para acessar a pagina dedicada e visualizar os produtos disponiveis.</p>
     </div>
 
-    {% if grupos_produtos %}
-    <div class="products-category-list" id="produtosGrid">
-      {% for grupo in grupos_produtos %}
-      <section id="categoria-{{ grupo.slug }}" class="products-category-block">
-        <div class="products-category-block__header">
-          <div>
-            <p class="kicker">Categoria</p>
-            <h3 class="products-category-block__title">{{ grupo.nome_exibicao }}</h3>
-            {% if grupo.subtitulo_exibicao %}
-            <p class="products-category-block__subtitle">{{ grupo.subtitulo_exibicao }}</p>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="grid-produtos">
-          {% for p in grupo.produtos %}
-          <div class="card-produto">
-            <div class="card-image-container">
-              <img
-                src="{{ p.imagem_url or '/static/images/placeholder.png' }}"
-                alt="{{ p.nome }}"
-                class="card-image"
-                onerror="this.src='/static/images/placeholder.png'"
-              >
-            </div>
-            <div class="card-content">
-              <h3 class="card-title">{{ p.nome }}</h3>
-              <div class="card-actions card-actions--single">
-                <a
-                  href="/produto/{{ p.id }}"
-                  class="btn-product"
-                >
-                  Ver detalhes
-                </a>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-
-      </section>
+    {% if categorias_home %}
+    <div class="home-categories__grid" id="produtosGrid">
+      {% for categoria in categorias_home %}
+      <a href="/categorias/{{ categoria.slug }}" class="home-category-card">
+        <span class="home-category-card__frame">
+          <img
+            src="{{ categoria.imagem_url }}"
+            alt="{{ categoria.nome_exibicao }}"
+            class="home-category-card__image"
+          >
+        </span>
+        <span class="home-category-card__label">
+          <span class="home-category-card__title">{{ categoria.nome_exibicao }}</span>
+          {% if categoria.subtitulo_exibicao %}
+          <span class="home-category-card__subtitle">{{ categoria.subtitulo_exibicao }}</span>
+          {% endif %}
+        </span>
+      </a>
       {% endfor %}
     </div>
     {% else %}
     <div class="products-empty-state">
-      <h3 class="section-title">Nenhum produto cadastrado</h3>
-      <p class="section-subtitle">Assim que os itens forem adicionados no painel administrativo, eles aparecerao aqui separados por categoria.</p>
+      <h3 class="section-title">Nenhuma categoria disponivel</h3>
+      <p class="section-subtitle">As categorias serao exibidas aqui assim que forem configuradas.</p>
     </div>
     {% endif %}
+
+    <div class="home-categories__divider home-categories__divider--bottom" aria-hidden="true"></div>
   </div>
 </section>
 {% endblock %}

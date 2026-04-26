@@ -5,14 +5,503 @@
   <div class="admin-header-content">
     <div>
       <h1 class="admin-title">Painel Administrativo</h1>
-      <p class="admin-subtitle">Gerencie produtos e imagens da vitrine.</p>
+      <p class="admin-subtitle">Gerencie categorias, subcatalogos e produtos da vitrine.</p>
     </div>
     <div class="admin-stats">
+      <div class="stat-badge">
+        <span class="stat-number">{{ categorias|length }}</span>
+        <span class="stat-text">Categorias</span>
+      </div>
+      <div class="stat-badge">
+        <span class="stat-number">{{ subcategorias|length }}</span>
+        <span class="stat-text">Subcatalogos</span>
+      </div>
       <div class="stat-badge">
         <span class="stat-number">{{ produtos|length }}</span>
         <span class="stat-text">Produtos</span>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="admin-section">
+  <div class="admin-card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-icon">#</span>
+        Gerenciar Categorias
+      </h2>
+    </div>
+
+    <form method="post" action="/admin/categoria" class="admin-form" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="categoria-slug" class="form-label">Slug *</label>
+          <input
+            type="text"
+            id="categoria-slug"
+            name="slug"
+            class="form-input"
+            placeholder="Ex: cantoneiras-de-aluminio"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="categoria-nome" class="form-label">Nome interno *</label>
+          <input
+            type="text"
+            id="categoria-nome"
+            name="nome"
+            class="form-input"
+            placeholder="Ex: Cantoneiras de Aluminio"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="categoria-nome-exibicao" class="form-label">Nome de exibicao *</label>
+          <input
+            type="text"
+            id="categoria-nome-exibicao"
+            name="nome_exibicao"
+            class="form-input"
+            placeholder="Ex: Cantoneiras de Alumínio"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="categoria-subtitulo" class="form-label">Subtitulo</label>
+          <input
+            type="text"
+            id="categoria-subtitulo"
+            name="subtitulo_exibicao"
+            class="form-input"
+            placeholder="Ex: Ferramentas"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Imagem da categoria</label>
+          <label class="upload-area">
+            <input
+              type="file"
+              name="imagem"
+              accept="image/png,image/jpeg"
+              class="upload-input"
+              onchange="updateUploadPreview(this, 'create-categoria-preview', 'create-categoria-upload-label')"
+            >
+            <span class="upload-content">
+              <span class="upload-title">Toque para escolher uma imagem</span>
+              <span class="upload-subtitle">PNG ou JPG</span>
+              <span id="create-categoria-upload-label" class="upload-filename">Nenhum arquivo selecionado</span>
+            </span>
+          </label>
+          <div class="upload-preview">
+            <img id="create-categoria-preview" class="upload-preview-img" alt="Preview da categoria" data-current-src="" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="categoria-ordem" class="form-label">Ordem</label>
+          <input
+            type="number"
+            id="categoria-ordem"
+            name="ordem_exibicao"
+            class="form-input"
+            min="0"
+            value="{{ categorias|length + 1 }}"
+          >
+        </div>
+      </div>
+      <button type="submit" class="btn-save">Criar Categoria</button>
+    </form>
+
+    {% if categorias %}
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Ordem</th>
+            <th>Nome</th>
+            <th>Slug</th>
+            <th>Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in categorias %}
+          <tr id="categoria-row-{{ c.id }}">
+            <td>#{{ c.id }}</td>
+            <td>{{ c.ordem_exibicao }}</td>
+            <td>
+              {{ c.nome_exibicao }}
+              {% if c.subtitulo_exibicao %}
+              / {{ c.subtitulo_exibicao }}
+              {% endif %}
+            </td>
+            <td>{{ c.slug }}</td>
+            <td>
+              <button class="btn-edit" onclick="toggleEditForm('categoria', '{{ c.id }}')">Editar</button>
+              <button class="btn-delete" onclick="confirmDeleteCategoria('{{ c.id }}')">Excluir</button>
+            </td>
+          </tr>
+          <tr id="categoria-edit-row-{{ c.id }}" class="edit-row" style="display: none;">
+            <td colspan="5">
+              <form method="post" action="/admin/categoria/{{ c.id }}" class="edit-form" enctype="multipart/form-data">
+                <input type="hidden" name="_method" value="PUT">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="edit-categoria-slug-{{ c.id }}" class="form-label">Slug</label>
+                    <input
+                      type="text"
+                      id="edit-categoria-slug-{{ c.id }}"
+                      name="slug"
+                      value="{{ c.slug }}"
+                      class="form-input"
+                      required
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label for="edit-categoria-nome-{{ c.id }}" class="form-label">Nome interno</label>
+                    <input
+                      type="text"
+                      id="edit-categoria-nome-{{ c.id }}"
+                      name="nome"
+                      value="{{ c.nome }}"
+                      class="form-input"
+                      required
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label for="edit-categoria-nome-exibicao-{{ c.id }}" class="form-label">Nome de exibicao</label>
+                    <input
+                      type="text"
+                      id="edit-categoria-nome-exibicao-{{ c.id }}"
+                      name="nome_exibicao"
+                      value="{{ c.nome_exibicao }}"
+                      class="form-input"
+                      required
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label for="edit-categoria-subtitulo-{{ c.id }}" class="form-label">Subtitulo</label>
+                    <input
+                      type="text"
+                      id="edit-categoria-subtitulo-{{ c.id }}"
+                      name="subtitulo_exibicao"
+                      value="{{ c.subtitulo_exibicao or '' }}"
+                      class="form-input"
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Trocar imagem da categoria (opcional)</label>
+                    <label class="upload-area upload-area-compact">
+                      <input
+                        type="file"
+                        name="imagem"
+                        accept="image/png,image/jpeg"
+                        class="upload-input"
+                        onchange="updateUploadPreview(this, 'edit-categoria-preview-{{ c.id }}', 'edit-categoria-upload-label-{{ c.id }}')"
+                      >
+                      <span class="upload-content">
+                        <span class="upload-title">Selecionar nova imagem</span>
+                        <span class="upload-subtitle">Mantem a atual se nao escolher</span>
+                        <span id="edit-categoria-upload-label-{{ c.id }}" class="upload-filename">Nenhum arquivo selecionado</span>
+                      </span>
+                    </label>
+                    <div class="upload-preview">
+                      <img
+                        id="edit-categoria-preview-{{ c.id }}"
+                        class="upload-preview-img is-visible"
+                        src="{{ c.imagem_url }}"
+                        alt="Preview da categoria atual"
+                        data-current-src="{{ c.imagem_url }}"
+                        onerror="this.style.display='none'"
+                      >
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="edit-categoria-ordem-{{ c.id }}" class="form-label">Ordem</label>
+                    <input
+                      type="number"
+                      id="edit-categoria-ordem-{{ c.id }}"
+                      name="ordem_exibicao"
+                      value="{{ c.ordem_exibicao }}"
+                      class="form-input"
+                      min="0"
+                    >
+                  </div>
+                </div>
+
+                <div class="edit-form-actions">
+                  <button type="submit" class="btn-save">Salvar Alteracoes</button>
+                  <button type="button" class="btn-cancel" onclick="toggleEditForm('categoria', '{{ c.id }}')">Cancelar</button>
+                </div>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state-admin">
+      <div class="empty-icon">#</div>
+      <p class="empty-title">Nenhuma categoria cadastrada</p>
+      <p class="empty-text">Crie a primeira categoria usando o formulario acima.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="admin-section">
+  <div class="admin-card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-icon">#</span>
+        Gerenciar Subcatalogos
+      </h2>
+    </div>
+
+    <form method="post" action="/admin/subcategoria" class="admin-form" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="subcategoria-categoria" class="form-label">Categoria *</label>
+          <select
+            id="subcategoria-categoria"
+            name="categoria_slug"
+            class="form-input"
+            required
+          >
+            <option value="">Selecione a categoria</option>
+            {% for categoria in categorias %}
+            <option value="{{ categoria.slug }}">{{ categoria.nome_exibicao }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="subcategoria-slug" class="form-label">Slug *</label>
+          <input
+            type="text"
+            id="subcategoria-slug"
+            name="slug"
+            class="form-input"
+            placeholder="Ex: alicate-universal"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="subcategoria-nome" class="form-label">Nome interno *</label>
+          <input
+            type="text"
+            id="subcategoria-nome"
+            name="nome"
+            class="form-input"
+            placeholder="Ex: Alicate Universal"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="subcategoria-nome-exibicao" class="form-label">Nome de exibicao *</label>
+          <input
+            type="text"
+            id="subcategoria-nome-exibicao"
+            name="nome_exibicao"
+            class="form-input"
+            placeholder="Ex: Alicate Universal"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Imagem do subcatalogo</label>
+          <label class="upload-area">
+            <input
+              type="file"
+              name="imagem"
+              accept="image/png,image/jpeg"
+              class="upload-input"
+              onchange="updateUploadPreview(this, 'create-subcategoria-preview', 'create-subcategoria-upload-label')"
+            >
+            <span class="upload-content">
+              <span class="upload-title">Toque para escolher uma imagem</span>
+              <span class="upload-subtitle">PNG ou JPG</span>
+              <span id="create-subcategoria-upload-label" class="upload-filename">Nenhum arquivo selecionado</span>
+            </span>
+          </label>
+          <div class="upload-preview">
+            <img id="create-subcategoria-preview" class="upload-preview-img" alt="Preview do subcatalogo" data-current-src="" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="subcategoria-ordem" class="form-label">Ordem</label>
+          <input
+            type="number"
+            id="subcategoria-ordem"
+            name="ordem_exibicao"
+            class="form-input"
+            min="0"
+            value="{{ subcategorias|length + 1 }}"
+          >
+        </div>
+      </div>
+      <button type="submit" class="btn-save">Criar Subcatalogo</button>
+    </form>
+
+    {% if subcategorias %}
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Categoria</th>
+            <th>Ordem</th>
+            <th>Nome</th>
+            <th>Slug</th>
+            <th>Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in subcategorias %}
+          <tr id="subcategoria-row-{{ s.id }}">
+            <td>#{{ s.id }}</td>
+            <td>{{ s.categoria_slug }}</td>
+            <td>{{ s.ordem_exibicao }}</td>
+            <td>{{ s.nome_exibicao }}</td>
+            <td>{{ s.slug }}</td>
+            <td>
+              <button class="btn-edit" onclick="toggleEditForm('subcategoria', '{{ s.id }}')">Editar</button>
+              <button class="btn-delete" onclick="confirmDeleteSubcategoria('{{ s.id }}')">Excluir</button>
+            </td>
+          </tr>
+          <tr id="subcategoria-edit-row-{{ s.id }}" class="edit-row" style="display: none;">
+            <td colspan="6">
+              <form method="post" action="/admin/subcategoria/{{ s.id }}" class="edit-form" enctype="multipart/form-data">
+                <input type="hidden" name="_method" value="PUT">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="edit-subcategoria-categoria-{{ s.id }}" class="form-label">Categoria</label>
+                    <select
+                      id="edit-subcategoria-categoria-{{ s.id }}"
+                      name="categoria_slug"
+                      class="form-input"
+                      required
+                    >
+                      <option value="">Selecione a categoria</option>
+                      {% for categoria in categorias %}
+                      <option value="{{ categoria.slug }}" {% if categoria.slug == s.categoria_slug %}selected{% endif %}>
+                        {{ categoria.nome_exibicao }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="edit-subcategoria-slug-{{ s.id }}" class="form-label">Slug</label>
+                    <input
+                      type="text"
+                      id="edit-subcategoria-slug-{{ s.id }}"
+                      name="slug"
+                      value="{{ s.slug }}"
+                      class="form-input"
+                      required
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label for="edit-subcategoria-nome-{{ s.id }}" class="form-label">Nome interno</label>
+                    <input
+                      type="text"
+                      id="edit-subcategoria-nome-{{ s.id }}"
+                      name="nome"
+                      value="{{ s.nome }}"
+                      class="form-input"
+                      required
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label for="edit-subcategoria-nome-exibicao-{{ s.id }}" class="form-label">Nome de exibicao</label>
+                    <input
+                      type="text"
+                      id="edit-subcategoria-nome-exibicao-{{ s.id }}"
+                      name="nome_exibicao"
+                      value="{{ s.nome_exibicao }}"
+                      class="form-input"
+                      required
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Trocar imagem do subcatalogo (opcional)</label>
+                    <label class="upload-area upload-area-compact">
+                      <input
+                        type="file"
+                        name="imagem"
+                        accept="image/png,image/jpeg"
+                        class="upload-input"
+                        onchange="updateUploadPreview(this, 'edit-subcategoria-preview-{{ s.id }}', 'edit-subcategoria-upload-label-{{ s.id }}')"
+                      >
+                      <span class="upload-content">
+                        <span class="upload-title">Selecionar nova imagem</span>
+                        <span class="upload-subtitle">Mantem a atual se nao escolher</span>
+                        <span id="edit-subcategoria-upload-label-{{ s.id }}" class="upload-filename">Nenhum arquivo selecionado</span>
+                      </span>
+                    </label>
+                    <div class="upload-preview">
+                      <img
+                        id="edit-subcategoria-preview-{{ s.id }}"
+                        class="upload-preview-img is-visible"
+                        src="{{ s.imagem_url }}"
+                        alt="Preview do subcatalogo atual"
+                        data-current-src="{{ s.imagem_url }}"
+                        onerror="this.style.display='none'"
+                      >
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="edit-subcategoria-ordem-{{ s.id }}" class="form-label">Ordem</label>
+                    <input
+                      type="number"
+                      id="edit-subcategoria-ordem-{{ s.id }}"
+                      name="ordem_exibicao"
+                      value="{{ s.ordem_exibicao }}"
+                      class="form-input"
+                      min="0"
+                    >
+                  </div>
+                </div>
+
+                <div class="edit-form-actions">
+                  <button type="submit" class="btn-save">Salvar Alteracoes</button>
+                  <button type="button" class="btn-cancel" onclick="toggleEditForm('subcategoria', '{{ s.id }}')">Cancelar</button>
+                </div>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state-admin">
+      <div class="empty-icon">#</div>
+      <p class="empty-title">Nenhum subcatalogo cadastrado</p>
+      <p class="empty-text">Crie o primeiro subcatalogo usando o formulario acima.</p>
+    </div>
+    {% endif %}
   </div>
 </section>
 
@@ -40,17 +529,29 @@
         </div>
 
         <div class="form-group">
-          <label for="categoria_slug" class="form-label">Tipo *</label>
+          <label for="categoria_slug" class="form-label">Categoria *</label>
           <select
             id="categoria_slug"
             name="categoria_slug"
             class="form-input"
             required
           >
-            <option value="">Selecione o tipo</option>
+            <option value="">Selecione a categoria</option>
             {% for categoria in categorias %}
             <option value="{{ categoria.slug }}">{{ categoria.nome_exibicao }}</option>
             {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group" id="create-subcategoria-group" style="display: none;">
+          <label for="subcategoria_slug" class="form-label">Subcatalogo</label>
+          <select
+            id="subcategoria_slug"
+            name="subcategoria_slug"
+            class="form-input"
+            data-current=""
+          >
+            <option value="">Selecione o subcatalogo</option>
           </select>
         </div>
 
@@ -106,7 +607,6 @@
             <img id="create-preview-medidas" class="upload-preview-img" alt="Preview da imagem de medidas" />
           </div>
         </div>
-
       </div>
       <button type="submit" class="btn-save">Criar Produto</button>
     </form>
@@ -129,22 +629,27 @@
           <tr>
             <th>ID</th>
             <th>Nome</th>
-            <th>Tipo</th>
+            <th>Catalogo</th>
             <th>Acoes</th>
           </tr>
         </thead>
         <tbody>
           {% for p in produtos %}
-          <tr id="row-{{ p.id }}">
+          <tr id="produto-row-{{ p.id }}">
             <td>#{{ p.id }}</td>
             <td>{{ p.nome }}</td>
-            <td>{{ p.categoria_nome_exibicao or 'Sem tipo' }}</td>
             <td>
-              <button class="btn-edit" onclick="toggleEditForm('{{ p.id }}')">Editar</button>
-              <button class="btn-delete" onclick="confirmDelete('{{ p.id }}')">Excluir</button>
+              {{ p.categoria_nome_exibicao or 'Sem categoria' }}
+              {% if p.subcategoria_nome_exibicao %}
+              / {{ p.subcategoria_nome_exibicao }}
+              {% endif %}
+            </td>
+            <td>
+              <button class="btn-edit" onclick="toggleEditForm('produto', '{{ p.id }}')">Editar</button>
+              <button class="btn-delete" onclick="confirmDeleteProduto('{{ p.id }}')">Excluir</button>
             </td>
           </tr>
-          <tr id="edit-row-{{ p.id }}" class="edit-row" style="display: none;">
+          <tr id="produto-edit-row-{{ p.id }}" class="edit-row" style="display: none;">
             <td colspan="4">
               <form method="post" action="/admin/produto/{{ p.id }}" class="edit-form" enctype="multipart/form-data">
                 <input type="hidden" name="_method" value="PUT">
@@ -162,19 +667,31 @@
                   </div>
 
                   <div class="form-group">
-                    <label for="edit-categoria-slug-{{ p.id }}" class="form-label">Tipo</label>
+                    <label for="edit-categoria-slug-{{ p.id }}" class="form-label">Categoria</label>
                     <select
                       id="edit-categoria-slug-{{ p.id }}"
                       name="categoria_slug"
                       class="form-input"
                       required
                     >
-                      <option value="">Selecione o tipo</option>
+                      <option value="">Selecione a categoria</option>
                       {% for categoria in categorias %}
                       <option value="{{ categoria.slug }}" {% if categoria.slug == p.categoria_slug %}selected{% endif %}>
                         {{ categoria.nome_exibicao }}
                       </option>
                       {% endfor %}
+                    </select>
+                  </div>
+
+                  <div class="form-group" id="edit-subcategoria-group-{{ p.id }}" style="display: none;">
+                    <label for="edit-produto-subcategoria-slug-{{ p.id }}" class="form-label">Subcatalogo</label>
+                    <select
+                      id="edit-produto-subcategoria-slug-{{ p.id }}"
+                      name="subcategoria_slug"
+                      class="form-input"
+                      data-current="{{ p.subcategoria_slug or '' }}"
+                    >
+                      <option value="">Selecione o subcatalogo</option>
                     </select>
                   </div>
 
@@ -205,7 +722,7 @@
                       </span>
                     </label>
                     <div class="upload-preview">
-                      <img id="edit-preview-{{ p.id }}" class="upload-preview-img is-visible" src="{{ p.imagem_url }}" alt="Preview da imagem atual" onerror="this.style.display='none'">
+                      <img id="edit-preview-{{ p.id }}" class="upload-preview-img is-visible" src="{{ p.imagem_url }}" alt="Preview da imagem atual" data-current-src="{{ p.imagem_url }}" onerror="this.style.display='none'">
                     </div>
                   </div>
 
@@ -231,6 +748,7 @@
                         class="upload-preview-img{% if p.imagem_medidas_url %} is-visible{% endif %}"
                         src="{{ p.imagem_medidas_url or '' }}"
                         alt="Preview da imagem de medidas atual"
+                        data-current-src="{{ p.imagem_medidas_url or '' }}"
                         onerror="this.style.display='none'"
                       >
                     </div>
@@ -239,7 +757,7 @@
 
                 <div class="edit-form-actions">
                   <button type="submit" class="btn-save">Salvar Alteracoes</button>
-                  <button type="button" class="btn-cancel" onclick="toggleEditForm('{{ p.id }}')">Cancelar</button>
+                  <button type="button" class="btn-cancel" onclick="toggleEditForm('produto', '{{ p.id }}')">Cancelar</button>
                 </div>
               </form>
             </td>
@@ -252,39 +770,55 @@
     <div class="empty-state-admin">
       <div class="empty-icon">#</div>
       <p class="empty-title">Nenhum produto cadastrado</p>
-      <p class="empty-text">Crie seu primeiro produto usando o formulario acima</p>
+      <p class="empty-text">Crie seu primeiro produto usando o formulario acima.</p>
     </div>
     {% endif %}
   </div>
 </section>
 
 <script>
-function toggleEditForm(id) {
-  const editRow = document.getElementById('edit-row-' + id);
-  const productRow = document.getElementById('row-' + id);
+const SUBCATEGORIAS_POR_CATEGORIA = {{ subcategorias_por_categoria | tojson }};
+
+function toggleEditForm(prefix, id) {
+  const editRow = document.getElementById(`${prefix}-edit-row-${id}`);
+  const itemRow = document.getElementById(`${prefix}-row-${id}`);
+
+  if (!editRow || !itemRow) return;
 
   if (editRow.style.display === 'none') {
     editRow.style.display = 'table-row';
-    productRow.style.opacity = '0.5';
-    productRow.style.pointerEvents = 'none';
+    itemRow.style.opacity = '0.5';
+    itemRow.style.pointerEvents = 'none';
   } else {
     editRow.style.display = 'none';
-    productRow.style.opacity = '1';
-    productRow.style.pointerEvents = 'auto';
+    itemRow.style.opacity = '1';
+    itemRow.style.pointerEvents = 'auto';
   }
 }
 
-function confirmDelete(id) {
-  if (confirm('Tem certeza que deseja excluir este produto?')) {
-    fetch(`/admin/produto/${id}`, { method: 'DELETE' })
-      .then(response => {
-        if (response.ok) {
-          location.reload();
-        } else {
-          alert('Erro ao excluir produto');
-        }
-      });
-  }
+function confirmDelete(url, message) {
+  if (!confirm(message)) return;
+
+  fetch(url, { method: 'DELETE' })
+    .then((response) => {
+      if (response.ok) {
+        location.reload();
+        return;
+      }
+      alert('Erro ao excluir registro.');
+    });
+}
+
+function confirmDeleteCategoria(id) {
+  confirmDelete(`/admin/categoria/${id}`, 'Tem certeza que deseja excluir esta categoria? As subcategorias e produtos vinculados tambem serao removidos.');
+}
+
+function confirmDeleteSubcategoria(id) {
+  confirmDelete(`/admin/subcategoria/${id}`, 'Tem certeza que deseja excluir este subcatalogo? Os produtos vinculados tambem serao removidos.');
+}
+
+function confirmDeleteProduto(id) {
+  confirmDelete(`/admin/produto/${id}`, 'Tem certeza que deseja excluir este produto?');
 }
 
 function updateFileLabel(input, labelId) {
@@ -300,11 +834,12 @@ function updateUploadPreview(input, previewId, labelId) {
 
   const preview = document.getElementById(previewId);
   const file = input.files && input.files[0];
+  const currentSrc = preview ? (preview.dataset.currentSrc || '') : '';
 
   if (!preview) return;
   if (!file) {
-    preview.src = '';
-    preview.style.display = 'none';
+    preview.src = currentSrc;
+    preview.style.display = currentSrc ? 'block' : 'none';
     return;
   }
 
@@ -313,6 +848,75 @@ function updateUploadPreview(input, previewId, labelId) {
   preview.style.display = 'block';
   preview.onload = () => URL.revokeObjectURL(objectUrl);
 }
+
+function preencherSubcategorias(selectEl, categoriaSlug, currentValue) {
+  if (!selectEl) return;
+
+  const subcategorias = SUBCATEGORIAS_POR_CATEGORIA[categoriaSlug] || [];
+  const selectedValue = subcategorias.some((item) => item.slug === currentValue) ? currentValue : '';
+
+  selectEl.innerHTML = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = subcategorias.length ? 'Selecione o subcatalogo' : 'Sem subcatalogo para esta categoria';
+  selectEl.appendChild(placeholder);
+
+  subcategorias.forEach((item) => {
+    const option = document.createElement('option');
+    option.value = item.slug;
+    option.textContent = item.nome_exibicao;
+    selectEl.appendChild(option);
+  });
+
+  selectEl.value = selectedValue;
+}
+
+function sincronizarSubcategoria(categorySelectId, subcategorySelectId, groupId) {
+  const categorySelect = document.getElementById(categorySelectId);
+  const subcategorySelect = document.getElementById(subcategorySelectId);
+  const group = document.getElementById(groupId);
+
+  if (!categorySelect || !subcategorySelect || !group) return;
+
+  const categoriaSlug = categorySelect.value;
+  const possuiSubcategorias = (SUBCATEGORIAS_POR_CATEGORIA[categoriaSlug] || []).length > 0;
+  const currentValue = subcategorySelect.dataset.current || '';
+
+  preencherSubcategorias(subcategorySelect, categoriaSlug, currentValue);
+  group.style.display = possuiSubcategorias ? '' : 'none';
+  subcategorySelect.required = possuiSubcategorias;
+  subcategorySelect.disabled = !possuiSubcategorias;
+
+  if (!possuiSubcategorias) {
+    subcategorySelect.dataset.current = '';
+    subcategorySelect.value = '';
+  }
+}
+
+function conectarSubcategoria(categorySelectId, subcategorySelectId, groupId) {
+  const categorySelect = document.getElementById(categorySelectId);
+  const subcategorySelect = document.getElementById(subcategorySelectId);
+
+  if (!categorySelect || !subcategorySelect) return;
+
+  sincronizarSubcategoria(categorySelectId, subcategorySelectId, groupId);
+
+  categorySelect.addEventListener('change', () => {
+    subcategorySelect.dataset.current = '';
+    sincronizarSubcategoria(categorySelectId, subcategorySelectId, groupId);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  conectarSubcategoria('categoria_slug', 'subcategoria_slug', 'create-subcategoria-group');
+  {% for p in produtos %}
+  conectarSubcategoria(
+    'edit-categoria-slug-{{ p.id }}',
+    'edit-produto-subcategoria-slug-{{ p.id }}',
+    'edit-subcategoria-group-{{ p.id }}'
+  );
+  {% endfor %}
+});
 </script>
 
 {% endblock %}

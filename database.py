@@ -54,12 +54,37 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
 
+def _sync_table_columns(table_name: str, alteracoes: dict[str, str]) -> None:
+    inspector = inspect(engine)
+    if table_name not in inspector.get_table_names():
+        return
+
+    colunas = {c["name"] for c in inspector.get_columns(table_name)}
+    for coluna, ddl in alteracoes.items():
+        if coluna in colunas:
+            continue
+        with engine.begin() as conn:
+            conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {coluna} {ddl}"))
+
+
+def _sync_catalogo_tables() -> None:
+    blob_type = "BLOB" if engine.dialect.name == "sqlite" else "BYTEA"
+    alteracoes = {
+        "imagem_mime": "VARCHAR(64)",
+        "imagem_bytes": blob_type,
+        "imagem_sha256": "VARCHAR(64)",
+    }
+    _sync_table_columns("categorias", alteracoes)
+    _sync_table_columns("subcategorias", alteracoes)
+
+
 def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
     campos_copiados = [
         "id",
         "nome",
         "resumo_curto",
         "categoria_slug",
+        "subcategoria_slug",
         "imagem_url",
         "imagem_mime",
         "imagem_bytes",
@@ -87,6 +112,7 @@ def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
                     nome VARCHAR(120) NOT NULL,
                     resumo_curto TEXT,
                     categoria_slug VARCHAR(80),
+                    subcategoria_slug VARCHAR(80),
                     imagem_url VARCHAR,
                     imagem_mime VARCHAR(64),
                     imagem_bytes BLOB,
@@ -118,6 +144,7 @@ def _postgres_sync_produtos(colunas: set[str]) -> None:
     alteracoes = {
         "resumo_curto": "TEXT",
         "categoria_slug": "VARCHAR(80)",
+        "subcategoria_slug": "VARCHAR(80)",
         "imagem_mime": "VARCHAR(64)",
         "imagem_bytes": "BYTEA",
         "imagem_sha256": "VARCHAR(64)",
@@ -151,14 +178,19 @@ def _postgres_sync_produtos(colunas: set[str]) -> None:
             conn.execute(text(f"ALTER TABLE produtos DROP COLUMN IF EXISTS {coluna}"))
 
 
-def init_db():
+def init_db() -> dict[str, bool]:
     import models  # noqa: F401
 
+    inspector_pre = inspect(engine)
+    tabelas_existentes_antes = set(inspector_pre.get_table_names())
     Base.metadata.create_all(bind=engine)
 
     inspector = inspect(engine)
+    _sync_catalogo_tables()
     if "produtos" not in inspector.get_table_names():
-        return
+        return {
+            "seed_catalogo": "categorias" not in tabelas_existentes_antes and "subcategorias" not in tabelas_existentes_antes,
+        }
 
     colunas = {c["name"] for c in inspector.get_columns("produtos")}
     colunas_desejadas = {
@@ -166,6 +198,7 @@ def init_db():
         "nome",
         "resumo_curto",
         "categoria_slug",
+        "subcategoria_slug",
         "imagem_url",
         "imagem_mime",
         "imagem_bytes",
@@ -192,7 +225,13 @@ def init_db():
     if engine.dialect.name == "sqlite":
         if colunas != colunas_desejadas:
             _sqlite_rebuild_produtos(colunas)
-        return
+        return {
+            "seed_catalogo": "categorias" not in tabelas_existentes_antes and "subcategorias" not in tabelas_existentes_antes,
+        }
 
     if (colunas_desejadas - colunas) or (colunas_obsoletas & colunas):
         _postgres_sync_produtos(colunas)
+
+    return {
+        "seed_catalogo": "categorias" not in tabelas_existentes_antes and "subcategorias" not in tabelas_existentes_antes,
+    }
