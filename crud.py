@@ -19,6 +19,18 @@ def _clean_optional_str(value: Optional[str]) -> Optional[str]:
     return (value or "").strip() or None
 
 
+def _field_was_provided(schema_obj: object, field_name: str) -> bool:
+    model_fields_set = getattr(schema_obj, "model_fields_set", None)
+    if model_fields_set is not None:
+        return field_name in model_fields_set
+
+    fields_set = getattr(schema_obj, "__fields_set__", None)
+    if fields_set is not None:
+        return field_name in fields_set
+
+    return getattr(schema_obj, field_name, None) is not None
+
+
 def _apply_image_data(
     target: object,
     *,
@@ -130,7 +142,7 @@ def update_categoria(
         categoria.nome = dados.nome.strip()
     if dados.nome_exibicao is not None:
         categoria.nome_exibicao = dados.nome_exibicao.strip()
-    if dados.subtitulo_exibicao is not None:
+    if _field_was_provided(dados, "subtitulo_exibicao"):
         categoria.subtitulo_exibicao = _clean_optional_str(dados.subtitulo_exibicao)
     if dados.imagem_url is not None:
         categoria.imagem_url = _clean_optional_str(dados.imagem_url) or PLACEHOLDER_IMAGE_URL
@@ -430,11 +442,11 @@ def update_produto(
 
     if dados.nome is not None:
         produto.nome = dados.nome.strip()
-    if dados.resumo_curto is not None:
+    if _field_was_provided(dados, "resumo_curto"):
         produto.resumo_curto = _clean_optional_str(dados.resumo_curto)
     if dados.categoria_slug is not None:
         produto.categoria_slug = _clean_optional_str(dados.categoria_slug)
-    if dados.subcategoria_slug is not None:
+    if _field_was_provided(dados, "subcategoria_slug"):
         produto.subcategoria_slug = _clean_optional_str(dados.subcategoria_slug)
 
     if not produto.imagem_url:

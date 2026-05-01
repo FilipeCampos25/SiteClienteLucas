@@ -23,7 +23,7 @@
       {% endif %}
       <p class="muted">
         {% if subcategoria_atual %}
-        Confira os produtos disponiveis nesta linha e abra os detalhes de cada item.
+        Confira os produtos disponiveis nesta linha.
         {% elif subcategorias %}
         Escolha um subcatalogo para acessar os produtos internos desta linha.
         {% elif produtos %}
@@ -74,9 +74,11 @@
           </div>
           <div class="card-content">
             <h3 class="card-title">{{ p.nome }}</h3>
+            {% if not subcategoria_atual %}
             <div class="card-actions card-actions--single">
               <a href="/produto/{{ p.id }}" class="btn-product">Ver detalhes</a>
             </div>
+            {% endif %}
           </div>
         </div>
         {% endfor %}
@@ -127,3 +129,5 @@
   </div>
 </section>
 {% endblock %}
+
+{% block pre_footer %}{% endblock %}
