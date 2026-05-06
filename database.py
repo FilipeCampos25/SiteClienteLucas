@@ -140,7 +140,8 @@ def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_produtos_id ON produtos (id)"))
 
 
-def _postgres_sync_produtos(colunas: set[str]) -> None:
+def _postgres_sync_produtos(colunas_info: dict[str, dict[str, object]]) -> None:
+    colunas = set(colunas_info)
     alteracoes = {
         "resumo_curto": "TEXT",
         "categoria_slug": "VARCHAR(80)",
@@ -158,6 +159,11 @@ def _postgres_sync_produtos(colunas: set[str]) -> None:
             continue
         with engine.begin() as conn:
             conn.execute(text(f"ALTER TABLE produtos ADD COLUMN {coluna} {ddl}"))
+
+    tipo_resumo_curto = str(colunas_info["resumo_curto"]["type"]).upper() if "resumo_curto" in colunas_info else None
+    if tipo_resumo_curto and tipo_resumo_curto != "TEXT":
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE produtos ALTER COLUMN resumo_curto TYPE TEXT"))
 
     colunas_obsoletas = (
         "catalogo_url",
@@ -192,7 +198,8 @@ def init_db() -> dict[str, bool]:
             "seed_catalogo": "categorias" not in tabelas_existentes_antes and "subcategorias" not in tabelas_existentes_antes,
         }
 
-    colunas = {c["name"] for c in inspector.get_columns("produtos")}
+    colunas_info = {c["name"]: c for c in inspector.get_columns("produtos")}
+    colunas = set(colunas_info)
     colunas_desejadas = {
         "id",
         "nome",
@@ -229,8 +236,11 @@ def init_db() -> dict[str, bool]:
             "seed_catalogo": "categorias" not in tabelas_existentes_antes and "subcategorias" not in tabelas_existentes_antes,
         }
 
-    if (colunas_desejadas - colunas) or (colunas_obsoletas & colunas):
-        _postgres_sync_produtos(colunas)
+    tipo_resumo_curto = str(colunas_info["resumo_curto"]["type"]).upper() if "resumo_curto" in colunas_info else None
+    resumo_curto_precisa_sync = tipo_resumo_curto is not None and tipo_resumo_curto != "TEXT"
+
+    if (colunas_desejadas - colunas) or (colunas_obsoletas & colunas) or resumo_curto_precisa_sync:
+        _postgres_sync_produtos(colunas_info)
 
     return {
         "seed_catalogo": "categorias" not in tabelas_existentes_antes and "subcategorias" not in tabelas_existentes_antes,
