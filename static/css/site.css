@@ -1420,11 +1420,11 @@ button{ cursor: pointer; }
 
 .footer__grid{
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, max-content));
+  grid-template-columns: repeat(3, minmax(220px, max-content));
   justify-content: center;
   justify-items: center;
   row-gap: 22px;
-  column-gap: clamp(100px, 12vw, 180px);
+  column-gap: clamp(48px, 7vw, 120px);
   align-items: start;
   text-align: center;
 }
@@ -1486,6 +1486,27 @@ button{ cursor: pointer; }
   font-weight: 800;
 }
 .footer__links a:hover{ color: rgba(16,17,20,0.90); }
+
+.footer__info{
+  display: grid;
+  gap: 6px;
+  max-width: 34ch;
+  margin: 0;
+  color: rgba(16,17,20,0.68);
+  font-style: normal;
+  font-size: 14px;
+  line-height: 1.55;
+  justify-items: center;
+}
+
+.footer__infoLabel{
+  margin-top: 2px;
+  color: rgba(16,17,20,0.90);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 
 .footer__bottom{
   margin-top: var(--space-6);

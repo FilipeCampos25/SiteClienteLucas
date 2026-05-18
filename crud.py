@@ -48,6 +48,18 @@ def _apply_image_data(
     setattr(target, image_sha_attr, _sha256_hex(image_bytes))
 
 
+def _clear_image_data(
+    target: object,
+    *,
+    image_bytes_attr: str,
+    image_mime_attr: str,
+    image_sha_attr: str,
+) -> None:
+    setattr(target, image_bytes_attr, None)
+    setattr(target, image_mime_attr, None)
+    setattr(target, image_sha_attr, None)
+
+
 def _next_categoria_ordem(db: Session) -> int:
     ultima = db.query(models.Categoria).order_by(models.Categoria.ordem_exibicao.desc(), models.Categoria.id.desc()).first()
     return int(getattr(ultima, "ordem_exibicao", 0) or 0) + 1
@@ -447,6 +459,9 @@ def update_produto(
     imagem_medidas_mime: Optional[str] = None,
     imagem_extra_bytes: Optional[bytes] = None,
     imagem_extra_mime: Optional[str] = None,
+    remover_imagem: bool = False,
+    remover_imagem_medidas: bool = False,
+    remover_imagem_extra: bool = False,
 ) -> Optional[models.Produto]:
     produto = get_produto(db, produto_id=produto_id)
     if not produto:
@@ -463,6 +478,29 @@ def update_produto(
 
     if not produto.imagem_url:
         produto.imagem_url = PLACEHOLDER_IMAGE_URL
+
+    if remover_imagem:
+        produto.imagem_url = PLACEHOLDER_IMAGE_URL
+        _clear_image_data(
+            produto,
+            image_bytes_attr="imagem_bytes",
+            image_mime_attr="imagem_mime",
+            image_sha_attr="imagem_sha256",
+        )
+    if remover_imagem_medidas:
+        _clear_image_data(
+            produto,
+            image_bytes_attr="imagem_medidas_bytes",
+            image_mime_attr="imagem_medidas_mime",
+            image_sha_attr="imagem_medidas_sha256",
+        )
+    if remover_imagem_extra:
+        _clear_image_data(
+            produto,
+            image_bytes_attr="imagem_extra_bytes",
+            image_mime_attr="imagem_extra_mime",
+            image_sha_attr="imagem_extra_sha256",
+        )
 
     _apply_image_data(
         produto,

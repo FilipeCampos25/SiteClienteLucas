@@ -140,6 +140,17 @@
         <a href="/contato">Contato</a>
       </nav>
 
+      <address class="footer__info" aria-label="Dados da loja">
+        {% if STORE_ADDRESS %}
+        <span class="footer__infoLabel">Localiza&ccedil;&atilde;o</span>
+        <span>{{ STORE_ADDRESS }}</span>
+        {% endif %}
+        {% if STORE_CNPJ %}
+        <span class="footer__infoLabel">CNPJ</span>
+        <span>{{ STORE_CNPJ }}</span>
+        {% endif %}
+      </address>
+
     </div>
 
     <div class="neo-container footer__bottom">

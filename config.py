@@ -19,6 +19,11 @@ INSTAGRAM_URL = os.getenv(
     "https://www.instagram.com/casa_dascantoneiras?igsh=NWJvNnRsNXc2cTR4",
 ).strip()
 FACEBOOK_URL = os.getenv("FACEBOOK_URL", "https://www.facebook.com/").strip()
+STORE_ADDRESS = os.getenv(
+    "STORE_ADDRESS",
+    "Casa Das Cantoneiras, St. Hab. Vicente Pires - Vicente Pires, Brasilia - DF, 72005-512",
+).strip()
+STORE_CNPJ = os.getenv("STORE_CNPJ", "").strip()
 
 # CORS
 CORS_ORIGINS = [

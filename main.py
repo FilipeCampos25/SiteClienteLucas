@@ -18,7 +18,16 @@ from starlette.middleware.sessions import SessionMiddleware
 import crud
 import models
 import schemas
-from config import ADMIN_PASSWORD, ADMIN_USER, CORS_ORIGINS, FACEBOOK_URL, INSTAGRAM_URL, WHATSAPP_NUMERO
+from config import (
+    ADMIN_PASSWORD,
+    ADMIN_USER,
+    CORS_ORIGINS,
+    FACEBOOK_URL,
+    INSTAGRAM_URL,
+    STORE_ADDRESS,
+    STORE_CNPJ,
+    WHATSAPP_NUMERO,
+)
 from database import SessionLocal, init_db
 from utils import gerar_link_whatsapp, gerar_link_whatsapp_text, telefone_visivel
 
@@ -46,6 +55,8 @@ templates.env.globals.update(
     WHATSAPP_LINK=gerar_link_whatsapp([]),
     INSTAGRAM_URL=INSTAGRAM_URL or "",
     FACEBOOK_URL=FACEBOOK_URL or "",
+    STORE_ADDRESS=STORE_ADDRESS or "",
+    STORE_CNPJ=STORE_CNPJ or "",
     LOGO_URL="/static/images/logomarca.png",
 )
 
@@ -315,6 +326,7 @@ def _produto_view(
         "nome": produto.nome,
         "resumo_curto": produto.resumo_curto,
         "imagem_url": _produto_image_url(produto),
+        "tem_imagem": _produto_real_image_url(produto) is not None,
         "imagem_medidas_url": _produto_medidas_image_url(produto),
         "imagem_extra_url": _produto_extra_image_url(produto),
         "imagens": _produto_image_urls(produto),
@@ -1067,6 +1079,9 @@ def admin_produto_atualizar(
     imagem: UploadFile = File(None),
     imagem_medidas: UploadFile = File(None),
     imagem_extra: UploadFile = File(None),
+    remover_imagem: bool = Form(False),
+    remover_imagem_medidas: bool = Form(False),
+    remover_imagem_extra: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
@@ -1083,6 +1098,9 @@ def admin_produto_atualizar(
         imagem_medidas_mime=imagem_medidas_mime,
         imagem_extra_bytes=imagem_extra_bytes,
         imagem_extra_mime=imagem_extra_mime,
+        remover_imagem=remover_imagem,
+        remover_imagem_medidas=remover_imagem_medidas,
+        remover_imagem_extra=remover_imagem_extra,
     )
     if not produto:
         raise HTTPException(status_code=404, detail="Produto nao encontrado")
@@ -1101,6 +1119,9 @@ def admin_produto_method_override(
     imagem: UploadFile = File(None),
     imagem_medidas: UploadFile = File(None),
     imagem_extra: UploadFile = File(None),
+    remover_imagem: bool = Form(False),
+    remover_imagem_medidas: bool = Form(False),
+    remover_imagem_extra: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     if (_method or "").strip().upper() == "PUT":
@@ -1114,6 +1135,9 @@ def admin_produto_method_override(
             imagem=imagem,
             imagem_medidas=imagem_medidas,
             imagem_extra=imagem_extra,
+            remover_imagem=remover_imagem,
+            remover_imagem_medidas=remover_imagem_medidas,
+            remover_imagem_extra=remover_imagem_extra,
             db=db,
         )
 

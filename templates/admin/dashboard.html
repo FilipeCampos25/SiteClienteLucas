@@ -734,7 +734,7 @@
                         name="imagem"
                         accept="image/png,image/jpeg,image/webp"
                         class="upload-input"
-                        onchange="updateUploadPreview(this, 'edit-preview-{{ p.id }}', 'edit-upload-label-{{ p.id }}')"
+                        onchange="updateUploadPreview(this, 'edit-preview-{{ p.id }}', 'edit-upload-label-{{ p.id }}', 'remove-image-{{ p.id }}', 'remove-image-btn-{{ p.id }}')"
                       >
                       <span class="upload-content">
                         <span class="upload-title">Selecionar nova imagem</span>
@@ -742,8 +742,19 @@
                         <span id="edit-upload-label-{{ p.id }}" class="upload-filename">Nenhum arquivo selecionado</span>
                       </span>
                     </label>
+                    <input type="hidden" name="remover_imagem" id="remove-image-{{ p.id }}" value="0">
                     <div class="upload-preview">
                       <img id="edit-preview-{{ p.id }}" class="upload-preview-img is-visible" src="{{ p.imagem_url }}" alt="Preview da imagem atual" data-current-src="{{ p.imagem_url }}" onerror="this.style.display='none'">
+                      <button
+                        type="button"
+                        class="upload-remove-btn"
+                        id="remove-image-btn-{{ p.id }}"
+                        aria-label="Remover imagem principal"
+                        title="Remover imagem"
+                        data-preview-id="edit-preview-{{ p.id }}"
+                        onclick="removeUploadImage(this, 'imagem', 'edit-preview-{{ p.id }}', 'edit-upload-label-{{ p.id }}', 'remove-image-{{ p.id }}')"
+                        {% if not p.tem_imagem %}style="display: none;"{% endif %}
+                      >X</button>
                     </div>
                   </div>
 
@@ -755,7 +766,7 @@
                         name="imagem_medidas"
                         accept="image/png,image/jpeg,image/webp"
                         class="upload-input"
-                        onchange="updateUploadPreview(this, 'edit-preview-medidas-{{ p.id }}', 'edit-upload-label-medidas-{{ p.id }}')"
+                        onchange="updateUploadPreview(this, 'edit-preview-medidas-{{ p.id }}', 'edit-upload-label-medidas-{{ p.id }}', 'remove-image-medidas-{{ p.id }}', 'remove-image-medidas-btn-{{ p.id }}')"
                       >
                       <span class="upload-content">
                         <span class="upload-title">Selecionar nova imagem de medidas</span>
@@ -763,6 +774,7 @@
                         <span id="edit-upload-label-medidas-{{ p.id }}" class="upload-filename">Nenhum arquivo selecionado</span>
                       </span>
                     </label>
+                    <input type="hidden" name="remover_imagem_medidas" id="remove-image-medidas-{{ p.id }}" value="0">
                     <div class="upload-preview">
                       <img
                         id="edit-preview-medidas-{{ p.id }}"
@@ -772,6 +784,16 @@
                         data-current-src="{{ p.imagem_medidas_url or '' }}"
                         onerror="this.style.display='none'"
                       >
+                      <button
+                        type="button"
+                        class="upload-remove-btn"
+                        id="remove-image-medidas-btn-{{ p.id }}"
+                        aria-label="Remover imagem de medidas"
+                        title="Remover imagem"
+                        data-preview-id="edit-preview-medidas-{{ p.id }}"
+                        onclick="removeUploadImage(this, 'imagem_medidas', 'edit-preview-medidas-{{ p.id }}', 'edit-upload-label-medidas-{{ p.id }}', 'remove-image-medidas-{{ p.id }}')"
+                        {% if not p.imagem_medidas_url %}style="display: none;"{% endif %}
+                      >X</button>
                     </div>
                   </div>
 
@@ -783,7 +805,7 @@
                         name="imagem_extra"
                         accept="image/png,image/jpeg,image/webp"
                         class="upload-input"
-                        onchange="updateUploadPreview(this, 'edit-preview-extra-{{ p.id }}', 'edit-upload-label-extra-{{ p.id }}')"
+                        onchange="updateUploadPreview(this, 'edit-preview-extra-{{ p.id }}', 'edit-upload-label-extra-{{ p.id }}', 'remove-image-extra-{{ p.id }}', 'remove-image-extra-btn-{{ p.id }}')"
                       >
                       <span class="upload-content">
                         <span class="upload-title">Selecionar terceira imagem</span>
@@ -791,6 +813,7 @@
                         <span id="edit-upload-label-extra-{{ p.id }}" class="upload-filename">Nenhum arquivo selecionado</span>
                       </span>
                     </label>
+                    <input type="hidden" name="remover_imagem_extra" id="remove-image-extra-{{ p.id }}" value="0">
                     <div class="upload-preview">
                       <img
                         id="edit-preview-extra-{{ p.id }}"
@@ -800,6 +823,16 @@
                         data-current-src="{{ p.imagem_extra_url or '' }}"
                         onerror="this.style.display='none'"
                       >
+                      <button
+                        type="button"
+                        class="upload-remove-btn"
+                        id="remove-image-extra-btn-{{ p.id }}"
+                        aria-label="Remover terceira imagem"
+                        title="Remover imagem"
+                        data-preview-id="edit-preview-extra-{{ p.id }}"
+                        onclick="removeUploadImage(this, 'imagem_extra', 'edit-preview-extra-{{ p.id }}', 'edit-upload-label-extra-{{ p.id }}', 'remove-image-extra-{{ p.id }}')"
+                        {% if not p.imagem_extra_url %}style="display: none;"{% endif %}
+                      >X</button>
                     </div>
                   </div>
                 </div>
@@ -838,11 +871,32 @@ function toggleEditForm(prefix, id) {
     editRow.style.display = 'table-row';
     itemRow.style.opacity = '0.5';
     itemRow.style.pointerEvents = 'none';
+    syncExistingImageRemoveButtons(editRow);
   } else {
     editRow.style.display = 'none';
     itemRow.style.opacity = '1';
     itemRow.style.pointerEvents = 'auto';
   }
+}
+
+function isRemovableImageSrc(src) {
+  const normalizedSrc = (src || '').trim();
+  return normalizedSrc && !normalizedSrc.endsWith('/static/images/placeholder.png');
+}
+
+function syncExistingImageRemoveButtons(root) {
+  const scope = root || document;
+  scope.querySelectorAll('.upload-remove-btn[data-preview-id]').forEach((button) => {
+    const preview = document.getElementById(button.dataset.previewId);
+    const currentSrc = preview ? (preview.dataset.currentSrc || preview.getAttribute('src') || '') : '';
+    const shouldShow = isRemovableImageSrc(currentSrc);
+
+    button.style.display = shouldShow ? 'block' : 'none';
+    if (preview) {
+      preview.classList.toggle('is-visible', shouldShow);
+      preview.style.display = shouldShow ? 'block' : 'none';
+    }
+  });
 }
 
 function confirmDelete(url, message) {
@@ -878,24 +932,62 @@ function updateFileLabel(input, labelId) {
   }
 }
 
-function updateUploadPreview(input, previewId, labelId) {
+function updateUploadPreview(input, previewId, labelId, removeInputId, removeButtonId) {
   updateFileLabel(input, labelId);
 
   const preview = document.getElementById(previewId);
   const file = input.files && input.files[0];
   const currentSrc = preview ? (preview.dataset.currentSrc || '') : '';
+  const removeInput = removeInputId ? document.getElementById(removeInputId) : null;
+  const removeButton = removeButtonId ? document.getElementById(removeButtonId) : null;
 
   if (!preview) return;
   if (!file) {
+    if (removeInput && removeInput.value === '1') {
+      preview.removeAttribute('src');
+      preview.classList.remove('is-visible');
+      preview.style.display = 'none';
+      if (removeButton) removeButton.style.display = 'none';
+      return;
+    }
     preview.src = currentSrc;
     preview.style.display = currentSrc ? 'block' : 'none';
+    preview.classList.toggle('is-visible', Boolean(currentSrc));
+    if (removeButton) removeButton.style.display = currentSrc ? 'block' : 'none';
     return;
   }
 
+  if (removeInput) removeInput.value = '0';
   const objectUrl = URL.createObjectURL(file);
   preview.src = objectUrl;
+  preview.classList.add('is-visible');
   preview.style.display = 'block';
+  if (removeButton) removeButton.style.display = 'block';
   preview.onload = () => URL.revokeObjectURL(objectUrl);
+}
+
+function removeUploadImage(button, inputName, previewId, labelId, removeInputId) {
+  const form = button.closest('form');
+  const fileInput = form ? form.querySelector(`input[type="file"][name="${inputName}"]`) : null;
+  const removeInput = document.getElementById(removeInputId);
+  const preview = document.getElementById(previewId);
+  const label = document.getElementById(labelId);
+
+  if (fileInput) {
+    fileInput.value = '';
+  }
+  if (removeInput) {
+    removeInput.value = '1';
+  }
+  if (preview) {
+    preview.removeAttribute('src');
+    preview.classList.remove('is-visible');
+    preview.style.display = 'none';
+  }
+  if (label) {
+    label.textContent = 'Imagem marcada para remocao';
+  }
+  button.style.display = 'none';
 }
 
 function preencherSubcategorias(selectEl, categoriaSlug, currentValue) {
