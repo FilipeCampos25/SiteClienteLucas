@@ -6,24 +6,17 @@
 {% set p = produto %}
 
 <section class="produto-page produto-page--gallery" aria-label="Galeria do produto">
-  <div class="neo-container produto-gallery-grid">
+  <div class="neo-container produto-gallery-grid produto-gallery-grid--count-{{ p.imagens|length }}">
+    {% for imagem in p.imagens %}
     <div class="produto-gallery-item">
       <img
-        src="{{ p.imagem_url or '/static/images/placeholder.png' }}"
-        alt="{{ p.nome }}"
-        class="produto-gallery-image produto-gallery-image--principal"
+        src="{{ imagem or '/static/images/placeholder.png' }}"
+        alt="{% if loop.index == 2 %}Medidas de {{ p.nome }}{% else %}{{ p.nome }}{% endif %}"
+        class="produto-gallery-image produto-gallery-image--{{ loop.index }}"
         onerror="this.src='/static/images/placeholder.png'"
       >
     </div>
-
-    <div class="produto-gallery-item">
-      <img
-        src="{{ p.imagem_medidas_url or '/static/images/placeholder.png' }}"
-        alt="Medidas de {{ p.nome }}"
-        class="produto-gallery-image produto-gallery-image--medidas"
-        onerror="this.src='/static/images/placeholder.png'"
-      >
-    </div>
+    {% endfor %}
   </div>
 </section>
 

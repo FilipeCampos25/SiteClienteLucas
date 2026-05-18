@@ -394,6 +394,8 @@ def create_produto(
     imagem_mime: Optional[str] = None,
     imagem_medidas_bytes: Optional[bytes] = None,
     imagem_medidas_mime: Optional[str] = None,
+    imagem_extra_bytes: Optional[bytes] = None,
+    imagem_extra_mime: Optional[str] = None,
 ) -> models.Produto:
     novo = models.Produto(
         nome=produto.nome.strip(),
@@ -419,6 +421,14 @@ def create_produto(
         image_bytes=imagem_medidas_bytes,
         image_mime=imagem_medidas_mime,
     )
+    _apply_image_data(
+        novo,
+        image_bytes_attr="imagem_extra_bytes",
+        image_mime_attr="imagem_extra_mime",
+        image_sha_attr="imagem_extra_sha256",
+        image_bytes=imagem_extra_bytes,
+        image_mime=imagem_extra_mime,
+    )
 
     db.add(novo)
     db.commit()
@@ -435,6 +445,8 @@ def update_produto(
     imagem_mime: Optional[str] = None,
     imagem_medidas_bytes: Optional[bytes] = None,
     imagem_medidas_mime: Optional[str] = None,
+    imagem_extra_bytes: Optional[bytes] = None,
+    imagem_extra_mime: Optional[str] = None,
 ) -> Optional[models.Produto]:
     produto = get_produto(db, produto_id=produto_id)
     if not produto:
@@ -467,6 +479,14 @@ def update_produto(
         image_sha_attr="imagem_medidas_sha256",
         image_bytes=imagem_medidas_bytes,
         image_mime=imagem_medidas_mime,
+    )
+    _apply_image_data(
+        produto,
+        image_bytes_attr="imagem_extra_bytes",
+        image_mime_attr="imagem_extra_mime",
+        image_sha_attr="imagem_extra_sha256",
+        image_bytes=imagem_extra_bytes,
+        image_mime=imagem_extra_mime,
     )
 
     db.commit()

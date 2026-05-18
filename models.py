@@ -61,6 +61,9 @@ class Produto(Base):
     imagem_medidas_mime = Column(String(64), nullable=True)
     imagem_medidas_bytes = Column(LargeBinary, nullable=True)
     imagem_medidas_sha256 = Column(String(64), nullable=True)
+    imagem_extra_mime = Column(String(64), nullable=True)
+    imagem_extra_bytes = Column(LargeBinary, nullable=True)
+    imagem_extra_sha256 = Column(String(64), nullable=True)
 
     criado_em = Column(DateTime(timezone=True), server_default=func.now())
     atualizado_em = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

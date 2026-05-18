@@ -256,20 +256,47 @@ def _catalogo_index(db: Session) -> dict[str, object]:
 
 
 def _produto_image_url(produto: models.Produto) -> str:
+    url_real = _produto_real_image_url(produto)
+    if url_real:
+        return url_real
+
+    return crud.PLACEHOLDER_IMAGE_URL
+
+
+def _produto_real_image_url(produto: models.Produto) -> Optional[str]:
     if getattr(produto, "imagem_bytes", None):
         return f"/media/produto/{produto.id}/imagem"
 
     url_externa = (getattr(produto, "imagem_url", None) or "").strip()
-    if url_externa:
+    if url_externa and url_externa != crud.PLACEHOLDER_IMAGE_URL:
         return url_externa
 
-    return crud.PLACEHOLDER_IMAGE_URL
+    return None
 
 
 def _produto_medidas_image_url(produto: models.Produto) -> Optional[str]:
     if getattr(produto, "imagem_medidas_bytes", None):
         return f"/media/produto/{produto.id}/imagem-medidas"
     return None
+
+
+def _produto_extra_image_url(produto: models.Produto) -> Optional[str]:
+    if getattr(produto, "imagem_extra_bytes", None):
+        return f"/media/produto/{produto.id}/imagem-extra"
+    return None
+
+
+def _produto_image_urls(produto: models.Produto) -> list[str]:
+    imagens = [
+        url
+        for url in (
+            _produto_real_image_url(produto),
+            _produto_medidas_image_url(produto),
+            _produto_extra_image_url(produto),
+        )
+        if url
+    ]
+    return imagens or [crud.PLACEHOLDER_IMAGE_URL]
 
 
 def _produto_view(
@@ -289,6 +316,8 @@ def _produto_view(
         "resumo_curto": produto.resumo_curto,
         "imagem_url": _produto_image_url(produto),
         "imagem_medidas_url": _produto_medidas_image_url(produto),
+        "imagem_extra_url": _produto_extra_image_url(produto),
+        "imagens": _produto_image_urls(produto),
         "categoria_slug": categoria_slug or None,
         "categoria_nome_exibicao": categoria["nome_exibicao"] if categoria else None,
         "categoria_url": f"/categorias/{categoria['slug']}" if categoria else None,
@@ -704,6 +733,16 @@ def media_produto_imagem_medidas(produto_id: int, db: Session = Depends(get_db))
     return Response(content=produto.imagem_medidas_bytes, media_type=mime)
 
 
+@app.get("/media/produto/{produto_id}/imagem-extra")
+def media_produto_imagem_extra(produto_id: int, db: Session = Depends(get_db)):
+    produto = crud.get_produto(db, produto_id=produto_id)
+    if not produto or not getattr(produto, "imagem_extra_bytes", None):
+        raise HTTPException(status_code=404, detail="Imagem extra nao encontrada")
+
+    mime = getattr(produto, "imagem_extra_mime", None) or "application/octet-stream"
+    return Response(content=produto.imagem_extra_bytes, media_type=mime)
+
+
 @app.get("/api/produtos")
 def api_produtos(db: Session = Depends(get_db)):
     catalogo = _catalogo_index(db)
@@ -997,10 +1036,12 @@ def admin_produto_novo(
     subcategoria_slug: str = Form(None),
     imagem: UploadFile = File(None),
     imagem_medidas: UploadFile = File(None),
+    imagem_extra: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
     imagem_medidas_bytes, imagem_medidas_mime = _load_uploaded_image(imagem_medidas)
+    imagem_extra_bytes, imagem_extra_mime = _load_uploaded_image(imagem_extra)
 
     crud.create_produto(
         db,
@@ -1009,6 +1050,8 @@ def admin_produto_novo(
         imagem_mime=imagem_mime,
         imagem_medidas_bytes=imagem_medidas_bytes,
         imagem_medidas_mime=imagem_medidas_mime,
+        imagem_extra_bytes=imagem_extra_bytes,
+        imagem_extra_mime=imagem_extra_mime,
     )
     return RedirectResponse("/admin", status_code=303)
 
@@ -1023,10 +1066,12 @@ def admin_produto_atualizar(
     subcategoria_slug: str = Form(None),
     imagem: UploadFile = File(None),
     imagem_medidas: UploadFile = File(None),
+    imagem_extra: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
     imagem_medidas_bytes, imagem_medidas_mime = _load_uploaded_image(imagem_medidas)
+    imagem_extra_bytes, imagem_extra_mime = _load_uploaded_image(imagem_extra)
 
     produto = crud.update_produto(
         db,
@@ -1036,6 +1081,8 @@ def admin_produto_atualizar(
         imagem_mime=imagem_mime,
         imagem_medidas_bytes=imagem_medidas_bytes,
         imagem_medidas_mime=imagem_medidas_mime,
+        imagem_extra_bytes=imagem_extra_bytes,
+        imagem_extra_mime=imagem_extra_mime,
     )
     if not produto:
         raise HTTPException(status_code=404, detail="Produto nao encontrado")
@@ -1053,6 +1100,7 @@ def admin_produto_method_override(
     subcategoria_slug: str = Form(None),
     imagem: UploadFile = File(None),
     imagem_medidas: UploadFile = File(None),
+    imagem_extra: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     if (_method or "").strip().upper() == "PUT":
@@ -1065,6 +1113,7 @@ def admin_produto_method_override(
             subcategoria_slug=subcategoria_slug,
             imagem=imagem,
             imagem_medidas=imagem_medidas,
+            imagem_extra=imagem_extra,
             db=db,
         )
 

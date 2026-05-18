@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CategoriaBase(BaseModel):
@@ -70,6 +70,8 @@ class ProdutoOut(ProdutoBase):
     id: int
     imagem_url: Optional[str] = None
     imagem_medidas_url: Optional[str] = None
+    imagem_extra_url: Optional[str] = None
+    imagens: list[str] = Field(default_factory=list)
     criado_em: Optional[datetime] = None
     atualizado_em: Optional[datetime] = None
 

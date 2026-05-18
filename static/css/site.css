@@ -1184,11 +1184,20 @@ button{ cursor: pointer; }
 .produto-gallery-grid{
   --produto-gallery-size: 520px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, var(--produto-gallery-size)));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--produto-gallery-size)), var(--produto-gallery-size)));
   gap: 26px;
   align-items: start;
   justify-content: center;
   justify-items: center;
+}
+.produto-gallery-grid--count-1{
+  grid-template-columns: minmax(0, var(--produto-gallery-size));
+}
+.produto-gallery-grid--count-2{
+  grid-template-columns: repeat(2, minmax(0, var(--produto-gallery-size)));
+}
+.produto-gallery-grid--count-3{
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .produto-gallery-item{
   width: min(100%, var(--produto-gallery-size));
@@ -1197,6 +1206,11 @@ button{ cursor: pointer; }
   border-radius: 28px;
   background: rgba(16,17,20,0.04);
 }
+.produto-gallery-grid--count-3 .produto-gallery-item{
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+}
 .produto-gallery-image{
   display: block;
   width: 100%;
@@ -1204,10 +1218,10 @@ button{ cursor: pointer; }
   object-fit: cover;
   border-radius: inherit;
 }
-.produto-gallery-image--principal{
+.produto-gallery-image--1{
   object-position: center 42%;
 }
-.produto-gallery-image--medidas{
+.produto-gallery-image--2{
   object-position: center 28%;
 }
 .produto-description-shell{

@@ -607,6 +607,27 @@
             <img id="create-preview-medidas" class="upload-preview-img" alt="Preview da imagem de medidas" />
           </div>
         </div>
+
+        <div class="form-group">
+          <label class="form-label">Terceira imagem</label>
+          <label class="upload-area">
+            <input
+              type="file"
+              name="imagem_extra"
+              accept="image/png,image/jpeg,image/webp"
+              class="upload-input"
+              onchange="updateUploadPreview(this, 'create-preview-extra', 'create-upload-label-extra')"
+            >
+            <span class="upload-content">
+              <span class="upload-title">Toque para escolher a terceira imagem</span>
+              <span class="upload-subtitle">PNG, JPG ou WEBP</span>
+              <span id="create-upload-label-extra" class="upload-filename">Nenhum arquivo selecionado</span>
+            </span>
+          </label>
+          <div class="upload-preview">
+            <img id="create-preview-extra" class="upload-preview-img" alt="Preview da terceira imagem" />
+          </div>
+        </div>
       </div>
       <button type="submit" class="btn-save">Criar Produto</button>
     </form>
@@ -749,6 +770,34 @@
                         src="{{ p.imagem_medidas_url or '' }}"
                         alt="Preview da imagem de medidas atual"
                         data-current-src="{{ p.imagem_medidas_url or '' }}"
+                        onerror="this.style.display='none'"
+                      >
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Trocar terceira imagem (opcional)</label>
+                    <label class="upload-area upload-area-compact">
+                      <input
+                        type="file"
+                        name="imagem_extra"
+                        accept="image/png,image/jpeg,image/webp"
+                        class="upload-input"
+                        onchange="updateUploadPreview(this, 'edit-preview-extra-{{ p.id }}', 'edit-upload-label-extra-{{ p.id }}')"
+                      >
+                      <span class="upload-content">
+                        <span class="upload-title">Selecionar terceira imagem</span>
+                        <span class="upload-subtitle">Mantem a atual se nao escolher</span>
+                        <span id="edit-upload-label-extra-{{ p.id }}" class="upload-filename">Nenhum arquivo selecionado</span>
+                      </span>
+                    </label>
+                    <div class="upload-preview">
+                      <img
+                        id="edit-preview-extra-{{ p.id }}"
+                        class="upload-preview-img{% if p.imagem_extra_url %} is-visible{% endif %}"
+                        src="{{ p.imagem_extra_url or '' }}"
+                        alt="Preview da terceira imagem atual"
+                        data-current-src="{{ p.imagem_extra_url or '' }}"
                         onerror="this.style.display='none'"
                       >
                     </div>
