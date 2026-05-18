@@ -302,18 +302,21 @@ def _produto_view(
     }
 
 
-def _compress_to_jpeg(raw: bytes) -> tuple[bytes, str]:
+def _convert_to_webp(raw: bytes) -> tuple[bytes, str]:
     try:
         img = Image.open(io.BytesIO(raw))
         img = ImageOps.exif_transpose(img)
-        img = img.convert("RGB")
+        img = img.convert("RGBA" if img.mode in ("RGBA", "LA", "P") else "RGB")
         img.thumbnail((1600, 1600))
 
         out = io.BytesIO()
-        img.save(out, format="JPEG", quality=82, optimize=True)
-        return out.getvalue(), "image/jpeg"
+        img.save(out, format="WEBP", quality=82, method=6)
+        return out.getvalue(), "image/webp"
     except Exception:
-        return raw, "application/octet-stream"
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Envie uma imagem valida em PNG, JPG ou WEBP.",
+        )
 
 
 def _load_uploaded_image(upload: Optional[UploadFile]) -> tuple[Optional[bytes], Optional[str]]:
@@ -324,7 +327,7 @@ def _load_uploaded_image(upload: Optional[UploadFile]) -> tuple[Optional[bytes],
     if not raw:
         return None, None
 
-    return _compress_to_jpeg(raw)
+    return _convert_to_webp(raw)
 
 
 def _admin_credentials() -> tuple[str, str]:

@@ -88,13 +88,13 @@
             <input
               type="file"
               name="imagem"
-              accept="image/png,image/jpeg"
+              accept="image/png,image/jpeg,image/webp"
               class="upload-input"
               onchange="updateUploadPreview(this, 'create-categoria-preview', 'create-categoria-upload-label')"
             >
             <span class="upload-content">
               <span class="upload-title">Toque para escolher uma imagem</span>
-              <span class="upload-subtitle">PNG ou JPG</span>
+              <span class="upload-subtitle">PNG, JPG ou WEBP</span>
               <span id="create-categoria-upload-label" class="upload-filename">Nenhum arquivo selecionado</span>
             </span>
           </label>
@@ -205,7 +205,7 @@
                       <input
                         type="file"
                         name="imagem"
-                        accept="image/png,image/jpeg"
+                        accept="image/png,image/jpeg,image/webp"
                         class="upload-input"
                         onchange="updateUploadPreview(this, 'edit-categoria-preview-{{ c.id }}', 'edit-categoria-upload-label-{{ c.id }}')"
                       >
@@ -329,13 +329,13 @@
             <input
               type="file"
               name="imagem"
-              accept="image/png,image/jpeg"
+              accept="image/png,image/jpeg,image/webp"
               class="upload-input"
               onchange="updateUploadPreview(this, 'create-subcategoria-preview', 'create-subcategoria-upload-label')"
             >
             <span class="upload-content">
               <span class="upload-title">Toque para escolher uma imagem</span>
-              <span class="upload-subtitle">PNG ou JPG</span>
+              <span class="upload-subtitle">PNG, JPG ou WEBP</span>
               <span id="create-subcategoria-upload-label" class="upload-filename">Nenhum arquivo selecionado</span>
             </span>
           </label>
@@ -449,7 +449,7 @@
                       <input
                         type="file"
                         name="imagem"
-                        accept="image/png,image/jpeg"
+                        accept="image/png,image/jpeg,image/webp"
                         class="upload-input"
                         onchange="updateUploadPreview(this, 'edit-subcategoria-preview-{{ s.id }}', 'edit-subcategoria-upload-label-{{ s.id }}')"
                       >
@@ -572,13 +572,13 @@
             <input
               type="file"
               name="imagem"
-              accept="image/png,image/jpeg"
+              accept="image/png,image/jpeg,image/webp"
               class="upload-input"
               onchange="updateUploadPreview(this, 'create-preview', 'create-upload-label')"
             >
             <span class="upload-content">
               <span class="upload-title">Toque para escolher uma imagem</span>
-              <span class="upload-subtitle">PNG ou JPG</span>
+              <span class="upload-subtitle">PNG, JPG ou WEBP</span>
               <span id="create-upload-label" class="upload-filename">Nenhum arquivo selecionado</span>
             </span>
           </label>
@@ -593,13 +593,13 @@
             <input
               type="file"
               name="imagem_medidas"
-              accept="image/png,image/jpeg"
+              accept="image/png,image/jpeg,image/webp"
               class="upload-input"
               onchange="updateUploadPreview(this, 'create-preview-medidas', 'create-upload-label-medidas')"
             >
             <span class="upload-content">
               <span class="upload-title">Toque para escolher a imagem de medidas</span>
-              <span class="upload-subtitle">PNG ou JPG</span>
+              <span class="upload-subtitle">PNG, JPG ou WEBP</span>
               <span id="create-upload-label-medidas" class="upload-filename">Nenhum arquivo selecionado</span>
             </span>
           </label>
@@ -711,7 +711,7 @@
                       <input
                         type="file"
                         name="imagem"
-                        accept="image/png,image/jpeg"
+                        accept="image/png,image/jpeg,image/webp"
                         class="upload-input"
                         onchange="updateUploadPreview(this, 'edit-preview-{{ p.id }}', 'edit-upload-label-{{ p.id }}')"
                       >
@@ -732,7 +732,7 @@
                       <input
                         type="file"
                         name="imagem_medidas"
-                        accept="image/png,image/jpeg"
+                        accept="image/png,image/jpeg,image/webp"
                         class="upload-input"
                         onchange="updateUploadPreview(this, 'edit-preview-medidas-{{ p.id }}', 'edit-upload-label-medidas-{{ p.id }}')"
                       >
