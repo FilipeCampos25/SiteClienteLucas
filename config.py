@@ -5,10 +5,12 @@ load_dotenv()
 
 # Banco de dados (AWS RDS PostgreSQL)
 DATABASE_URL = os.getenv("DATABASE_URL")
+IS_RENDER = os.getenv("RENDER") == "true"
 
 # Admin
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "troque_essa_senha")
+SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key")
 
 
 
@@ -23,7 +25,8 @@ STORE_ADDRESS = os.getenv(
     "STORE_ADDRESS",
     "Casa Das Cantoneiras, St. Hab. Vicente Pires - Vicente Pires, Brasilia - DF, 72005-512",
 ).strip()
-STORE_CNPJ = os.getenv("STORE_CNPJ", "").strip()
+STORE_CNPJ = os.getenv("STORE_CNPJ", "55.291.020/0001-50").strip()
+MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", "4000000"))
 
 # CORS
 CORS_ORIGINS = [

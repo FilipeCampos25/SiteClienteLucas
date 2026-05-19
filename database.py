@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from config import DATABASE_URL
+from config import DATABASE_URL, IS_RENDER
 
 logger = logging.getLogger(__name__)
 
@@ -21,26 +21,34 @@ def _create_sqlite_engine():
 
 def _create_primary_engine():
     if not DATABASE_URL:
+        if IS_RENDER:
+            raise RuntimeError("DATABASE_URL ausente no Render. Configure a URL interna do Postgres.")
         logger.warning("DATABASE_URL ausente. Usando SQLite local em %s.", SQLITE_URL)
         return _create_sqlite_engine()
+
+    database_url = DATABASE_URL
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
 
     engine_kwargs = {
         "pool_pre_ping": True,
         "pool_recycle": 300,
         "poolclass": NullPool,
     }
-    if DATABASE_URL.startswith("sqlite"):
+    if database_url.startswith("sqlite"):
         engine_kwargs["connect_args"] = {"check_same_thread": False}
     else:
         engine_kwargs["connect_args"] = {"connect_timeout": 5}
 
-    primary_engine = create_engine(DATABASE_URL, **engine_kwargs)
+    primary_engine = create_engine(database_url, **engine_kwargs)
 
     try:
         with primary_engine.connect():
             logger.info("Conexao com banco remoto estabelecida.")
         return primary_engine
     except SQLAlchemyError as exc:
+        if IS_RENDER:
+            raise RuntimeError("Falha ao conectar no banco remoto configurado em DATABASE_URL.") from exc
         logger.warning(
             "Falha ao conectar no banco remoto; usando SQLite local. Motivo: %s",
             exc,

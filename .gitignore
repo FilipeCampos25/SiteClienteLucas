@@ -27,7 +27,9 @@ venv.bak/
 
 # Logs and databases
 *.log
+*.db
 *.sqlite
 *.sqlite3
 /db.sqlite3
+/local.db
 templates.zip

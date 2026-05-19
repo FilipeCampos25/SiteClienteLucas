@@ -24,6 +24,9 @@ from config import (
     CORS_ORIGINS,
     FACEBOOK_URL,
     INSTAGRAM_URL,
+    IS_RENDER,
+    MAX_IMAGE_BYTES,
+    SECRET_KEY,
     STORE_ADDRESS,
     STORE_CNPJ,
     WHATSAPP_NUMERO,
@@ -42,9 +45,9 @@ app.add_middleware(
 )
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.getenv("SECRET_KEY", "change-this-secret-key"),
+    secret_key=SECRET_KEY,
     same_site="lax",
-    https_only=False,
+    https_only=IS_RENDER,
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -367,6 +370,11 @@ def _load_uploaded_image(upload: Optional[UploadFile]) -> tuple[Optional[bytes],
     raw = upload.file.read()
     if not raw:
         return None, None
+    if len(raw) > MAX_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Imagem muito grande. Envie um arquivo de ate {MAX_IMAGE_BYTES} bytes.",
+        )
 
     return _convert_to_webp(raw)
 
