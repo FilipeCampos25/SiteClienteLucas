@@ -15,6 +15,8 @@
   --brand: #c87400;          /* laranja principal */
   --brand-2: #ff9800;        /* laranja mais vivo para detalhes */
   --brand-ink: #1a1a1a;
+  --catalog-frame-border: 5px solid var(--brand-2);
+  --catalog-frame-shadow: 0 20px 34px rgba(23,153,219,0.10);
 
   --radius-sm: 10px;
   --radius-md: 16px;
@@ -727,9 +729,9 @@ button{ cursor: pointer; }
   padding: 0;
   overflow: hidden;
   border-radius: 34px;
-  border: 5px solid var(--brand-2);
+  border: var(--catalog-frame-border);
   background: #fff;
-  box-shadow: 0 20px 34px rgba(23,153,219,0.10);
+  box-shadow: var(--catalog-frame-shadow);
 }
 .home-category-card__image{
   width: 100%;
@@ -794,6 +796,10 @@ button{ cursor: pointer; }
 .home-product-card__media{
   aspect-ratio: 16 / 11;
   background: rgba(16,17,20,0.04);
+  overflow: hidden;
+  border: var(--catalog-frame-border);
+  border-radius: 22px;
+  box-shadow: var(--catalog-frame-shadow);
 }
 .home-product-card__image{
   width: 100%;
@@ -912,10 +918,10 @@ button{ cursor: pointer; }
 
 .card-produto{
   background: #fff;
-  border: 1px solid rgba(16,17,20,0.10);
+  border: var(--catalog-frame-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--catalog-frame-shadow);
   display: flex;
   flex-direction: column;
   min-height: 100%;
@@ -923,13 +929,17 @@ button{ cursor: pointer; }
 }
 .card-produto:hover{
   transform: translateY(-2px);
-  border-color: rgba(16,17,20,0.16);
+  border-color: var(--brand-2);
   box-shadow: 0 16px 34px rgba(16,17,20,0.10);
 }
 .card-image-container{
   position: relative;
   height: 280px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
   background: rgba(16,17,20,0.03);
+  box-shadow: none;
 }
 .card-image{
   width: 100%;
@@ -1204,7 +1214,9 @@ button{ cursor: pointer; }
   height: var(--produto-gallery-size);
   overflow: hidden;
   border-radius: 28px;
+  border: var(--catalog-frame-border);
   background: rgba(16,17,20,0.04);
+  box-shadow: var(--catalog-frame-shadow);
 }
 .produto-gallery-grid--count-3 .produto-gallery-item{
   width: 100%;
