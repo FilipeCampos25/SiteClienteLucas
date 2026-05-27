@@ -18,10 +18,9 @@
       <a class="btn btn--primary" href="/contato">Fale com a equipe</a>
     </div>
     <div class="statement__gallery">
-      <img src="static\images\img10.jpeg" alt="Casa das Cantoneiras">
-      <img src="static\images\img11.jpeg" alt="Casa das Cantoneiras">
-      <img src="static\images\img13.jpeg" alt="Casa das Cantoneiras">
-      <img src="static\images\img14.jpeg" alt="Casa das Cantoneiras">
+      {% for imagem in galeria_quem_somos %}
+      <img src="{{ imagem.imagem_url }}" alt="{{ imagem.alt_texto }}">
+      {% endfor %}
     </div>
   </div>
 </section>

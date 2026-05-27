@@ -75,6 +75,15 @@ def _next_subcategoria_ordem(db: Session, categoria_slug: str) -> int:
     return int(getattr(ultima, "ordem_exibicao", 0) or 0) + 1
 
 
+def _next_quem_somos_ordem(db: Session) -> int:
+    ultima = (
+        db.query(models.QuemSomosImagem)
+        .order_by(models.QuemSomosImagem.ordem_exibicao.desc(), models.QuemSomosImagem.id.desc())
+        .first()
+    )
+    return int(getattr(ultima, "ordem_exibicao", 0) or 0) + 1
+
+
 def list_categorias(db: Session) -> List[models.Categoria]:
     return (
         db.query(models.Categoria)
@@ -353,6 +362,93 @@ def delete_subcategoria(db: Session, *, subcategoria_id: int) -> bool:
         .delete(synchronize_session=False)
     )
     db.delete(subcategoria)
+    db.commit()
+    return True
+
+
+def list_quem_somos_imagens(db: Session) -> List[models.QuemSomosImagem]:
+    return (
+        db.query(models.QuemSomosImagem)
+        .order_by(models.QuemSomosImagem.ordem_exibicao.asc(), models.QuemSomosImagem.id.asc())
+        .all()
+    )
+
+
+def get_quem_somos_imagem(db: Session, *, imagem_id: int) -> Optional[models.QuemSomosImagem]:
+    return db.query(models.QuemSomosImagem).filter(models.QuemSomosImagem.id == imagem_id).first()
+
+
+def create_quem_somos_imagem(
+    db: Session,
+    dados: schemas.QuemSomosImagemCreate,
+    *,
+    imagem_bytes: Optional[bytes] = None,
+    imagem_mime: Optional[str] = None,
+) -> models.QuemSomosImagem:
+    imagem = models.QuemSomosImagem(
+        alt_texto=_clean_optional_str(dados.alt_texto),
+        imagem_url=_clean_optional_str(dados.imagem_url) or PLACEHOLDER_IMAGE_URL,
+        ordem_exibicao=(
+            dados.ordem_exibicao
+            if dados.ordem_exibicao is not None
+            else _next_quem_somos_ordem(db)
+        ),
+    )
+    _apply_image_data(
+        imagem,
+        image_bytes_attr="imagem_bytes",
+        image_mime_attr="imagem_mime",
+        image_sha_attr="imagem_sha256",
+        image_bytes=imagem_bytes,
+        image_mime=imagem_mime,
+    )
+    db.add(imagem)
+    db.commit()
+    db.refresh(imagem)
+    return imagem
+
+
+def update_quem_somos_imagem(
+    db: Session,
+    *,
+    imagem_id: int,
+    dados: schemas.QuemSomosImagemUpdate,
+    imagem_bytes: Optional[bytes] = None,
+    imagem_mime: Optional[str] = None,
+) -> Optional[models.QuemSomosImagem]:
+    imagem = get_quem_somos_imagem(db, imagem_id=imagem_id)
+    if not imagem:
+        return None
+
+    if _field_was_provided(dados, "alt_texto"):
+        imagem.alt_texto = _clean_optional_str(dados.alt_texto)
+    if dados.imagem_url is not None:
+        imagem.imagem_url = _clean_optional_str(dados.imagem_url) or PLACEHOLDER_IMAGE_URL
+    if dados.ordem_exibicao is not None:
+        imagem.ordem_exibicao = dados.ordem_exibicao
+    if not imagem.imagem_url:
+        imagem.imagem_url = PLACEHOLDER_IMAGE_URL
+
+    _apply_image_data(
+        imagem,
+        image_bytes_attr="imagem_bytes",
+        image_mime_attr="imagem_mime",
+        image_sha_attr="imagem_sha256",
+        image_bytes=imagem_bytes,
+        image_mime=imagem_mime,
+    )
+
+    db.commit()
+    db.refresh(imagem)
+    return imagem
+
+
+def delete_quem_somos_imagem(db: Session, *, imagem_id: int) -> bool:
+    imagem = get_quem_somos_imagem(db, imagem_id=imagem_id)
+    if not imagem:
+        return False
+
+    db.delete(imagem)
     db.commit()
     return True
 

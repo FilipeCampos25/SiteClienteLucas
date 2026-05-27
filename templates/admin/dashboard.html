@@ -20,7 +20,178 @@
         <span class="stat-number">{{ produtos|length }}</span>
         <span class="stat-text">Produtos</span>
       </div>
+      <div class="stat-badge">
+        <span class="stat-number">{{ quem_somos_imagens|length }}</span>
+        <span class="stat-text">Quem Somos</span>
+      </div>
     </div>
+  </div>
+</section>
+
+<section class="admin-section">
+  <div class="admin-card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-icon">*</span>
+        Galeria Quem Somos
+      </h2>
+    </div>
+
+    <form method="post" action="/admin/quem-somos/imagem" class="admin-form" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="quem-somos-alt-texto" class="form-label">Texto alternativo</label>
+          <input
+            type="text"
+            id="quem-somos-alt-texto"
+            name="alt_texto"
+            class="form-input"
+            placeholder="Ex: Estruturas metalicas expostas"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Imagem da galeria *</label>
+          <label class="upload-area">
+            <input
+              type="file"
+              name="imagem"
+              accept="image/png,image/jpeg"
+              class="upload-input"
+              required
+              onchange="updateUploadPreview(this, 'create-quem-somos-preview', 'create-quem-somos-upload-label')"
+            >
+            <span class="upload-content">
+              <span class="upload-title">Toque para escolher uma imagem</span>
+              <span class="upload-subtitle">PNG ou JPG</span>
+              <span id="create-quem-somos-upload-label" class="upload-filename">Nenhum arquivo selecionado</span>
+            </span>
+          </label>
+          <div class="upload-preview">
+            <img id="create-quem-somos-preview" class="upload-preview-img" alt="Preview da galeria Quem Somos" data-current-src="" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="quem-somos-ordem" class="form-label">Ordem</label>
+          <input
+            type="number"
+            id="quem-somos-ordem"
+            name="ordem_exibicao"
+            class="form-input"
+            min="0"
+            value="{{ quem_somos_imagens|length + 1 }}"
+          >
+        </div>
+      </div>
+      <button type="submit" class="btn-save">Adicionar Imagem</button>
+    </form>
+
+    {% if quem_somos_imagens %}
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Preview</th>
+            <th>Ordem</th>
+            <th>Texto alternativo</th>
+            <th>Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for imagem in quem_somos_imagens %}
+          <tr id="quem-somos-row-{{ imagem.id }}">
+            <td>#{{ imagem.id }}</td>
+            <td>
+              <img
+                src="{{ imagem.imagem_url }}"
+                alt="{{ imagem.alt_texto }}"
+                style="width: 72px; height: 72px; object-fit: cover; border-radius: 12px;"
+              >
+            </td>
+            <td>{{ imagem.ordem_exibicao }}</td>
+            <td>{{ imagem.alt_texto }}</td>
+            <td>
+              <button class="btn-edit" onclick="toggleEditForm('quem-somos', '{{ imagem.id }}')">Editar</button>
+              <button class="btn-delete" onclick="confirmDeleteQuemSomosImagem('{{ imagem.id }}')">Excluir</button>
+            </td>
+          </tr>
+          <tr id="quem-somos-edit-row-{{ imagem.id }}" class="edit-row" style="display: none;">
+            <td colspan="5">
+              <form method="post" action="/admin/quem-somos/imagem/{{ imagem.id }}" class="edit-form" enctype="multipart/form-data">
+                <input type="hidden" name="_method" value="PUT">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="edit-quem-somos-alt-texto-{{ imagem.id }}" class="form-label">Texto alternativo</label>
+                    <input
+                      type="text"
+                      id="edit-quem-somos-alt-texto-{{ imagem.id }}"
+                      name="alt_texto"
+                      value="{{ imagem.alt_texto }}"
+                      class="form-input"
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Trocar imagem (opcional)</label>
+                    <label class="upload-area upload-area-compact">
+                      <input
+                        type="file"
+                        name="imagem"
+                        accept="image/png,image/jpeg"
+                        class="upload-input"
+                        onchange="updateUploadPreview(this, 'edit-quem-somos-preview-{{ imagem.id }}', 'edit-quem-somos-upload-label-{{ imagem.id }}')"
+                      >
+                      <span class="upload-content">
+                        <span class="upload-title">Selecionar nova imagem</span>
+                        <span class="upload-subtitle">Mantem a atual se nao escolher</span>
+                        <span id="edit-quem-somos-upload-label-{{ imagem.id }}" class="upload-filename">Nenhum arquivo selecionado</span>
+                      </span>
+                    </label>
+                    <div class="upload-preview">
+                      <img
+                        id="edit-quem-somos-preview-{{ imagem.id }}"
+                        class="upload-preview-img is-visible"
+                        src="{{ imagem.imagem_url }}"
+                        alt="Preview da imagem atual da galeria"
+                        data-current-src="{{ imagem.imagem_url }}"
+                        onerror="this.style.display='none'"
+                      >
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="edit-quem-somos-ordem-{{ imagem.id }}" class="form-label">Ordem</label>
+                    <input
+                      type="number"
+                      id="edit-quem-somos-ordem-{{ imagem.id }}"
+                      name="ordem_exibicao"
+                      value="{{ imagem.ordem_exibicao }}"
+                      class="form-input"
+                      min="0"
+                    >
+                  </div>
+                </div>
+
+                <div class="edit-form-actions">
+                  <button type="submit" class="btn-save">Salvar Alteracoes</button>
+                  <button type="button" class="btn-cancel" onclick="toggleEditForm('quem-somos', '{{ imagem.id }}')">Cancelar</button>
+                </div>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state-admin">
+      <div class="empty-icon">*</div>
+      <p class="empty-title">Nenhuma imagem cadastrada</p>
+      <p class="empty-text">Adicione imagens para exibir na pagina Quem Somos.</p>
+    </div>
+    {% endif %}
   </div>
 </section>
 
@@ -918,6 +1089,10 @@ function confirmDeleteCategoria(id) {
 
 function confirmDeleteSubcategoria(id) {
   confirmDelete(`/admin/subcategoria/${id}`, 'Tem certeza que deseja excluir este subcatalogo? Os produtos vinculados tambem serao removidos.');
+}
+
+function confirmDeleteQuemSomosImagem(id) {
+  confirmDelete(`/admin/quem-somos/imagem/${id}`, 'Tem certeza que deseja excluir esta imagem da pagina Quem Somos?');
 }
 
 function confirmDeleteProduto(id) {

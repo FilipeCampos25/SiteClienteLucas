@@ -66,6 +66,22 @@ class ProdutoUpdate(BaseModel):
     subcategoria_slug: Optional[str] = None
 
 
+class QuemSomosImagemBase(BaseModel):
+    alt_texto: Optional[str] = None
+    imagem_url: Optional[str] = None
+    ordem_exibicao: Optional[int] = None
+
+
+class QuemSomosImagemCreate(QuemSomosImagemBase):
+    pass
+
+
+class QuemSomosImagemUpdate(BaseModel):
+    alt_texto: Optional[str] = None
+    imagem_url: Optional[str] = None
+    ordem_exibicao: Optional[int] = None
+
+
 class ProdutoOut(ProdutoBase):
     id: int
     imagem_url: Optional[str] = None

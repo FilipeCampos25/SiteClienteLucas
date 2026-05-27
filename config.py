@@ -23,7 +23,7 @@ INSTAGRAM_URL = os.getenv(
 FACEBOOK_URL = os.getenv("FACEBOOK_URL", "https://www.facebook.com/").strip()
 STORE_ADDRESS = os.getenv(
     "STORE_ADDRESS",
-    "Casa Das Cantoneiras, St. Hab. Vicente Pires - Vicente Pires, Brasilia - DF, 72005-512",
+    "Rua 08, Chacara 225, Loja 2/3, Vicente Pires, Brasilia - DF, CEP 72007-065",
 ).strip()
 STORE_CNPJ = os.getenv("STORE_CNPJ", "55.291.020/0001-50").strip()
 MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", "4000000"))

@@ -127,6 +127,24 @@ DEFAULT_SUBCATEGORIAS_POR_CATEGORIA = {
         },
     ],
 }
+DEFAULT_QUEM_SOMOS_IMAGENS = [
+    {
+        "alt_texto": "Casa das Cantoneiras",
+        "imagem_url": "/static/images/img10.jpeg",
+    },
+    {
+        "alt_texto": "Casa das Cantoneiras",
+        "imagem_url": "/static/images/img11.jpeg",
+    },
+    {
+        "alt_texto": "Casa das Cantoneiras",
+        "imagem_url": "/static/images/img13.jpeg",
+    },
+    {
+        "alt_texto": "Casa das Cantoneiras",
+        "imagem_url": "/static/images/img14.jpeg",
+    },
+]
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -173,10 +191,30 @@ def _seed_catalogo_inicial() -> None:
         db.close()
 
 
+def _seed_quem_somos_inicial() -> None:
+    db = SessionLocal()
+    try:
+        if crud.list_quem_somos_imagens(db):
+            return
+
+        for idx, imagem in enumerate(DEFAULT_QUEM_SOMOS_IMAGENS, start=1):
+            crud.create_quem_somos_imagem(
+                db,
+                schemas.QuemSomosImagemCreate(
+                    alt_texto=imagem.get("alt_texto"),
+                    imagem_url=imagem.get("imagem_url"),
+                    ordem_exibicao=idx,
+                ),
+            )
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def _startup() -> None:
     init_db()
     _seed_catalogo_inicial()
+    _seed_quem_somos_inicial()
 
 
 def _slugify(value: Optional[str]) -> str:
@@ -223,6 +261,13 @@ def _subcategoria_image_url(subcategoria: models.Subcategoria) -> str:
     return (getattr(subcategoria, "imagem_url", None) or "").strip() or crud.PLACEHOLDER_IMAGE_URL
 
 
+def _quem_somos_image_url(imagem: models.QuemSomosImagem) -> str:
+    if getattr(imagem, "imagem_bytes", None):
+        return f"/media/quem-somos/{imagem.id}/imagem"
+
+    return (getattr(imagem, "imagem_url", None) or "").strip() or crud.PLACEHOLDER_IMAGE_URL
+
+
 def _categoria_view(categoria: models.Categoria) -> dict[str, Optional[str]]:
     return {
         "id": categoria.id,
@@ -244,6 +289,15 @@ def _subcategoria_view(subcategoria: models.Subcategoria) -> dict[str, Optional[
         "nome_exibicao": subcategoria.nome_exibicao,
         "imagem_url": _subcategoria_image_url(subcategoria),
         "ordem_exibicao": subcategoria.ordem_exibicao,
+    }
+
+
+def _quem_somos_image_view(imagem: models.QuemSomosImagem) -> dict[str, Optional[str]]:
+    return {
+        "id": imagem.id,
+        "alt_texto": (imagem.alt_texto or "").strip() or "Casa das Cantoneiras",
+        "imagem_url": _quem_somos_image_url(imagem),
+        "ordem_exibicao": imagem.ordem_exibicao,
     }
 
 
@@ -482,6 +536,18 @@ def _categoria_create_from_form(
     )
 
 
+def _quem_somos_imagem_from_form(
+    alt_texto: Optional[str],
+    ordem_exibicao: Optional[int],
+    imagem_url: Optional[str] = None,
+) -> schemas.QuemSomosImagemCreate:
+    return schemas.QuemSomosImagemCreate(
+        alt_texto=(alt_texto or "").strip() or None,
+        imagem_url=(imagem_url or "").strip() or None,
+        ordem_exibicao=_ordem_normalizada(ordem_exibicao),
+    )
+
+
 def _subcategoria_create_from_form(
     db: Session,
     categoria_slug: str,
@@ -564,6 +630,9 @@ def _catalogo_admin_context(db: Session) -> dict[str, object]:
         "categorias": catalogo["categorias"],
         "subcategorias": catalogo["subcategorias"],
         "subcategorias_por_categoria": catalogo["subcategorias_por_categoria"],
+        "quem_somos_imagens": [
+            _quem_somos_image_view(imagem) for imagem in crud.list_quem_somos_imagens(db)
+        ],
         "produtos": produtos,
     }
 
@@ -582,11 +651,14 @@ def home(request: Request, db: Session = Depends(get_db)):
 
 
 @app.get("/quem-somos", response_class=HTMLResponse)
-def quem_somos(request: Request):
+def quem_somos(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         "quem_somos.html",
         {
             "request": request,
+            "galeria_quem_somos": [
+                _quem_somos_image_view(imagem) for imagem in crud.list_quem_somos_imagens(db)
+            ],
             "whatsapp_numero": telefone_visivel(),
         },
     )
@@ -741,6 +813,16 @@ def media_subcategoria_imagem(subcategoria_id: int, db: Session = Depends(get_db
 
     mime = getattr(subcategoria, "imagem_mime", None) or "application/octet-stream"
     return Response(content=subcategoria.imagem_bytes, media_type=mime)
+
+
+@app.get("/media/quem-somos/{imagem_id}/imagem")
+def media_quem_somos_imagem(imagem_id: int, db: Session = Depends(get_db)):
+    imagem = crud.get_quem_somos_imagem(db, imagem_id=imagem_id)
+    if not imagem or not getattr(imagem, "imagem_bytes", None):
+        raise HTTPException(status_code=404, detail="Imagem nao encontrada")
+
+    mime = getattr(imagem, "imagem_mime", None) or "application/octet-stream"
+    return Response(content=imagem.imagem_bytes, media_type=mime)
 
 
 @app.get("/media/produto/{produto_id}/imagem-medidas")
@@ -1044,6 +1126,88 @@ def admin_subcategoria_excluir(
 ):
     if not crud.delete_subcategoria(db, subcategoria_id=subcategoria_id):
         raise HTTPException(status_code=404, detail="Subcatalogo nao encontrado")
+    return Response(status_code=204)
+
+
+@app.post("/admin/quem-somos/imagem")
+def admin_quem_somos_imagem_nova(
+    _: str = Depends(_auth_admin),
+    alt_texto: str = Form(""),
+    imagem: UploadFile = File(None),
+    ordem_exibicao: Optional[int] = Form(None),
+    db: Session = Depends(get_db),
+):
+    imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
+    if imagem_bytes is None:
+        raise HTTPException(status_code=400, detail="Selecione uma imagem para a galeria")
+
+    crud.create_quem_somos_imagem(
+        db,
+        _quem_somos_imagem_from_form(alt_texto, ordem_exibicao),
+        imagem_bytes=imagem_bytes,
+        imagem_mime=imagem_mime,
+    )
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.put("/admin/quem-somos/imagem/{imagem_id}")
+def admin_quem_somos_imagem_atualizar(
+    imagem_id: int,
+    _: str = Depends(_auth_admin),
+    alt_texto: str = Form(""),
+    imagem: UploadFile = File(None),
+    ordem_exibicao: Optional[int] = Form(None),
+    db: Session = Depends(get_db),
+):
+    imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
+    imagem_atualizada = crud.update_quem_somos_imagem(
+        db,
+        imagem_id=imagem_id,
+        dados=schemas.QuemSomosImagemUpdate(
+            **_schema_dump(_quem_somos_imagem_from_form(alt_texto, ordem_exibicao))
+        ),
+        imagem_bytes=imagem_bytes,
+        imagem_mime=imagem_mime,
+    )
+    if not imagem_atualizada:
+        raise HTTPException(status_code=404, detail="Imagem da galeria nao encontrada")
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/quem-somos/imagem/{imagem_id}")
+def admin_quem_somos_imagem_method_override(
+    imagem_id: int,
+    _: str = Depends(_auth_admin),
+    _method: Optional[str] = Form(None),
+    alt_texto: str = Form(""),
+    imagem: UploadFile = File(None),
+    ordem_exibicao: Optional[int] = Form(None),
+    db: Session = Depends(get_db),
+):
+    if (_method or "").strip().upper() == "PUT":
+        return admin_quem_somos_imagem_atualizar(
+            imagem_id=imagem_id,
+            _=_,
+            alt_texto=alt_texto,
+            imagem=imagem,
+            ordem_exibicao=ordem_exibicao,
+            db=db,
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+        detail="Metodo nao suportado para /admin/quem-somos/imagem/{id}. Use _method=PUT ou DELETE.",
+    )
+
+
+@app.delete("/admin/quem-somos/imagem/{imagem_id}")
+def admin_quem_somos_imagem_excluir(
+    imagem_id: int,
+    _: str = Depends(_auth_admin),
+    db: Session = Depends(get_db),
+):
+    if not crud.delete_quem_somos_imagem(db, imagem_id=imagem_id):
+        raise HTTPException(status_code=404, detail="Imagem da galeria nao encontrada")
     return Response(status_code=204)
 
 
