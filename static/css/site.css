@@ -437,7 +437,7 @@ button{ cursor: pointer; }
   margin: 0 0 var(--space-4);
   color: #000;
   line-height: 1.08;
-  font-weight: 950;
+  font-weight: 400;
   letter-spacing: 0.01em;
 }
 
@@ -1079,10 +1079,35 @@ button{ cursor: pointer; }
   display: grid;
   justify-items: center;
   text-align: center;
+  row-gap: 14px;
 }
 .statement__content .heading-lg{
   text-align: center;
   justify-self: start !important;
+}
+.statement__title{
+  margin-bottom: 20px;
+}
+.statement__subtitle{
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.statement__text{
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto 8px;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.52;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.statement__text--bold{
+  font-weight: 700;
 }
 .statement__gallery{
   display: grid;
