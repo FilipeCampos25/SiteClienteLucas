@@ -1213,6 +1213,10 @@ body {
   max-width: 260px;
 }
 
+.upload-preview-wide {
+  max-width: 720px;
+}
+
 .upload-preview-img {
   width: 100%;
   max-width: 260px;
@@ -1222,6 +1226,11 @@ body {
   border: 1px solid var(--cinza-medio);
   box-shadow: var(--shadow-sm);
   display: none;
+}
+
+.upload-preview-img-wide {
+  max-width: 720px;
+  aspect-ratio: 16 / 5;
 }
 
 .upload-preview-img.is-visible {

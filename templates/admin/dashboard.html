@@ -32,6 +32,63 @@
   <div class="admin-card">
     <div class="card-header">
       <h2 class="card-title">
+        <span class="card-icon">~</span>
+        Imagem da Home
+      </h2>
+    </div>
+
+    <form method="post" action="/admin/site-imagem/{{ home_banner_image.chave }}" class="admin-form" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="home-banner-alt-texto" class="form-label">Texto alternativo</label>
+          <input
+            type="text"
+            id="home-banner-alt-texto"
+            name="alt_texto"
+            value="{{ home_banner_image.alt_texto }}"
+            class="form-input"
+            placeholder="Ex: Imagem institucional"
+          >
+        </div>
+
+        <div class="form-group form-group-full">
+          <label class="form-label">Banner institucional da Home</label>
+          <label class="upload-area">
+            <input
+              type="file"
+              name="imagem"
+              accept="image/png,image/jpeg,image/webp"
+              class="upload-input"
+              onchange="updateUploadPreview(this, 'home-banner-preview', 'home-banner-upload-label')"
+            >
+            <span class="upload-content">
+              <span class="upload-title">Selecionar nova imagem</span>
+              <span class="upload-subtitle">PNG, JPG ou WEBP. Mantem a atual se nao escolher.</span>
+              <span id="home-banner-upload-label" class="upload-filename">Nenhum arquivo selecionado</span>
+            </span>
+          </label>
+          <div class="upload-preview upload-preview-wide">
+            <img
+              id="home-banner-preview"
+              class="upload-preview-img upload-preview-img-wide is-visible"
+              src="{{ home_banner_image.imagem_url }}"
+              alt="Preview do banner institucional da Home"
+              data-current-src="{{ home_banner_image.imagem_url }}"
+              onerror="this.style.display='none'"
+            >
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-save">Salvar Imagem da Home</button>
+    </form>
+  </div>
+</section>
+
+<section class="admin-section">
+  <div class="admin-card">
+    <div class="card-header">
+      <h2 class="card-title">
         <span class="card-icon">*</span>
         Galeria Quem Somos
       </h2>

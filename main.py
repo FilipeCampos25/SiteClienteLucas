@@ -146,6 +146,10 @@ DEFAULT_QUEM_SOMOS_IMAGENS = [
     },
 ]
 
+HOME_BANNER_IMAGE_KEY = "home_banner"
+HOME_BANNER_DEFAULT_ALT = "Imagem institucional"
+HOME_BANNER_DEFAULT_URL = "/static/images/img-larger.jpeg"
+
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
@@ -210,11 +214,25 @@ def _seed_quem_somos_inicial() -> None:
         db.close()
 
 
+def _seed_site_imagens_inicial() -> None:
+    db = SessionLocal()
+    try:
+        crud.ensure_site_imagem(
+            db,
+            chave=HOME_BANNER_IMAGE_KEY,
+            alt_texto=HOME_BANNER_DEFAULT_ALT,
+            imagem_url=HOME_BANNER_DEFAULT_URL,
+        )
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def _startup() -> None:
     init_db()
     _seed_catalogo_inicial()
     _seed_quem_somos_inicial()
+    _seed_site_imagens_inicial()
 
 
 def _slugify(value: Optional[str]) -> str:
@@ -268,6 +286,15 @@ def _quem_somos_image_url(imagem: models.QuemSomosImagem) -> str:
     return (getattr(imagem, "imagem_url", None) or "").strip() or crud.PLACEHOLDER_IMAGE_URL
 
 
+def _site_image_url(imagem: models.SiteImagem) -> str:
+    if getattr(imagem, "imagem_bytes", None):
+        versao = (getattr(imagem, "imagem_sha256", None) or "").strip()[:12]
+        cache_buster = f"?v={versao}" if versao else ""
+        return f"/media/site-imagem/{imagem.chave}/imagem{cache_buster}"
+
+    return (getattr(imagem, "imagem_url", None) or "").strip() or crud.PLACEHOLDER_IMAGE_URL
+
+
 def _categoria_view(categoria: models.Categoria) -> dict[str, Optional[str]]:
     return {
         "id": categoria.id,
@@ -299,6 +326,25 @@ def _quem_somos_image_view(imagem: models.QuemSomosImagem) -> dict[str, Optional
         "imagem_url": _quem_somos_image_url(imagem),
         "ordem_exibicao": imagem.ordem_exibicao,
     }
+
+
+def _site_image_view(imagem: models.SiteImagem) -> dict[str, Optional[str]]:
+    return {
+        "id": imagem.id,
+        "chave": imagem.chave,
+        "alt_texto": (imagem.alt_texto or "").strip() or HOME_BANNER_DEFAULT_ALT,
+        "imagem_url": _site_image_url(imagem),
+    }
+
+
+def _home_banner_image_view(db: Session) -> dict[str, Optional[str]]:
+    imagem = crud.ensure_site_imagem(
+        db,
+        chave=HOME_BANNER_IMAGE_KEY,
+        alt_texto=HOME_BANNER_DEFAULT_ALT,
+        imagem_url=HOME_BANNER_DEFAULT_URL,
+    )
+    return _site_image_view(imagem)
 
 
 def _catalogo_index(db: Session) -> dict[str, object]:
@@ -633,6 +679,7 @@ def _catalogo_admin_context(db: Session) -> dict[str, object]:
         "quem_somos_imagens": [
             _quem_somos_image_view(imagem) for imagem in crud.list_quem_somos_imagens(db)
         ],
+        "home_banner_image": _home_banner_image_view(db),
         "produtos": produtos,
     }
 
@@ -645,6 +692,7 @@ def home(request: Request, db: Session = Depends(get_db)):
         {
             "request": request,
             "categorias_home": catalogo["categorias"],
+            "home_banner_image": _home_banner_image_view(db),
             "whatsapp_numero": telefone_visivel(),
         },
     )
@@ -825,6 +873,16 @@ def media_quem_somos_imagem(imagem_id: int, db: Session = Depends(get_db)):
     return Response(content=imagem.imagem_bytes, media_type=mime)
 
 
+@app.get("/media/site-imagem/{chave}/imagem")
+def media_site_imagem(chave: str, db: Session = Depends(get_db)):
+    imagem = crud.get_site_imagem(db, chave=chave)
+    if not imagem or not getattr(imagem, "imagem_bytes", None):
+        raise HTTPException(status_code=404, detail="Imagem nao encontrada")
+
+    mime = getattr(imagem, "imagem_mime", None) or "application/octet-stream"
+    return Response(content=imagem.imagem_bytes, media_type=mime)
+
+
 @app.get("/media/produto/{produto_id}/imagem-medidas")
 def media_produto_imagem_medidas(produto_id: int, db: Session = Depends(get_db)):
     produto = crud.get_produto(db, produto_id=produto_id)
@@ -913,6 +971,30 @@ def admin_dashboard(
 def admin_logout(request: Request):
     request.session.clear()
     return RedirectResponse("/admin/login", status_code=303)
+
+
+@app.post("/admin/site-imagem/{chave}")
+def admin_site_imagem_atualizar(
+    chave: str,
+    _: str = Depends(_auth_admin),
+    alt_texto: str = Form(""),
+    imagem: UploadFile = File(None),
+    db: Session = Depends(get_db),
+):
+    if chave != HOME_BANNER_IMAGE_KEY:
+        raise HTTPException(status_code=404, detail="Imagem do site nao encontrada")
+
+    imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
+    crud.upsert_site_imagem(
+        db,
+        chave=HOME_BANNER_IMAGE_KEY,
+        dados=schemas.SiteImagemUpdate(alt_texto=(alt_texto or "").strip() or None),
+        default_alt_texto=HOME_BANNER_DEFAULT_ALT,
+        default_imagem_url=HOME_BANNER_DEFAULT_URL,
+        imagem_bytes=imagem_bytes,
+        imagem_mime=imagem_mime,
+    )
+    return RedirectResponse("/admin", status_code=303)
 
 
 @app.post("/admin/categoria")

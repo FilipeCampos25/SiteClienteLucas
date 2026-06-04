@@ -83,3 +83,19 @@ class QuemSomosImagem(Base):
 
     criado_em = Column(DateTime(timezone=True), server_default=func.now())
     atualizado_em = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class SiteImagem(Base):
+    __tablename__ = "site_imagens"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    chave = Column(String(80), nullable=False, unique=True, index=True)
+    alt_texto = Column(String(160), nullable=True)
+    imagem_url = Column(String, nullable=True)
+    imagem_mime = Column(String(64), nullable=True)
+    imagem_bytes = Column(LargeBinary, nullable=True)
+    imagem_sha256 = Column(String(64), nullable=True)
+
+    criado_em = Column(DateTime(timezone=True), server_default=func.now())
+    atualizado_em = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

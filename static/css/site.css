@@ -1106,9 +1106,6 @@ button{ cursor: pointer; }
   font-weight: 400;
   letter-spacing: 0;
 }
-.statement__text--bold{
-  font-weight: 700;
-}
 .statement__gallery{
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

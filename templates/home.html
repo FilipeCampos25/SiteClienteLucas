@@ -63,7 +63,11 @@
 </section>
 
 <section class="sectors sectors--fullbleed sectors--home-banner">
-  <img src="/static/images/img-larger.jpeg" alt="Imagem institucional" class="sectors__fullbleedImage">
+  <img
+    src="{{ home_banner_image.imagem_url }}"
+    alt="{{ home_banner_image.alt_texto }}"
+    class="sectors__fullbleedImage"
+  >
 </section>
 
 {% endblock %}

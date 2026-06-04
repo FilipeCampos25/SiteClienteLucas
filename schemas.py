@@ -82,6 +82,21 @@ class QuemSomosImagemUpdate(BaseModel):
     ordem_exibicao: Optional[int] = None
 
 
+class SiteImagemBase(BaseModel):
+    chave: str
+    alt_texto: Optional[str] = None
+    imagem_url: Optional[str] = None
+
+
+class SiteImagemCreate(SiteImagemBase):
+    pass
+
+
+class SiteImagemUpdate(BaseModel):
+    alt_texto: Optional[str] = None
+    imagem_url: Optional[str] = None
+
+
 class ProdutoOut(ProdutoBase):
     id: int
     imagem_url: Optional[str] = None

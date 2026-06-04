@@ -453,6 +453,94 @@ def delete_quem_somos_imagem(db: Session, *, imagem_id: int) -> bool:
     return True
 
 
+def get_site_imagem(db: Session, *, chave: str) -> Optional[models.SiteImagem]:
+    return db.query(models.SiteImagem).filter(models.SiteImagem.chave == chave.strip()).first()
+
+
+def ensure_site_imagem(
+    db: Session,
+    *,
+    chave: str,
+    alt_texto: Optional[str],
+    imagem_url: Optional[str],
+) -> models.SiteImagem:
+    imagem = get_site_imagem(db, chave=chave)
+    if imagem:
+        mudou = False
+        if not _clean_optional_str(imagem.alt_texto):
+            imagem.alt_texto = _clean_optional_str(alt_texto)
+            mudou = True
+        if not _clean_optional_str(imagem.imagem_url) and not getattr(imagem, "imagem_bytes", None):
+            imagem.imagem_url = _clean_optional_str(imagem_url) or PLACEHOLDER_IMAGE_URL
+            mudou = True
+        if mudou:
+            db.commit()
+            db.refresh(imagem)
+        return imagem
+
+    nova_imagem = models.SiteImagem(
+        chave=chave.strip(),
+        alt_texto=_clean_optional_str(alt_texto),
+        imagem_url=_clean_optional_str(imagem_url) or PLACEHOLDER_IMAGE_URL,
+    )
+    db.add(nova_imagem)
+    db.commit()
+    db.refresh(nova_imagem)
+    return nova_imagem
+
+
+def upsert_site_imagem(
+    db: Session,
+    *,
+    chave: str,
+    dados: schemas.SiteImagemUpdate,
+    default_alt_texto: Optional[str] = None,
+    default_imagem_url: Optional[str] = None,
+    imagem_bytes: Optional[bytes] = None,
+    imagem_mime: Optional[str] = None,
+) -> models.SiteImagem:
+    chave_normalizada = chave.strip()
+    if not chave_normalizada:
+        raise ValueError("Informe uma chave valida para a imagem do site")
+
+    imagem = get_site_imagem(db, chave=chave_normalizada)
+    if not imagem:
+        imagem = models.SiteImagem(
+            chave=chave_normalizada,
+            alt_texto=_clean_optional_str(dados.alt_texto) or _clean_optional_str(default_alt_texto),
+            imagem_url=(
+                _clean_optional_str(dados.imagem_url)
+                or _clean_optional_str(default_imagem_url)
+                or PLACEHOLDER_IMAGE_URL
+            ),
+        )
+        db.add(imagem)
+    else:
+        if _field_was_provided(dados, "alt_texto"):
+            imagem.alt_texto = _clean_optional_str(dados.alt_texto) or _clean_optional_str(default_alt_texto)
+        if dados.imagem_url is not None:
+            imagem.imagem_url = (
+                _clean_optional_str(dados.imagem_url)
+                or _clean_optional_str(default_imagem_url)
+                or PLACEHOLDER_IMAGE_URL
+            )
+        if not _clean_optional_str(imagem.imagem_url) and not getattr(imagem, "imagem_bytes", None):
+            imagem.imagem_url = _clean_optional_str(default_imagem_url) or PLACEHOLDER_IMAGE_URL
+
+    _apply_image_data(
+        imagem,
+        image_bytes_attr="imagem_bytes",
+        image_mime_attr="imagem_mime",
+        image_sha_attr="imagem_sha256",
+        image_bytes=imagem_bytes,
+        image_mime=imagem_mime,
+    )
+
+    db.commit()
+    db.refresh(imagem)
+    return imagem
+
+
 def get_produto(db: Session, *, produto_id: int) -> Optional[models.Produto]:
     return db.query(models.Produto).filter(models.Produto.id == produto_id).first()
 
