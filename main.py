@@ -5,6 +5,7 @@ import os
 import re
 import unicodedata
 from typing import Generator, List, Optional
+from urllib.parse import quote_plus
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,7 +33,6 @@ from config import (
     WHATSAPP_NUMERO,
 )
 from database import SessionLocal, init_db
-from utils import gerar_link_whatsapp, gerar_link_whatsapp_text, telefone_visivel
 
 app = FastAPI(title="Casa das Cantoneiras")
 
@@ -52,10 +52,43 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+
+def _numero_whatsapp_limpo(numero: Optional[str]) -> str:
+    return "".join(ch for ch in (numero or "") if ch.isdigit())
+
+
+def _telefone_visivel_numero(numero: Optional[str]) -> str:
+    num = _numero_whatsapp_limpo(numero)
+    if not num:
+        return ""
+
+    if len(num) >= 12 and num.startswith("55"):
+        country = "+" + num[:2]
+        area = num[2:4]
+        rest = num[4:]
+        if len(rest) == 8:
+            return f"{country} ({area}) {rest[:4]}-{rest[4:]}"
+        if len(rest) == 9:
+            return f"{country} ({area}) {rest[:5]}-{rest[5:]}"
+        return f"{country} ({area}) {rest}"
+
+    return "+" + num
+
+
+def _whatsapp_link_numero(numero: Optional[str], texto: Optional[str] = None) -> str:
+    num = _numero_whatsapp_limpo(numero)
+    if not num:
+        return "#"
+    if texto:
+        return f"https://wa.me/{num}?text={quote_plus(texto)}"
+    return f"https://wa.me/{num}"
+
+
 templates.env.globals.update(
     WHATSAPP_NUMERO=WHATSAPP_NUMERO or "",
-    WHATSAPP_DISPLAY=telefone_visivel(),
-    WHATSAPP_LINK=gerar_link_whatsapp([]),
+    WHATSAPP_DISPLAY=_telefone_visivel_numero(WHATSAPP_NUMERO),
+    WHATSAPP_LINK=_whatsapp_link_numero(WHATSAPP_NUMERO),
     INSTAGRAM_URL=INSTAGRAM_URL or "",
     FACEBOOK_URL=FACEBOOK_URL or "",
     STORE_ADDRESS=STORE_ADDRESS or "",
@@ -149,6 +182,91 @@ DEFAULT_QUEM_SOMOS_IMAGENS = [
 HOME_BANNER_IMAGE_KEY = "home_banner"
 HOME_BANNER_DEFAULT_ALT = "Imagem institucional"
 HOME_BANNER_DEFAULT_URL = "/static/images/img-larger.jpeg"
+SITE_LOGO_IMAGE_KEY = "site_logo"
+HOME_HERO_IMAGE_KEY = "home_hero_logo"
+
+SITE_IMAGE_DEFAULTS = {
+    SITE_LOGO_IMAGE_KEY: {
+        "label": "Logo do header e footer",
+        "help": "Usada na marca do topo e no rodape.",
+        "alt_texto": "Logo Casa das Cantoneiras",
+        "imagem_url": "/static/images/logomarca.png",
+    },
+    HOME_HERO_IMAGE_KEY: {
+        "label": "Imagem principal da Home",
+        "help": "Imagem exibida ao lado do texto principal da Home.",
+        "alt_texto": "Logo Casa das Cantoneiras",
+        "imagem_url": "/static/images/placeholder.png",
+    },
+    HOME_BANNER_IMAGE_KEY: {
+        "label": "Banner institucional da Home",
+        "help": "Imagem larga exibida abaixo das categorias.",
+        "alt_texto": HOME_BANNER_DEFAULT_ALT,
+        "imagem_url": HOME_BANNER_DEFAULT_URL,
+    },
+}
+
+DEFAULT_MAP_EMBED_URL = (
+    "https://www.google.com/maps?q=Rua%2008%2C%20Ch%C3%A1cara%20225%2C%20Loja%202%2F3%2C%20"
+    "Vicente%20Pires%2C%20Bras%C3%ADlia%20-%20DF%2C%2072007-065&z=17&output=embed"
+)
+
+DEFAULT_SITE_CONFIG = {
+    "site_title": "Casa das Cantoneiras - Catálogo",
+    "header_brand_name": "CASA DAS CANTONEIRAS",
+    "header_brand_tagline": "SOLUÇÕES EM PRODUTOS PARA FIXAÇÃO",
+    "nav_home": "Home",
+    "nav_quem_somos": "Quem Somos",
+    "nav_produtos": "Produtos",
+    "nav_contato": "Contato",
+    "whatsapp_numero": WHATSAPP_NUMERO or "",
+    "instagram_url": INSTAGRAM_URL or "",
+    "facebook_url": FACEBOOK_URL or "",
+    "home_hero_kicker": "Soluções em Cantoneiras e Acabamentos",
+    "home_hero_title": (
+        "Somos especialistas em acabamentos e suportes de alta qualidade. Oferecemos uma linha completa de "
+        "cantoneiras de alumínio e zinco, soluções práticas para reboco, perfis antiderrapantes para escadas, "
+        "além de cantoneiras reforçadas para o suporte de bancadas e prateleiras."
+    ),
+    "home_categories_kicker": "Categorias",
+    "home_categories_title": "ESCOLHA UMA LINHA",
+    "produtos_kicker": "Linha de produtos",
+    "produtos_title": "ESCOLHA UMA LINHA",
+    "produtos_subtitle": "Selecione uma categoria para acessar a página dedicada e visualizar os produtos disponíveis.",
+    "quem_somos_title": "Quem somos:",
+    "quem_somos_history_title": "Nossa História:",
+    "quem_somos_history_text": (
+        "A Casa das Cantoneiras surgiu da necessidade prática de encontrar tudo o que um projeto precisa em um só "
+        "lugar, combinada com o desejo de empreender entregando excelência ao mercado. Somos especialistas em "
+        "soluções de fixação e acabamento, oferecendo uma linha completa que vai de cantoneiras para escadas e "
+        "paredes a suportes específicos para prateleiras e bancadas, seja para ambientes residenciais ou comerciais."
+    ),
+    "quem_somos_work_title": "Como Trabalhamos:",
+    "quem_somos_work_text_1": (
+        "Atendimento Próximo e Consultivo: Não queremos apenas vender, queremos entender. Oferecemos um suporte "
+        "humanizado e técnico para que você encontre exatamente o que a sua estrutura precisa, sem complicações."
+    ),
+    "quem_somos_work_text_2": (
+        "Compromisso Inegociável com a Qualidade: Trabalhamos com materiais de alto padrão que garantem "
+        "durabilidade, resistência e o acabamento perfeito. Seu projeto merece a segurança de produtos que duram "
+        "uma vida inteira."
+    ),
+    "quem_somos_button_label": "Fale com a equipe",
+    "contato_title": "FALE COM A CASA DAS CANTONEIRAS!",
+    "contato_subtitle": "Nossa equipe está pronta para orientar sua consulta, tirar dúvidas e indicar o melhor catálogo.",
+    "contato_button_label": "Fale Conosco",
+    "contato_cta_title": "ATENDIMENTO RÁPIDO POR WHATSAPP E TELEFONE",
+    "contato_cta_button_label": "Iniciar conversa",
+    "footer_brand_title": "Casa das Cantoneiras",
+    "footer_description": "Catálogo de produtos com atendimento direto e rápido para sua obra.",
+    "footer_privacy_label": "Política de Privacidade",
+    "footer_copyright": "Todos os direitos reservados © 2026",
+    "store_address": STORE_ADDRESS or "",
+    "store_cnpj": STORE_CNPJ or "",
+    "map_title": "LOCALIZAÇÃO",
+    "map_address": STORE_ADDRESS or "",
+    "map_embed_url": DEFAULT_MAP_EMBED_URL,
+}
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -217,12 +335,21 @@ def _seed_quem_somos_inicial() -> None:
 def _seed_site_imagens_inicial() -> None:
     db = SessionLocal()
     try:
-        crud.ensure_site_imagem(
-            db,
-            chave=HOME_BANNER_IMAGE_KEY,
-            alt_texto=HOME_BANNER_DEFAULT_ALT,
-            imagem_url=HOME_BANNER_DEFAULT_URL,
-        )
+        for chave, imagem in SITE_IMAGE_DEFAULTS.items():
+            crud.ensure_site_imagem(
+                db,
+                chave=chave,
+                alt_texto=imagem["alt_texto"],
+                imagem_url=imagem["imagem_url"],
+            )
+    finally:
+        db.close()
+
+
+def _seed_site_config_inicial() -> None:
+    db = SessionLocal()
+    try:
+        crud.ensure_site_config_defaults(db, DEFAULT_SITE_CONFIG)
     finally:
         db.close()
 
@@ -233,6 +360,7 @@ def _startup() -> None:
     _seed_catalogo_inicial()
     _seed_quem_somos_inicial()
     _seed_site_imagens_inicial()
+    _seed_site_config_inicial()
 
 
 def _slugify(value: Optional[str]) -> str:
@@ -329,22 +457,85 @@ def _quem_somos_image_view(imagem: models.QuemSomosImagem) -> dict[str, Optional
 
 
 def _site_image_view(imagem: models.SiteImagem) -> dict[str, Optional[str]]:
+    default_alt = SITE_IMAGE_DEFAULTS.get(imagem.chave, {}).get("alt_texto", HOME_BANNER_DEFAULT_ALT)
     return {
         "id": imagem.id,
         "chave": imagem.chave,
-        "alt_texto": (imagem.alt_texto or "").strip() or HOME_BANNER_DEFAULT_ALT,
+        "alt_texto": (imagem.alt_texto or "").strip() or default_alt,
         "imagem_url": _site_image_url(imagem),
     }
 
 
-def _home_banner_image_view(db: Session) -> dict[str, Optional[str]]:
+def _site_image_view_by_key(db: Session, chave: str) -> dict[str, Optional[str]]:
+    default = SITE_IMAGE_DEFAULTS[chave]
     imagem = crud.ensure_site_imagem(
         db,
-        chave=HOME_BANNER_IMAGE_KEY,
-        alt_texto=HOME_BANNER_DEFAULT_ALT,
-        imagem_url=HOME_BANNER_DEFAULT_URL,
+        chave=chave,
+        alt_texto=default["alt_texto"],
+        imagem_url=default["imagem_url"],
     )
-    return _site_image_view(imagem)
+    view = _site_image_view(imagem)
+    view["label"] = default["label"]
+    view["help"] = default["help"]
+    return view
+
+
+def _home_banner_image_view(db: Session) -> dict[str, Optional[str]]:
+    return _site_image_view_by_key(db, HOME_BANNER_IMAGE_KEY)
+
+
+def _site_settings(db: Session) -> dict[str, str]:
+    settings = DEFAULT_SITE_CONFIG.copy()
+    settings.update(crud.ensure_site_config_defaults(db, DEFAULT_SITE_CONFIG))
+    return settings
+
+
+def _site_context(db: Session) -> dict[str, object]:
+    settings = _site_settings(db)
+    whatsapp_numero = settings.get("whatsapp_numero", "")
+    whatsapp_link = _whatsapp_link_numero(whatsapp_numero)
+    map_address = settings.get("map_address", "")
+    map_embed_url = settings.get("map_embed_url", "").strip()
+    if not map_embed_url and map_address:
+        map_embed_url = f"https://www.google.com/maps?q={quote_plus(map_address)}&z=17&output=embed"
+
+    logo = _site_image_view_by_key(db, SITE_LOGO_IMAGE_KEY)
+    return {
+        "SITE_CONFIG": settings,
+        "WHATSAPP_NUMERO": _numero_whatsapp_limpo(whatsapp_numero),
+        "WHATSAPP_DISPLAY": _telefone_visivel_numero(whatsapp_numero),
+        "WHATSAPP_LINK": whatsapp_link,
+        "INSTAGRAM_URL": settings.get("instagram_url", ""),
+        "FACEBOOK_URL": settings.get("facebook_url", ""),
+        "STORE_ADDRESS": settings.get("store_address", ""),
+        "STORE_CNPJ": settings.get("store_cnpj", ""),
+        "LOGO_URL": logo["imagem_url"],
+        "LOGO_ALT": logo["alt_texto"],
+        "MAP_EMBED_URL": map_embed_url,
+    }
+
+
+def _whatsapp_link_for_settings(settings: dict[str, str], texto: str) -> str:
+    return _whatsapp_link_numero(settings.get("whatsapp_numero", ""), texto)
+
+
+def _whatsapp_link_items(numero: Optional[str], itens: list[dict[str, object]]) -> str:
+    if not itens:
+        return _whatsapp_link_numero(numero)
+
+    texto = "Ola! Tenho interesse nos seguintes itens da Casa das Cantoneiras:\n\n"
+    total = 0.0
+    for item in itens:
+        qtd = int(item.get("quantidade") or 0)
+        nome = str(item.get("nome") or "")
+        valor_un = float(item.get("valor_unitario") or 0)
+        subtotal = qtd * valor_un
+        total += subtotal
+        texto += f"- {qtd}x {nome} - R$ {valor_un:.2f}/un -> R$ {subtotal:.2f}\n"
+
+    texto += f"\nTotal estimado: R$ {total:.2f}\n\nPode me passar orcamento com frete e prazo de entrega?"
+    return _whatsapp_link_numero(numero, texto)
+
 
 
 def _catalogo_index(db: Session) -> dict[str, object]:
@@ -684,30 +875,60 @@ def _catalogo_admin_context(db: Session) -> dict[str, object]:
     }
 
 
+def _frontend_admin_context(db: Session) -> dict[str, object]:
+    return {
+        "site_config": _site_settings(db),
+        "site_images": {
+            chave: _site_image_view_by_key(db, chave)
+            for chave in SITE_IMAGE_DEFAULTS
+        },
+        "site_image_fields": [
+            {
+                "chave": chave,
+                "label": dados["label"],
+                "help": dados["help"],
+            }
+            for chave, dados in SITE_IMAGE_DEFAULTS.items()
+        ],
+    }
+
+
+def _admin_context(db: Session, *, admin_page: str) -> dict[str, object]:
+    contexto = _catalogo_admin_context(db)
+    contexto.update(_frontend_admin_context(db))
+    contexto["admin_page"] = admin_page
+    return contexto
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request, db: Session = Depends(get_db)):
     catalogo = _catalogo_index(db)
+    site_context = _site_context(db)
     return templates.TemplateResponse(
         "home.html",
         {
             "request": request,
+            **site_context,
             "categorias_home": catalogo["categorias"],
             "home_banner_image": _home_banner_image_view(db),
-            "whatsapp_numero": telefone_visivel(),
+            "home_hero_image": _site_image_view_by_key(db, HOME_HERO_IMAGE_KEY),
+            "whatsapp_numero": site_context["WHATSAPP_DISPLAY"],
         },
     )
 
 
 @app.get("/quem-somos", response_class=HTMLResponse)
 def quem_somos(request: Request, db: Session = Depends(get_db)):
+    site_context = _site_context(db)
     return templates.TemplateResponse(
         "quem_somos.html",
         {
             "request": request,
+            **site_context,
             "galeria_quem_somos": [
                 _quem_somos_image_view(imagem) for imagem in crud.list_quem_somos_imagens(db)
             ],
-            "whatsapp_numero": telefone_visivel(),
+            "whatsapp_numero": site_context["WHATSAPP_DISPLAY"],
         },
     )
 
@@ -721,12 +942,17 @@ def categoria_detalhe(slug: str, request: Request, db: Session = Depends(get_db)
 
     subcategorias = catalogo["subcategorias_por_categoria"].get(slug, [])
     produtos_db = [] if subcategorias else crud.get_produtos(db, categoria_slug=slug)
-    whatsapp_link = gerar_link_whatsapp_text(f"Ola! Tenho interesse na categoria {categoria['nome']}.")
+    site_context = _site_context(db)
+    whatsapp_link = _whatsapp_link_for_settings(
+        site_context["SITE_CONFIG"],
+        f"Ola! Tenho interesse na categoria {categoria['nome']}.",
+    )
 
     return templates.TemplateResponse(
         "categoria.html",
         {
             "request": request,
+            **site_context,
             "categoria": categoria,
             "produtos": [
                 _produto_view(
@@ -738,7 +964,7 @@ def categoria_detalhe(slug: str, request: Request, db: Session = Depends(get_db)
             ],
             "subcategorias": subcategorias,
             "subcategoria_atual": None,
-            "whatsapp_numero": telefone_visivel(),
+            "whatsapp_numero": site_context["WHATSAPP_DISPLAY"],
             "whatsapp_link": whatsapp_link,
         },
     )
@@ -761,14 +987,17 @@ def subcategoria_detalhe(
         raise HTTPException(status_code=404, detail="Subcatalogo nao encontrado")
 
     produtos_db = crud.get_produtos(db, categoria_slug=slug, subcategoria_slug=subcategoria_slug)
-    whatsapp_link = gerar_link_whatsapp_text(
-        f"Ola! Tenho interesse em {subcategoria['nome']} da categoria {categoria['nome']}."
+    site_context = _site_context(db)
+    whatsapp_link = _whatsapp_link_for_settings(
+        site_context["SITE_CONFIG"],
+        f"Ola! Tenho interesse em {subcategoria['nome']} da categoria {categoria['nome']}.",
     )
 
     return templates.TemplateResponse(
         "categoria.html",
         {
             "request": request,
+            **site_context,
             "categoria": categoria,
             "produtos": [
                 _produto_view(
@@ -780,7 +1009,7 @@ def subcategoria_detalhe(
             ],
             "subcategorias": catalogo["subcategorias_por_categoria"].get(slug, []),
             "subcategoria_atual": subcategoria,
-            "whatsapp_numero": telefone_visivel(),
+            "whatsapp_numero": site_context["WHATSAPP_DISPLAY"],
             "whatsapp_link": whatsapp_link,
         },
     )
@@ -789,23 +1018,27 @@ def subcategoria_detalhe(
 @app.get("/produtos", response_class=HTMLResponse)
 def produtos(request: Request, db: Session = Depends(get_db)):
     catalogo = _catalogo_index(db)
+    site_context = _site_context(db)
     return templates.TemplateResponse(
         "produtos.html",
         {
             "request": request,
+            **site_context,
             "categorias_home": catalogo["categorias"],
-            "whatsapp_numero": telefone_visivel(),
+            "whatsapp_numero": site_context["WHATSAPP_DISPLAY"],
         },
     )
 
 
 @app.get("/contato", response_class=HTMLResponse)
-def contato(request: Request):
+def contato(request: Request, db: Session = Depends(get_db)):
+    site_context = _site_context(db)
     return templates.TemplateResponse(
         "contato.html",
         {
             "request": request,
-            "whatsapp_numero": telefone_visivel(),
+            **site_context,
+            "whatsapp_numero": site_context["WHATSAPP_DISPLAY"],
         },
     )
 
@@ -817,17 +1050,22 @@ def produto_detalhe(produto_id: int, request: Request, db: Session = Depends(get
         raise HTTPException(status_code=404, detail="Produto nao encontrado")
 
     catalogo = _catalogo_index(db)
-    whatsapp_link = gerar_link_whatsapp_text(f"Ola! Tenho interesse no produto {produto.nome}.")
+    site_context = _site_context(db)
+    whatsapp_link = _whatsapp_link_for_settings(
+        site_context["SITE_CONFIG"],
+        f"Ola! Tenho interesse no produto {produto.nome}.",
+    )
     return templates.TemplateResponse(
         "produto.html",
         {
             "request": request,
+            **site_context,
             "produto": _produto_view(
                 produto,
                 categorias_por_slug=catalogo["categorias_por_slug"],
                 subcategorias_por_chave=catalogo["subcategorias_por_chave"],
             ),
-            "whatsapp_numero": telefone_visivel(),
+            "whatsapp_numero": site_context["WHATSAPP_DISPLAY"],
             "whatsapp_link": whatsapp_link,
         },
     )
@@ -918,9 +1156,10 @@ def api_produtos(db: Session = Depends(get_db)):
 
 
 @app.post("/api/whatsapp")
-def api_whatsapp(itens: List[schemas.ItemCarrinho]):
+def api_whatsapp(itens: List[schemas.ItemCarrinho], db: Session = Depends(get_db)):
     itens_dict = [i.model_dump() if hasattr(i, "model_dump") else i.dict() for i in itens]
-    return {"url": gerar_link_whatsapp(itens_dict)}
+    settings = _site_settings(db)
+    return {"url": _whatsapp_link_items(settings.get("whatsapp_numero", ""), itens_dict)}
 
 
 @app.get("/admin/login", response_class=HTMLResponse)
@@ -957,12 +1196,45 @@ def admin_dashboard(
     if not _is_admin_authed(request):
         return RedirectResponse("/admin/login", status_code=303)
 
-    contexto = _catalogo_admin_context(db)
     return templates.TemplateResponse(
         "admin/dashboard.html",
         {
             "request": request,
-            **contexto,
+            **_admin_context(db, admin_page="dashboard"),
+        },
+    )
+
+
+@app.get("/admin/catalogo", response_class=HTMLResponse)
+def admin_catalogo(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    if not _is_admin_authed(request):
+        return RedirectResponse("/admin/login", status_code=303)
+
+    return templates.TemplateResponse(
+        "admin/dashboard.html",
+        {
+            "request": request,
+            **_admin_context(db, admin_page="catalogo"),
+        },
+    )
+
+
+@app.get("/admin/frontend", response_class=HTMLResponse)
+def admin_frontend(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    if not _is_admin_authed(request):
+        return RedirectResponse("/admin/login", status_code=303)
+
+    return templates.TemplateResponse(
+        "admin/dashboard.html",
+        {
+            "request": request,
+            **_admin_context(db, admin_page="frontend"),
         },
     )
 
@@ -973,6 +1245,21 @@ def admin_logout(request: Request):
     return RedirectResponse("/admin/login", status_code=303)
 
 
+@app.post("/admin/frontend/config")
+async def admin_frontend_config_atualizar(
+    request: Request,
+    _: str = Depends(_auth_admin),
+    db: Session = Depends(get_db),
+):
+    form = await request.form()
+    dados = {
+        chave: str(form.get(chave, "")).strip()
+        for chave in DEFAULT_SITE_CONFIG
+    }
+    crud.upsert_site_configs(db, dados)
+    return RedirectResponse("/admin/frontend", status_code=303)
+
+
 @app.post("/admin/site-imagem/{chave}")
 def admin_site_imagem_atualizar(
     chave: str,
@@ -981,20 +1268,21 @@ def admin_site_imagem_atualizar(
     imagem: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
-    if chave != HOME_BANNER_IMAGE_KEY:
+    if chave not in SITE_IMAGE_DEFAULTS:
         raise HTTPException(status_code=404, detail="Imagem do site nao encontrada")
 
+    default = SITE_IMAGE_DEFAULTS[chave]
     imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
     crud.upsert_site_imagem(
         db,
-        chave=HOME_BANNER_IMAGE_KEY,
+        chave=chave,
         dados=schemas.SiteImagemUpdate(alt_texto=(alt_texto or "").strip() or None),
-        default_alt_texto=HOME_BANNER_DEFAULT_ALT,
-        default_imagem_url=HOME_BANNER_DEFAULT_URL,
+        default_alt_texto=default["alt_texto"],
+        default_imagem_url=default["imagem_url"],
         imagem_bytes=imagem_bytes,
         imagem_mime=imagem_mime,
     )
-    return RedirectResponse("/admin", status_code=303)
+    return RedirectResponse("/admin/frontend", status_code=303)
 
 
 @app.post("/admin/categoria")
@@ -1021,7 +1309,7 @@ def admin_categoria_novo(
         crud.create_categoria(db, dados, imagem_bytes=imagem_bytes, imagem_mime=imagem_mime)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return RedirectResponse("/admin", status_code=303)
+    return RedirectResponse("/admin/catalogo", status_code=303)
 
 
 @app.put("/admin/categoria/{categoria_id}")
@@ -1057,7 +1345,7 @@ def admin_categoria_atualizar(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not categoria:
         raise HTTPException(status_code=404, detail="Categoria nao encontrada")
-    return RedirectResponse("/admin", status_code=303)
+    return RedirectResponse("/admin/catalogo", status_code=303)
 
 
 @app.post("/admin/categoria/{categoria_id}")
@@ -1128,7 +1416,7 @@ def admin_subcategoria_novo(
         crud.create_subcategoria(db, dados, imagem_bytes=imagem_bytes, imagem_mime=imagem_mime)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return RedirectResponse("/admin", status_code=303)
+    return RedirectResponse("/admin/catalogo", status_code=303)
 
 
 @app.put("/admin/subcategoria/{subcategoria_id}")
@@ -1165,7 +1453,7 @@ def admin_subcategoria_atualizar(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not subcategoria:
         raise HTTPException(status_code=404, detail="Subcatalogo nao encontrado")
-    return RedirectResponse("/admin", status_code=303)
+    return RedirectResponse("/admin/catalogo", status_code=303)
 
 
 @app.post("/admin/subcategoria/{subcategoria_id}")
@@ -1229,7 +1517,7 @@ def admin_quem_somos_imagem_nova(
         imagem_bytes=imagem_bytes,
         imagem_mime=imagem_mime,
     )
-    return RedirectResponse("/admin", status_code=303)
+    return RedirectResponse("/admin/frontend", status_code=303)
 
 
 @app.put("/admin/quem-somos/imagem/{imagem_id}")
@@ -1253,7 +1541,7 @@ def admin_quem_somos_imagem_atualizar(
     )
     if not imagem_atualizada:
         raise HTTPException(status_code=404, detail="Imagem da galeria nao encontrada")
-    return RedirectResponse("/admin", status_code=303)
+    return RedirectResponse("/admin/frontend", status_code=303)
 
 
 @app.post("/admin/quem-somos/imagem/{imagem_id}")
@@ -1319,7 +1607,7 @@ def admin_produto_novo(
         imagem_extra_bytes=imagem_extra_bytes,
         imagem_extra_mime=imagem_extra_mime,
     )
-    return RedirectResponse("/admin", status_code=303)
+    return RedirectResponse("/admin/catalogo", status_code=303)
 
 
 @app.put("/admin/produto/{produto_id}")
@@ -1358,7 +1646,7 @@ def admin_produto_atualizar(
     )
     if not produto:
         raise HTTPException(status_code=404, detail="Produto nao encontrado")
-    return RedirectResponse("/admin", status_code=303)
+    return RedirectResponse("/admin/catalogo", status_code=303)
 
 
 @app.post("/admin/produto/{produto_id}")

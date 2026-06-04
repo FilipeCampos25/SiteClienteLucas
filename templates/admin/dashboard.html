@@ -1,11 +1,46 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% macro admin_input(name, label, value, type='text', placeholder='') %}
+<div class="form-group">
+  <label for="{{ name }}" class="form-label">{{ label }}</label>
+  <input
+    type="{{ type }}"
+    id="{{ name }}"
+    name="{{ name }}"
+    value="{{ value }}"
+    class="form-input"
+    placeholder="{{ placeholder }}"
+  >
+</div>
+{% endmacro %}
+
+{% macro admin_textarea(name, label, value, rows=4, placeholder='') %}
+<div class="form-group form-group-full">
+  <label for="{{ name }}" class="form-label">{{ label }}</label>
+  <textarea
+    id="{{ name }}"
+    name="{{ name }}"
+    class="form-textarea"
+    rows="{{ rows }}"
+    placeholder="{{ placeholder }}"
+  >{{ value }}</textarea>
+</div>
+{% endmacro %}
+
 <section class="admin-header">
   <div class="admin-header-content">
     <div>
       <h1 class="admin-title">Painel Administrativo</h1>
-      <p class="admin-subtitle">Gerencie categorias, subcatalogos e produtos da vitrine.</p>
+      <p class="admin-subtitle">
+        {% if admin_page == 'frontend' %}
+        Gerencie textos, imagens, redes sociais, header, footer e paginas institucionais.
+        {% elif admin_page == 'catalogo' %}
+        Gerencie categorias, subcatalogos e produtos da vitrine.
+        {% else %}
+        Escolha a area que deseja administrar.
+        {% endif %}
+      </p>
     </div>
     <div class="admin-stats">
       <div class="stat-badge">
@@ -28,6 +63,7 @@
   </div>
 </section>
 
+{% if admin_page == 'frontend' %}
 <section class="admin-section">
   <div class="admin-card">
     <div class="card-header">
@@ -82,6 +118,187 @@
 
       <button type="submit" class="btn-save">Salvar Imagem da Home</button>
     </form>
+  </div>
+</section>
+{% endif %}
+
+<section class="admin-section admin-section--compact">
+  <div class="admin-mode-nav">
+    <a href="/admin/catalogo" class="admin-mode-card{% if admin_page == 'catalogo' %} is-active{% endif %}">
+      <span class="admin-mode-card__title">Catalogo e produtos</span>
+      <span class="admin-mode-card__text">Categorias, subcatalogos, produtos e imagens dos itens.</span>
+    </a>
+    <a href="/admin/frontend" class="admin-mode-card{% if admin_page == 'frontend' %} is-active{% endif %}">
+      <span class="admin-mode-card__title">Frontend do site</span>
+      <span class="admin-mode-card__text">Textos, titulos, logo, banners, redes sociais, header e footer.</span>
+    </a>
+  </div>
+</section>
+
+{% if admin_page == 'dashboard' %}
+<section class="admin-section">
+  <div class="admin-card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-icon">#</span>
+        Escolha uma area
+      </h2>
+    </div>
+    <div class="admin-dashboard-grid">
+      <a href="/admin/catalogo" class="admin-dashboard-card">
+        <span class="admin-dashboard-card__title">Editar catalogo</span>
+        <span class="admin-dashboard-card__text">Criar e editar categorias, subcatalogos e produtos.</span>
+      </a>
+      <a href="/admin/frontend" class="admin-dashboard-card">
+        <span class="admin-dashboard-card__title">Editar frontend</span>
+        <span class="admin-dashboard-card__text">Alterar textos, imagens, logo, redes sociais, mapa, header e footer.</span>
+      </a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if admin_page == 'frontend' %}
+<section class="admin-section">
+  <div class="admin-card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-icon">T</span>
+        Textos, links e dados do site
+      </h2>
+    </div>
+
+    <form method="post" action="/admin/frontend/config" class="admin-form">
+      <h3 class="admin-form-title">Header e redes sociais</h3>
+      <div class="form-grid">
+        {{ admin_input('site_title', 'Titulo da aba do navegador', site_config.site_title) }}
+        {{ admin_input('header_brand_name', 'Nome no header', site_config.header_brand_name) }}
+        {{ admin_input('header_brand_tagline', 'Subtitulo no header', site_config.header_brand_tagline) }}
+        {{ admin_input('whatsapp_numero', 'Numero do WhatsApp', site_config.whatsapp_numero, 'text', 'Ex: 5561985700278') }}
+        {{ admin_input('instagram_url', 'Link do Instagram', site_config.instagram_url, 'url') }}
+        {{ admin_input('facebook_url', 'Link do Facebook', site_config.facebook_url, 'url') }}
+        {{ admin_input('nav_home', 'Menu: Home', site_config.nav_home) }}
+        {{ admin_input('nav_quem_somos', 'Menu: Quem Somos', site_config.nav_quem_somos) }}
+        {{ admin_input('nav_produtos', 'Menu: Produtos', site_config.nav_produtos) }}
+        {{ admin_input('nav_contato', 'Menu: Contato', site_config.nav_contato) }}
+      </div>
+
+      <h3 class="admin-form-title">Home</h3>
+      <div class="form-grid">
+        {{ admin_input('home_hero_kicker', 'Titulo principal da Home', site_config.home_hero_kicker) }}
+        {{ admin_textarea('home_hero_title', 'Texto principal da Home', site_config.home_hero_title, 5) }}
+        {{ admin_input('home_categories_kicker', 'Rotulo das categorias na Home', site_config.home_categories_kicker) }}
+        {{ admin_input('home_categories_title', 'Titulo das categorias na Home', site_config.home_categories_title) }}
+      </div>
+
+      <h3 class="admin-form-title">Produtos</h3>
+      <div class="form-grid">
+        {{ admin_input('produtos_kicker', 'Rotulo da pagina Produtos', site_config.produtos_kicker) }}
+        {{ admin_input('produtos_title', 'Titulo da pagina Produtos', site_config.produtos_title) }}
+        {{ admin_textarea('produtos_subtitle', 'Texto da pagina Produtos', site_config.produtos_subtitle, 3) }}
+      </div>
+
+      <h3 class="admin-form-title">Quem Somos</h3>
+      <div class="form-grid">
+        {{ admin_input('quem_somos_title', 'Titulo da pagina Quem Somos', site_config.quem_somos_title) }}
+        {{ admin_input('quem_somos_history_title', 'Titulo da historia', site_config.quem_somos_history_title) }}
+        {{ admin_textarea('quem_somos_history_text', 'Texto da historia', site_config.quem_somos_history_text, 6) }}
+        {{ admin_input('quem_somos_work_title', 'Titulo da secao Como Trabalhamos', site_config.quem_somos_work_title) }}
+        {{ admin_textarea('quem_somos_work_text_1', 'Texto Como Trabalhamos 1', site_config.quem_somos_work_text_1, 4) }}
+        {{ admin_textarea('quem_somos_work_text_2', 'Texto Como Trabalhamos 2', site_config.quem_somos_work_text_2, 4) }}
+        {{ admin_input('quem_somos_button_label', 'Texto do botao Quem Somos', site_config.quem_somos_button_label) }}
+      </div>
+
+      <h3 class="admin-form-title">Contato</h3>
+      <div class="form-grid">
+        {{ admin_input('contato_title', 'Titulo da pagina Contato', site_config.contato_title) }}
+        {{ admin_textarea('contato_subtitle', 'Texto da pagina Contato', site_config.contato_subtitle, 3) }}
+        {{ admin_input('contato_button_label', 'Texto do botao principal', site_config.contato_button_label) }}
+        {{ admin_input('contato_cta_title', 'Titulo da faixa de contato', site_config.contato_cta_title) }}
+        {{ admin_input('contato_cta_button_label', 'Texto do botao da faixa', site_config.contato_cta_button_label) }}
+      </div>
+
+      <h3 class="admin-form-title">Footer e localizacao</h3>
+      <div class="form-grid">
+        {{ admin_input('footer_brand_title', 'Nome no footer', site_config.footer_brand_title) }}
+        {{ admin_textarea('footer_description', 'Descricao no footer', site_config.footer_description, 3) }}
+        {{ admin_input('store_address', 'Endereco no footer', site_config.store_address) }}
+        {{ admin_input('store_cnpj', 'CNPJ no footer', site_config.store_cnpj) }}
+        {{ admin_input('footer_privacy_label', 'Texto do link de privacidade', site_config.footer_privacy_label) }}
+        {{ admin_input('footer_copyright', 'Copyright do footer', site_config.footer_copyright) }}
+        {{ admin_input('map_title', 'Titulo do mapa', site_config.map_title) }}
+        {{ admin_input('map_address', 'Endereco exibido no mapa', site_config.map_address) }}
+        {{ admin_textarea('map_embed_url', 'URL de embed do Google Maps', site_config.map_embed_url, 3) }}
+      </div>
+
+      <button type="submit" class="btn-save">Salvar textos e links</button>
+    </form>
+  </div>
+</section>
+
+<section class="admin-section">
+  <div class="admin-card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span class="card-icon">I</span>
+        Imagens gerais do site
+      </h2>
+    </div>
+
+    <div class="admin-image-grid">
+      {% for field in site_image_fields %}
+      {% if field.chave != 'home_banner' %}
+      {% set site_image = site_images[field.chave] %}
+      <form method="post" action="/admin/site-imagem/{{ field.chave }}" class="admin-form admin-image-form" enctype="multipart/form-data">
+        <h3 class="admin-form-title">{{ field.label }}</h3>
+        <p class="admin-helper-text">{{ field.help }}</p>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="{{ field.chave }}-alt-texto" class="form-label">Texto alternativo</label>
+            <input
+              type="text"
+              id="{{ field.chave }}-alt-texto"
+              name="alt_texto"
+              value="{{ site_image.alt_texto }}"
+              class="form-input"
+            >
+          </div>
+
+          <div class="form-group form-group-full">
+            <label class="form-label">Imagem</label>
+            <label class="upload-area">
+              <input
+                type="file"
+                name="imagem"
+                accept="image/png,image/jpeg,image/webp"
+                class="upload-input"
+                onchange="updateUploadPreview(this, '{{ field.chave }}-preview', '{{ field.chave }}-upload-label')"
+              >
+              <span class="upload-content">
+                <span class="upload-title">Selecionar nova imagem</span>
+                <span class="upload-subtitle">PNG, JPG ou WEBP. Mantem a atual se nao escolher.</span>
+                <span id="{{ field.chave }}-upload-label" class="upload-filename">Nenhum arquivo selecionado</span>
+              </span>
+            </label>
+            <div class="upload-preview upload-preview-wide">
+              <img
+                id="{{ field.chave }}-preview"
+                class="upload-preview-img upload-preview-img-wide is-visible"
+                src="{{ site_image.imagem_url }}"
+                alt="Preview de {{ field.label }}"
+                data-current-src="{{ site_image.imagem_url }}"
+                onerror="this.style.display='none'"
+              >
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-save">Salvar imagem</button>
+      </form>
+      {% endif %}
+      {% endfor %}
+    </div>
   </div>
 </section>
 
@@ -252,6 +469,9 @@
   </div>
 </section>
 
+{% endif %}
+
+{% if admin_page == 'catalogo' %}
 <section class="admin-section">
   <div class="admin-card">
     <div class="card-header">
@@ -1085,6 +1305,8 @@
     {% endif %}
   </div>
 </section>
+
+{% endif %}
 
 <script>
 const SUBCATEGORIAS_POR_CATEGORIA = {{ subcategorias_por_categoria | tojson }};

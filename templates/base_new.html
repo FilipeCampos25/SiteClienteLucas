@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Casa das Cantoneiras - Catálogo</title>
+  <title>{{ SITE_CONFIG.site_title }}</title>
   <link rel="icon" type="image/png" href="/static/images/ico.png?v=20260304">
-  <link rel="stylesheet" href="/static/css/site.css?v=10">
+  <link rel="stylesheet" href="/static/css/site.css?v=13">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
 <body class="{% block body_class %}{% endblock %}">
   {% if WHATSAPP_NUMERO %}
   <a
-    href="https://wa.me/{{ WHATSAPP_NUMERO }}"
+    href="{{ WHATSAPP_LINK }}"
     target="_blank"
     rel="noopener noreferrer"
     aria-label="Falar no WhatsApp"
@@ -32,19 +32,19 @@
   <header class="site-header-new">
     <div class="neo-container header-shell__inner">
       <a class="brand" href="/" aria-label="Ir para a página inicial">
-        <img src="{{ LOGO_URL or '/static/images/logomarca.png' }}" alt="Logo Casa das Cantoneiras" class="brand__img">
+        <img src="{{ LOGO_URL or '/static/images/logomarca.png' }}" alt="{{ LOGO_ALT or 'Logo Casa das Cantoneiras' }}" class="brand__img">
         <span class="brand__copy">
-          <span class="brand__logo">CASA DAS CANTONEIRAS</span>
-          <span class="brand__tag">SOLUÇÕES EM PRODUTOS PARA FIXAÇÃO</span>
+          <span class="brand__logo">{{ SITE_CONFIG.header_brand_name }}</span>
+          <span class="brand__tag">{{ SITE_CONFIG.header_brand_tagline }}</span>
         </span>
       </a>
 
       <nav class="nav site-nav" id="siteNav" aria-label="Menu principal">
         <ul class="nav-list">
-          <li><a href="/" class="nav__link">Home</a></li>
-          <li><a href="/quem-somos" class="nav__link">Quem Somos</a></li>
-          <li><a href="/produtos" class="nav__link is-active">Produtos</a></li>
-          <li><a href="/contato" class="nav__link">Contato</a></li>
+          <li><a href="/" class="nav__link">{{ SITE_CONFIG.nav_home }}</a></li>
+          <li><a href="/quem-somos" class="nav__link">{{ SITE_CONFIG.nav_quem_somos }}</a></li>
+          <li><a href="/produtos" class="nav__link is-active">{{ SITE_CONFIG.nav_produtos }}</a></li>
+          <li><a href="/contato" class="nav__link">{{ SITE_CONFIG.nav_contato }}</a></li>
         </ul>
       </nav>
       <div class="header-shell__actions">
@@ -122,17 +122,17 @@
     <div class="neo-container footer__grid">
       <div class="footer__brand">
         <div class="footer__logoRow">
-          <img src="{{ LOGO_URL or '/static/images/logomarca.png' }}" alt="Logo Casa das Cantoneiras" class="footer__logoImg">
-          <div class="footer__logo">Casa das Cantoneiras</div>
+          <img src="{{ LOGO_URL or '/static/images/logomarca.png' }}" alt="{{ LOGO_ALT or 'Logo Casa das Cantoneiras' }}" class="footer__logoImg">
+          <div class="footer__logo">{{ SITE_CONFIG.footer_brand_title }}</div>
         </div>
-        <p class="footer__desc">Catálogo de produtos com atendimento direto e rápido para sua obra.</p>
+        <p class="footer__desc">{{ SITE_CONFIG.footer_description }}</p>
       </div>
 
       <nav class="footer__links" aria-label="Links do rodapé">
-        <a href="/">Home</a>
-        <a href="/quem-somos">Quem Somos</a>
-        <a href="/produtos">Produtos</a>
-        <a href="/contato">Contato</a>
+        <a href="/">{{ SITE_CONFIG.nav_home }}</a>
+        <a href="/quem-somos">{{ SITE_CONFIG.nav_quem_somos }}</a>
+        <a href="/produtos">{{ SITE_CONFIG.nav_produtos }}</a>
+        <a href="/contato">{{ SITE_CONFIG.nav_contato }}</a>
       </nav>
 
       <address class="footer__info" aria-label="Dados da loja">
@@ -149,8 +149,8 @@
     </div>
 
     <div class="neo-container footer__bottom">
-      <a href="/quem-somos" class="footer__privacy">Política de Privacidade</a>
-      <small class="footer__copy">Todos os direitos reservados © 2026</small>
+      <a href="/quem-somos" class="footer__privacy">{{ SITE_CONFIG.footer_privacy_label }}</a>
+      <small class="footer__copy">{{ SITE_CONFIG.footer_copyright }}</small>
     </div>
   </footer>
 

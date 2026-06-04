@@ -6,21 +6,21 @@
 <section class="statement">
   <div class="section-container">
     <h2 class="heading-lg">
-      FALE COM A CASA DAS CANTONEIRAS!
+      {{ SITE_CONFIG.contato_title }}
     </h2>
     <p class="muted">
-      Nossa equipe est&aacute; pronta para orientar sua consulta, tirar d&uacute;vidas e indicar o melhor cat&aacute;logo.
+      {{ SITE_CONFIG.contato_subtitle }}
     </p>
     <div class="btn-row">
-      <a class="btn btn--primary" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Fale Conosco</a>
+      <a class="btn btn--primary" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">{{ SITE_CONFIG.contato_button_label }}</a>
     </div>
   </div>
 </section>
 
 <section class="cta-band">
   <div class="section-container cta-band__inner">
-    <h3 class="cta-band__title">ATENDIMENTO R&Aacute;PIDO POR WHATSAPP E TELEFONE</h3>
-    <a class="btn btn--ghost" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">Iniciar conversa</a>
+    <h3 class="cta-band__title">{{ SITE_CONFIG.contato_cta_title }}</h3>
+    <a class="btn btn--ghost" href="{{ WHATSAPP_LINK }}" target="_blank" rel="noopener">{{ SITE_CONFIG.contato_cta_button_label }}</a>
   </div>
 </section>
 {% endblock %}

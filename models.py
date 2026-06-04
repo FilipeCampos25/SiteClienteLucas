@@ -99,3 +99,15 @@ class SiteImagem(Base):
 
     criado_em = Column(DateTime(timezone=True), server_default=func.now())
     atualizado_em = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class SiteConfig(Base):
+    __tablename__ = "site_config"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    chave = Column(String(120), nullable=False, unique=True, index=True)
+    valor = Column(Text, nullable=True)
+
+    criado_em = Column(DateTime(timezone=True), server_default=func.now())
+    atualizado_em = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

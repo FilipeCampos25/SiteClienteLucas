@@ -413,8 +413,18 @@ button{ cursor: pointer; }
 
 .hero-split{
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.3fr);
   align-items: stretch;
+}
+
+.hero-home .hero-split__left{
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.hero-home .hero-split__right{
+  grid-column: 1;
+  grid-row: 1;
 }
 
 .hero-split__left{
@@ -422,20 +432,30 @@ button{ cursor: pointer; }
   color: #000;
   overflow: hidden;
   position: relative;
+  display: flex;
+  align-items: center;
 }
 .hero-split__left .kicker--on-dark{
   color: #000;
+  font-size: clamp(20px, 2.3vw, 25px);
+  line-height: 1.06;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  margin-bottom: 18px;
 }
 .hero-split__leftInner{
-  padding: 42px;
+  width: 100%;
+  padding: 42px 54px;
   text-align: center;
-  margin-top: 10%;
+  margin-top: 0;
 }
 
 .hero-split__title{
-  margin: 0 0 var(--space-4);
+  max-width: 74ch;
+  margin: 0 auto;
   color: #000;
-  line-height: 1.08;
+  font-size: 21px;
+  line-height: 1.48;
   font-weight: 400;
   letter-spacing: 0.01em;
 }
@@ -447,7 +467,7 @@ button{ cursor: pointer; }
 }
 
 .hero-split__right{
-  min-height: 490px; /* ajuste pro seu gosto */
+  min-height: 380px; /* ajuste pro seu gosto */
   position: relative; /* importante pro absolute */
   overflow: hidden;
 }
@@ -469,7 +489,7 @@ button{ cursor: pointer; }
 }
 
 .hero-watermark-img{
-  width: 520px;
+  width: min(420px, 86%);
   filter: none;
   opacity: 1;
 }
@@ -1979,6 +1999,12 @@ section.contact-map .contact-map__frame iframe{
     min-height: auto;
   }
 
+  .hero-home .hero-split__left,
+  .hero-home .hero-split__right {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
   .hero-split__left,
   .hero-split__right {
     min-width: 0;
@@ -1989,9 +2015,13 @@ section.contact-map .contact-map__frame iframe{
     padding: 34px 24px;
   }
 
+  .hero-split__left .kicker--on-dark {
+    font-size: clamp(24px, 4.6vw, 32px);
+  }
+
   .hero-split__title {
-    font-size: clamp(24px, 4.8vw, 38px);
-    line-height: 1.15;
+    font-size: clamp(17px, 2.6vw, 21px);
+    line-height: 1.48;
   }
 
   .hero-split__right {
@@ -2025,9 +2055,14 @@ section.contact-map .contact-map__frame iframe{
     padding: 26px 16px;
   }
 
+  .hero-split__left .kicker--on-dark {
+    font-size: clamp(20px, 6.2vw, 26px);
+    line-height: 1.1;
+  }
+
   .hero-split__title {
-    font-size: clamp(20px, 6.2vw, 27px);
-    line-height: 1.22;
+    font-size: 16px;
+    line-height: 1.45;
     letter-spacing: 0;
   }
 

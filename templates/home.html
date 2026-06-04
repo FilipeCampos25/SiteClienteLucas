@@ -10,17 +10,18 @@
     <div class="hero-split">
       <div class="hero-split__left">
         <div class="hero-split__leftInner">
-          <p class="kicker kicker--on-dark">Soluções em Cantoneiras e Acabamentos</p>
+          <p class="kicker kicker--on-dark">{{ SITE_CONFIG.home_hero_kicker }}</p>
           <h1 class="hero-split__title">
-            Somos especialistas em acabamentos e suportes de alta qualidade. Oferecemos uma linha completa de cantoneiras de alumínio e zinco, soluções práticas para reboco, perfis antiderrapantes para escadas, além de cantoneiras reforçadas para o suporte de bancadas e prateleiras.
+            {{ SITE_CONFIG.home_hero_title }}
+          </h1>
         </div>
       </div>
 
       <div class="hero-split__right">
         <div class="hero-split__media" aria-label="Marca e identidade visual">
           <img
-            src="/static/images/placeholder.png"
-            alt="Logo Casa das Cantoneiras"
+            src="{{ home_hero_image.imagem_url }}"
+            alt="{{ home_hero_image.alt_texto }}"
             class="hero-watermark-img"
           >
         </div>
@@ -34,8 +35,8 @@
     <div class="home-categories__divider" aria-hidden="true"></div>
 
     <div class="home-categories__header">
-      <p class="kicker">Categorias</p>
-      <h2 class="heading-section">ESCOLHA UMA LINHA</h2>
+      <p class="kicker">{{ SITE_CONFIG.home_categories_kicker }}</p>
+      <h2 class="heading-section">{{ SITE_CONFIG.home_categories_title }}</h2>
     </div>
 
     <div class="home-categories__grid">

@@ -541,6 +541,49 @@ def upsert_site_imagem(
     return imagem
 
 
+def get_site_config(db: Session, *, chave: str) -> Optional[models.SiteConfig]:
+    return db.query(models.SiteConfig).filter(models.SiteConfig.chave == chave.strip()).first()
+
+
+def get_site_config_map(db: Session) -> dict[str, str]:
+    configs = db.query(models.SiteConfig).all()
+    return {config.chave: config.valor or "" for config in configs}
+
+
+def ensure_site_config_defaults(db: Session, defaults: dict[str, str]) -> dict[str, str]:
+    existentes = get_site_config_map(db)
+    mudou = False
+
+    for chave, valor_padrao in defaults.items():
+        if chave in existentes:
+            continue
+        db.add(models.SiteConfig(chave=chave, valor=valor_padrao))
+        existentes[chave] = valor_padrao
+        mudou = True
+
+    if mudou:
+        db.commit()
+
+    return existentes
+
+
+def upsert_site_configs(db: Session, dados: dict[str, str]) -> dict[str, str]:
+    for chave, valor in dados.items():
+        chave_normalizada = chave.strip()
+        if not chave_normalizada:
+            continue
+
+        config = get_site_config(db, chave=chave_normalizada)
+        if config:
+            config.valor = valor
+            continue
+
+        db.add(models.SiteConfig(chave=chave_normalizada, valor=valor))
+
+    db.commit()
+    return get_site_config_map(db)
+
+
 def get_produto(db: Session, *, produto_id: int) -> Optional[models.Produto]:
     return db.query(models.Produto).filter(models.Produto.id == produto_id).first()
 

@@ -9,21 +9,21 @@
 <section class="statement">
   <div class="section-container statement__layout">
     <div class="statement__content">
-      <h2 class="heading-lg statement__title">Quem somos:</h2>
+      <h2 class="heading-lg statement__title">{{ SITE_CONFIG.quem_somos_title }}</h2>
 
-      <h3 class="statement__subtitle">Nossa História:</h3>
+      <h3 class="statement__subtitle">{{ SITE_CONFIG.quem_somos_history_title }}</h3>
       <p class="statement__text">
-        A Casa das Cantoneiras surgiu da necessidade prática de encontrar tudo o que um projeto precisa em um só lugar, combinada com o desejo de empreender entregando excelência ao mercado. Somos especialistas em soluções de fixação e acabamento, oferecendo uma linha completa que vai de cantoneiras para escadas e paredes a suportes específicos para prateleiras e bancadas, seja para ambientes residenciais ou comerciais.
+        {{ SITE_CONFIG.quem_somos_history_text }}
       </p>
 
-      <h3 class="statement__subtitle">Como Trabalhamos:</h3>
+      <h3 class="statement__subtitle">{{ SITE_CONFIG.quem_somos_work_title }}</h3>
       <p class="statement__text">
-        Atendimento Próximo e Consultivo: Não queremos apenas vender, queremos entender. Oferecemos um suporte humanizado e técnico para que você encontre exatamente o que a sua estrutura precisa, sem complicações.
+        {{ SITE_CONFIG.quem_somos_work_text_1 }}
       </p>
       <p class="statement__text">
-        Compromisso Inegociável com a Qualidade: Trabalhamos com materiais de alto padrão que garantem durabilidade, resistência e o acabamento perfeito. Seu projeto merece a segurança de produtos que duram uma vida inteira.
+        {{ SITE_CONFIG.quem_somos_work_text_2 }}
       </p>
-      <a class="btn btn--primary" href="/contato">Fale com a equipe</a>
+      <a class="btn btn--primary" href="/contato">{{ SITE_CONFIG.quem_somos_button_label }}</a>
     </div>
     <div class="statement__gallery">
       {% for imagem in galeria_quem_somos %}
