@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ SITE_CONFIG.site_title }}</title>
   <link rel="icon" type="image/png" href="/static/images/ico.png?v=20260304">
-  <link rel="stylesheet" href="/static/css/site.css?v=13">
+  <link rel="stylesheet" href="/static/css/site.css?v=16">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -126,6 +126,12 @@
           <div class="footer__logo">{{ SITE_CONFIG.footer_brand_title }}</div>
         </div>
         <p class="footer__desc">{{ SITE_CONFIG.footer_description }}</p>
+        {% if STORE_EMAIL %}
+        <div class="footer__brandContact">
+          <span class="footer__infoLabel">E-mail</span>
+          <a class="footer__email" href="mailto:{{ STORE_EMAIL }}">{{ STORE_EMAIL }}</a>
+        </div>
+        {% endif %}
       </div>
 
       <nav class="footer__links" aria-label="Links do rodapé">
