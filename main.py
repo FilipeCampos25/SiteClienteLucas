@@ -636,6 +636,7 @@ def _produto_view(
             if categoria and subcategoria
             else None
         ),
+        "ordem_exibicao": produto.ordem_exibicao,
     }
 
 
@@ -819,6 +820,7 @@ def _create_produto_from_form(
     resumo_curto: str,
     categoria_slug: str,
     subcategoria_slug: Optional[str],
+    ordem_exibicao: Optional[int],
 ) -> schemas.ProdutoCreate:
     categoria_normalizada = _normalizar_categoria_slug(db, categoria_slug, required=True)
     return schemas.ProdutoCreate(
@@ -831,6 +833,7 @@ def _create_produto_from_form(
             subcategoria_slug,
             required=_categoria_exige_subcategoria(db, categoria_normalizada),
         ),
+        ordem_exibicao=_ordem_normalizada(ordem_exibicao),
     )
 
 
@@ -840,6 +843,7 @@ def _update_produto_from_form(
     resumo_curto: Optional[str],
     categoria_slug: Optional[str],
     subcategoria_slug: Optional[str],
+    ordem_exibicao: Optional[int],
 ) -> schemas.ProdutoUpdate:
     categoria_normalizada = _normalizar_categoria_slug(db, categoria_slug, required=True)
     return schemas.ProdutoUpdate(
@@ -852,6 +856,7 @@ def _update_produto_from_form(
             subcategoria_slug,
             required=_categoria_exige_subcategoria(db, categoria_normalizada),
         ),
+        ordem_exibicao=_ordem_normalizada(ordem_exibicao),
     )
 
 
@@ -1593,6 +1598,7 @@ def admin_produto_novo(
     imagem: UploadFile = File(None),
     imagem_medidas: UploadFile = File(None),
     imagem_extra: UploadFile = File(None),
+    ordem_exibicao: Optional[int] = Form(None),
     db: Session = Depends(get_db),
 ):
     imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
@@ -1601,7 +1607,14 @@ def admin_produto_novo(
 
     crud.create_produto(
         db,
-        _create_produto_from_form(db, nome, resumo_curto, categoria_slug, subcategoria_slug),
+        _create_produto_from_form(
+            db,
+            nome,
+            resumo_curto,
+            categoria_slug,
+            subcategoria_slug,
+            ordem_exibicao,
+        ),
         imagem_bytes=imagem_bytes,
         imagem_mime=imagem_mime,
         imagem_medidas_bytes=imagem_medidas_bytes,
@@ -1626,6 +1639,7 @@ def admin_produto_atualizar(
     remover_imagem: bool = Form(False),
     remover_imagem_medidas: bool = Form(False),
     remover_imagem_extra: bool = Form(False),
+    ordem_exibicao: Optional[int] = Form(None),
     db: Session = Depends(get_db),
 ):
     imagem_bytes, imagem_mime = _load_uploaded_image(imagem)
@@ -1635,7 +1649,14 @@ def admin_produto_atualizar(
     produto = crud.update_produto(
         db,
         produto_id=produto_id,
-        dados=_update_produto_from_form(db, nome, resumo_curto, categoria_slug, subcategoria_slug),
+        dados=_update_produto_from_form(
+            db,
+            nome,
+            resumo_curto,
+            categoria_slug,
+            subcategoria_slug,
+            ordem_exibicao,
+        ),
         imagem_bytes=imagem_bytes,
         imagem_mime=imagem_mime,
         imagem_medidas_bytes=imagem_medidas_bytes,
@@ -1666,6 +1687,7 @@ def admin_produto_method_override(
     remover_imagem: bool = Form(False),
     remover_imagem_medidas: bool = Form(False),
     remover_imagem_extra: bool = Form(False),
+    ordem_exibicao: Optional[int] = Form(None),
     db: Session = Depends(get_db),
 ):
     if (_method or "").strip().upper() == "PUT":
@@ -1682,6 +1704,7 @@ def admin_produto_method_override(
             remover_imagem=remover_imagem,
             remover_imagem_medidas=remover_imagem_medidas,
             remover_imagem_extra=remover_imagem_extra,
+            ordem_exibicao=ordem_exibicao,
             db=db,
         )
 

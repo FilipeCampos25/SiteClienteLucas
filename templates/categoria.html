@@ -63,7 +63,11 @@
     <section class="products-modern category-products">
       <div class="grid-produtos" id="produtosGrid">
         {% for p in produtos %}
-        <div class="card-produto">
+        <a
+          href="/produto/{{ p.id }}"
+          class="card-produto"
+          aria-label="Ver detalhes de {{ p.nome }}"
+        >
           <div class="card-image-container">
             <img
               src="{{ p.imagem_url or '/static/images/placeholder.png' }}"
@@ -74,13 +78,8 @@
           </div>
           <div class="card-content">
             <h3 class="card-title">{{ p.nome }}</h3>
-            {% if not subcategoria_atual %}
-            <div class="card-actions card-actions--single">
-              <a href="/produto/{{ p.id }}" class="btn-product">Ver detalhes</a>
-            </div>
-            {% endif %}
           </div>
-        </div>
+        </a>
         {% endfor %}
       </div>
     </section>

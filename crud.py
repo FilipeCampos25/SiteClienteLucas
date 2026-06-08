@@ -75,6 +75,23 @@ def _next_subcategoria_ordem(db: Session, categoria_slug: str) -> int:
     return int(getattr(ultima, "ordem_exibicao", 0) or 0) + 1
 
 
+def _next_produto_ordem(
+    db: Session,
+    categoria_slug: Optional[str],
+    subcategoria_slug: Optional[str],
+) -> int:
+    ultima = (
+        db.query(models.Produto)
+        .filter(
+            models.Produto.categoria_slug == categoria_slug,
+            models.Produto.subcategoria_slug == subcategoria_slug,
+        )
+        .order_by(models.Produto.ordem_exibicao.desc(), models.Produto.id.desc())
+        .first()
+    )
+    return int(getattr(ultima, "ordem_exibicao", 0) or 0) + 1
+
+
 def _next_quem_somos_ordem(db: Session) -> int:
     ultima = (
         db.query(models.QuemSomosImagem)
@@ -599,7 +616,12 @@ def get_produtos(
         query = query.filter(models.Produto.categoria_slug == categoria_slug)
     if subcategoria_slug:
         query = query.filter(models.Produto.subcategoria_slug == subcategoria_slug)
-    return query.order_by(models.Produto.id.desc()).all()
+    return query.order_by(
+        models.Produto.categoria_slug.asc(),
+        models.Produto.subcategoria_slug.asc(),
+        models.Produto.ordem_exibicao.asc(),
+        models.Produto.id.desc(),
+    ).all()
 
 
 def get_produtos_home(db: Session, *, limite: int = 4) -> List[models.Produto]:
@@ -642,6 +664,15 @@ def create_produto(
         categoria_slug=_clean_optional_str(produto.categoria_slug),
         subcategoria_slug=_clean_optional_str(produto.subcategoria_slug),
         imagem_url=PLACEHOLDER_IMAGE_URL,
+        ordem_exibicao=(
+            produto.ordem_exibicao
+            if produto.ordem_exibicao is not None
+            else _next_produto_ordem(
+                db,
+                _clean_optional_str(produto.categoria_slug),
+                _clean_optional_str(produto.subcategoria_slug),
+            )
+        ),
     )
 
     _apply_image_data(
@@ -702,6 +733,8 @@ def update_produto(
         produto.categoria_slug = _clean_optional_str(dados.categoria_slug)
     if _field_was_provided(dados, "subcategoria_slug"):
         produto.subcategoria_slug = _clean_optional_str(dados.subcategoria_slug)
+    if dados.ordem_exibicao is not None:
+        produto.ordem_exibicao = dados.ordem_exibicao
 
     if not produto.imagem_url:
         produto.imagem_url = PLACEHOLDER_IMAGE_URL

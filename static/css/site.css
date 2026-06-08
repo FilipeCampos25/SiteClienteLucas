@@ -940,6 +940,8 @@ button{ cursor: pointer; }
   background: #fff;
   border: var(--catalog-frame-border);
   border-radius: var(--radius-lg);
+  color: inherit;
+  cursor: pointer;
   overflow: hidden;
   box-shadow: var(--catalog-frame-shadow);
   display: flex;
@@ -951,6 +953,13 @@ button{ cursor: pointer; }
   transform: translateY(-2px);
   border-color: var(--brand-2);
   box-shadow: 0 16px 34px rgba(16,17,20,0.10);
+}
+.card-produto:focus-visible{
+  outline: 3px solid rgba(255,152,0,0.45);
+  outline-offset: 4px;
+}
+.card-produto:active{
+  transform: translateY(1px);
 }
 .card-image-container{
   position: relative;
@@ -1270,7 +1279,8 @@ button{ cursor: pointer; }
   padding-block: var(--space-7);
 }
 .category-page__hero{
-  width: 760px;
+  width: 100%;
+  max-width: 760px;
   margin: 0 auto var(--space-5);
 }
 .category-page__subtitle{

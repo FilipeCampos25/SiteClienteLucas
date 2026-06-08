@@ -1004,6 +1004,18 @@
           </select>
         </div>
 
+        <div class="form-group">
+          <label for="produto-ordem" class="form-label">Ordem no catalogo</label>
+          <input
+            type="number"
+            id="produto-ordem"
+            name="ordem_exibicao"
+            class="form-input"
+            min="0"
+            placeholder="Automatico: final da lista"
+          >
+        </div>
+
         <div class="form-group form-group-full">
           <label for="resumo_curto" class="form-label">Descricao</label>
           <textarea
@@ -1098,6 +1110,7 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>Ordem</th>
             <th>Nome</th>
             <th>Catalogo</th>
             <th>Acoes</th>
@@ -1107,6 +1120,7 @@
           {% for p in produtos %}
           <tr id="produto-row-{{ p.id }}">
             <td>#{{ p.id }}</td>
+            <td>{{ p.ordem_exibicao }}</td>
             <td>{{ p.nome }}</td>
             <td>
               {{ p.categoria_nome_exibicao or 'Sem categoria' }}
@@ -1120,7 +1134,7 @@
             </td>
           </tr>
           <tr id="produto-edit-row-{{ p.id }}" class="edit-row" style="display: none;">
-            <td colspan="4">
+            <td colspan="5">
               <form method="post" action="/admin/produto/{{ p.id }}" class="edit-form" enctype="multipart/form-data">
                 <input type="hidden" name="_method" value="PUT">
                 <div class="form-grid">
@@ -1163,6 +1177,18 @@
                     >
                       <option value="">Selecione o subcatalogo</option>
                     </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="edit-produto-ordem-{{ p.id }}" class="form-label">Ordem no catalogo</label>
+                    <input
+                      type="number"
+                      id="edit-produto-ordem-{{ p.id }}"
+                      name="ordem_exibicao"
+                      value="{{ p.ordem_exibicao }}"
+                      class="form-input"
+                      min="0"
+                    >
                   </div>
 
                   <div class="form-group form-group-full">

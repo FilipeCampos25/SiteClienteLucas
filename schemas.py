@@ -53,6 +53,7 @@ class ProdutoBase(BaseModel):
     resumo_curto: Optional[str] = None
     categoria_slug: Optional[str] = None
     subcategoria_slug: Optional[str] = None
+    ordem_exibicao: Optional[int] = None
 
 
 class ProdutoCreate(ProdutoBase):
@@ -64,6 +65,7 @@ class ProdutoUpdate(BaseModel):
     resumo_curto: Optional[str] = None
     categoria_slug: Optional[str] = None
     subcategoria_slug: Optional[str] = None
+    ordem_exibicao: Optional[int] = None
 
 
 class QuemSomosImagemBase(BaseModel):

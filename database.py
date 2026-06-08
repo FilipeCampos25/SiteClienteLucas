@@ -103,6 +103,7 @@ def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
         "imagem_extra_mime",
         "imagem_extra_bytes",
         "imagem_extra_sha256",
+        "ordem_exibicao",
         "criado_em",
         "atualizado_em",
     ]
@@ -110,6 +111,8 @@ def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
     for campo in campos_copiados:
         if campo in colunas_existentes:
             select_campos.append(campo)
+        elif campo == "ordem_exibicao":
+            select_campos.append("0 AS ordem_exibicao")
         else:
             select_campos.append(f"NULL AS {campo}")
 
@@ -134,6 +137,7 @@ def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
                     imagem_extra_mime VARCHAR(64),
                     imagem_extra_bytes BLOB,
                     imagem_extra_sha256 VARCHAR(64),
+                    ordem_exibicao INTEGER NOT NULL DEFAULT 0,
                     criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
                     atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
@@ -169,6 +173,7 @@ def _postgres_sync_produtos(colunas_info: dict[str, dict[str, object]]) -> None:
         "imagem_extra_mime": "VARCHAR(64)",
         "imagem_extra_bytes": "BYTEA",
         "imagem_extra_sha256": "VARCHAR(64)",
+        "ordem_exibicao": "INTEGER NOT NULL DEFAULT 0",
         "atualizado_em": "TIMESTAMP DEFAULT NOW()",
     }
     for coluna, ddl in alteracoes.items():
@@ -191,7 +196,6 @@ def _postgres_sync_produtos(colunas_info: dict[str, dict[str, object]]) -> None:
         "tipo",
         "valor",
         "ativo",
-        "ordem_exibicao",
         "destaque_home",
     )
     for coluna in colunas_obsoletas:
@@ -233,6 +237,7 @@ def init_db() -> dict[str, bool]:
         "imagem_extra_mime",
         "imagem_extra_bytes",
         "imagem_extra_sha256",
+        "ordem_exibicao",
         "criado_em",
         "atualizado_em",
     }
@@ -245,7 +250,6 @@ def init_db() -> dict[str, bool]:
         "tipo",
         "valor",
         "ativo",
-        "ordem_exibicao",
         "destaque_home",
     }
 
