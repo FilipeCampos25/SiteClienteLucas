@@ -1321,6 +1321,14 @@ button{ cursor: pointer; }
 .category-subcatalog__grid{
   align-items: start;
 }
+.category-subcatalog__grid--centered{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.category-subcatalog__grid--centered .category-subcatalog__card{
+  flex: 0 1 calc((100% - 72px) / 4);
+}
 .category-subcatalog__card{
   min-width: 0;
 }

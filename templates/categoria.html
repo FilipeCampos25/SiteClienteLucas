@@ -37,7 +37,7 @@
     {% if subcategorias and not subcategoria_atual %}
     <section class="category-subcatalog" aria-labelledby="subcatalogo-title">
 
-      <div class="home-categories__grid category-subcatalog__grid">
+      <div class="home-categories__grid category-subcatalog__grid{% if categoria.slug == 'cantoneira-suporte-para-prateleira' %} category-subcatalog__grid--centered{% endif %}">
         {% for subcategoria in subcategorias %}
         <a
           href="/categorias/{{ categoria.slug }}/subcategorias/{{ subcategoria.slug }}"
