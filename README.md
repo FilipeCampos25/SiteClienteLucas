@@ -1,29 +1,106 @@
-Casa das Cantoneiras — entrega pronta para deploy (versão simplificada)
-------------------------------------------------------------
-Estrutura mínima do projeto. Configure variáveis de ambiente em .env antes de rodar.
-- DATABASE_URL (ex: postgresql://user:pass@host:port/dbname) — se não definido, usa SQLite local.
-- ADMIN_USER, ADMIN_PASSWORD — credenciais do admin.
-- S3_BUCKET_IMAGENS, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (opcional) — para upload de imagens.
+# Casa das Cantoneiras
 
-Para rodar localmente:
-$ python -m venv .venv
-$ . .venv/bin/activate
-$ pip install -r requirements.txt
-$ uvicorn main:app --reload
+Catalogo administravel construido com FastAPI, Jinja2, SQLAlchemy e Alembic.
+Imagens de categorias, produtos e paginas institucionais continuam armazenadas
+no banco nos campos `imagem_bytes`, `imagem_mime` e `imagem_sha256`.
 
-O pacote zip entregue aqui contém templates (Jinja2), static (CSS/JS), backend FastAPI e scripts básicos.
+## Desenvolvimento local
 
+Crie o ambiente, instale as dependencias e configure o `.env`:
 
-## Mudança importante (imagens mais confiáveis)
-Esta versão armazena a imagem do produto **no banco (Postgres)** (`imagem_bytes` + `imagem_mime`). Isso evita perda de arquivos em hospedagens com filesystem efêmero.
-
-**Atenção:** como não há migração automatizada (alembic), se você já tem uma tabela `produtos` antiga sem essas colunas, você precisa:
-- ou recriar a tabela (ambiente novo),
-- ou aplicar um `ALTER TABLE` adicionando as colunas: `imagem_mime`, `imagem_bytes`, `imagem_sha256`, `atualizado_em` e tornar `imagem_url` nullable.
-
-As imagens são servidas por: `/media/produto/{id}` com cache (ETag + Cache-Control).
-
-
-& "C:\Program Files\Python312\python.exe" -m venv .venv
+```powershell
+py -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
+Copy-Item .env.example .env
+```
+
+`APP_ENV=development` permite deixar `DATABASE_URL` vazio. Nesse caso o app usa
+`sqlite:///./local.db` e registra warnings para credenciais/chaves de
+desenvolvimento.
+
+Antes de iniciar o servidor, aplique as migracoes:
+
+```powershell
+alembic upgrade head
+uvicorn main:app --reload
+```
+
+Para verificar o estado:
+
+```powershell
+alembic current
+alembic history
+pytest
+```
+
+## Configuracao de producao
+
+Producao e ativada por `APP_ENV=production` ou automaticamente por
+`RENDER=true`. O app falha antes de iniciar se qualquer item abaixo estiver
+ausente ou inseguro:
+
+- `DATABASE_URL`
+- `SECRET_KEY`
+- `ADMIN_USER`
+- `ADMIN_PASSWORD`
+- `CORS_ORIGINS`
+
+`CORS_ORIGINS` deve conter origens explicitas separadas por virgula e nao pode
+conter `*`. Gere `SECRET_KEY` e `ADMIN_PASSWORD` como valores longos e aleatorios.
+O alias legado `ADMIN_PASS` funciona somente em desenvolvimento e deve ser
+substituido por `ADMIN_PASSWORD`.
+
+## Adocao do Alembic
+
+Sempre crie um backup antes da primeira migracao de um banco existente.
+
+Banco novo:
+
+```bash
+alembic upgrade head
+```
+
+Banco existente que ainda precisa receber tabelas ou colunas do schema atual:
+
+```bash
+alembic upgrade head
+```
+
+A revisao inicial e aditiva: cria tabelas ausentes e adiciona colunas e indices
+ausentes. Ela preserva dados, blobs e colunas legadas. Se encontrar uma coluna
+obrigatoria ausente em uma tabela com dados e sem valor seguro para preenchimento,
+a migracao falha para exigir uma revisao controlada.
+
+Use `stamp` somente quando o schema existente ja foi comparado com os models e
+esta integralmente compativel:
+
+```bash
+alembic stamp head
+alembic current
+```
+
+O downgrade automatico da revisao inicial nao e oferecido porque ela pode adotar
+objetos que ja existiam antes do Alembic.
+
+## Deploy no Render
+
+Configure as variaveis obrigatorias no painel do Render. O `start.sh` executa:
+
+```bash
+alembic upgrade head
+gunicorn main:app --workers "${WEB_CONCURRENCY:-2}" \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --bind "0.0.0.0:${PORT:-10000}"
+```
+
+Fluxo recomendado para o primeiro deploy:
+
+1. Fazer backup do Postgres.
+2. Conferir se o banco e novo, compativel ou legado.
+3. Publicar com todas as variaveis de producao configuradas.
+4. Confirmar nos logs que `alembic upgrade head` concluiu antes do Gunicorn.
+5. Validar `/admin/login`, uma edicao do catalogo e uma pagina publica.
+
+Com varios workers, o rate limit de login e mantido separadamente em memoria por
+processo. Redis ou outro armazenamento compartilhado permanece fora do escopo.

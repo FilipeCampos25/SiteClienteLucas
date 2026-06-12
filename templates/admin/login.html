@@ -13,6 +13,7 @@
     {% endif %}
 
     <form method="post" action="/admin/login" class="admin-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="form-group">
         <label for="username" class="form-label">Usuário</label>
         <input type="text" id="username" name="username" class="form-input" required autofocus>

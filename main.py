@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import io
-import os
+import logging
 import re
+import secrets
 import unicodedata
 from typing import Generator, List, Optional
 from urllib.parse import quote_plus
@@ -22,9 +23,11 @@ import schemas
 from config import (
     ADMIN_PASSWORD,
     ADMIN_USER,
+    CORS_ALLOW_CREDENTIALS,
     CORS_ORIGINS,
     FACEBOOK_URL,
     INSTAGRAM_URL,
+    IS_PRODUCTION,
     IS_RENDER,
     MAX_IMAGE_BYTES,
     SECRET_KEY,
@@ -32,14 +35,19 @@ from config import (
     STORE_CNPJ,
     WHATSAPP_NUMERO,
 )
-from database import SessionLocal, init_db
+from database import SessionLocal
+from rate_limit import LoginRateLimiter, client_ip
+from security import csrf_protect, get_csrf_token, rotate_session
+
+logger = logging.getLogger(__name__)
+login_rate_limiter = LoginRateLimiter()
 
 app = FastAPI(title="Casa das Cantoneiras")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=CORS_ALLOW_CREDENTIALS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -47,7 +55,7 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
     same_site="lax",
-    https_only=IS_RENDER,
+    https_only=IS_PRODUCTION,
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -357,7 +365,6 @@ def _seed_site_config_inicial() -> None:
 
 @app.on_event("startup")
 def _startup() -> None:
-    init_db()
     _seed_catalogo_inicial()
     _seed_quem_somos_inicial()
     _seed_site_imagens_inicial()
@@ -674,11 +681,7 @@ def _load_uploaded_image(upload: Optional[UploadFile]) -> tuple[Optional[bytes],
 
 
 def _admin_credentials() -> tuple[str, str]:
-    user = (os.getenv("ADMIN_USER") or ADMIN_USER or "admin").strip()
-    password = (os.getenv("ADMIN_PASS") or os.getenv("ADMIN_PASSWORD") or ADMIN_PASSWORD or "").strip()
-    if password == "troque_essa_senha":
-        password = ""
-    return user, password
+    return ADMIN_USER.strip(), ADMIN_PASSWORD.strip()
 
 
 def _is_admin_authed(request: Request) -> bool:
@@ -689,6 +692,12 @@ def _auth_admin(request: Request) -> str:
     if _is_admin_authed(request):
         return request.session.get("admin_user", "admin")
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+
+async def _auth_admin_mutation(request: Request) -> str:
+    admin_user = _auth_admin(request)
+    await csrf_protect(request)
+    return admin_user
 
 
 def _get_categoria(db: Session, slug: str) -> dict[str, Optional[str]]:
@@ -1173,25 +1182,54 @@ def api_whatsapp(itens: List[schemas.ItemCarrinho], db: Session = Depends(get_db
 def admin_login_get(request: Request):
     if _is_admin_authed(request):
         return RedirectResponse("/admin", status_code=303)
-    return templates.TemplateResponse("admin/login.html", {"request": request})
+    return templates.TemplateResponse(
+        "admin/login.html",
+        {
+            "request": request,
+            "csrf_token": get_csrf_token(request),
+        },
+    )
 
 
 @app.post("/admin/login")
 def admin_login_post(
     request: Request,
+    _: None = Depends(csrf_protect),
     username: str = Form(...),
     password: str = Form(...),
 ):
-    admin_user, admin_pass = _admin_credentials()
-    if not admin_pass or username != admin_user or password != admin_pass:
+    ip_address = client_ip(request, trust_render_proxy=IS_RENDER)
+    retry_after = login_rate_limiter.retry_after(ip_address)
+    if retry_after:
+        logger.warning("Tentativa de login admin bloqueada para o IP %s.", ip_address)
         return templates.TemplateResponse(
             "admin/login.html",
-            {"request": request, "error": "Usuario ou senha invalidos"},
+            {
+                "request": request,
+                "csrf_token": get_csrf_token(request),
+                "error": "Nao foi possivel realizar o login. Tente novamente mais tarde.",
+            },
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    admin_user, admin_pass = _admin_credentials()
+    valid_user = secrets.compare_digest(username, admin_user)
+    valid_password = secrets.compare_digest(password, admin_pass)
+    if not admin_pass or not valid_user or not valid_password:
+        login_rate_limiter.record_failure(ip_address)
+        return templates.TemplateResponse(
+            "admin/login.html",
+            {
+                "request": request,
+                "csrf_token": get_csrf_token(request),
+                "error": "Usuario ou senha invalidos",
+            },
             status_code=200,
         )
 
-    request.session["admin_authed"] = True
-    request.session["admin_user"] = admin_user
+    login_rate_limiter.reset(ip_address)
+    rotate_session(request, admin_user=admin_user)
     return RedirectResponse("/admin", status_code=303)
 
 
@@ -1207,6 +1245,7 @@ def admin_dashboard(
         "admin/dashboard.html",
         {
             "request": request,
+            "csrf_token": get_csrf_token(request),
             **_admin_context(db, admin_page="dashboard"),
         },
     )
@@ -1224,6 +1263,7 @@ def admin_catalogo(
         "admin/dashboard.html",
         {
             "request": request,
+            "csrf_token": get_csrf_token(request),
             **_admin_context(db, admin_page="catalogo"),
         },
     )
@@ -1241,13 +1281,17 @@ def admin_frontend(
         "admin/dashboard.html",
         {
             "request": request,
+            "csrf_token": get_csrf_token(request),
             **_admin_context(db, admin_page="frontend"),
         },
     )
 
 
-@app.get("/admin/logout")
-def admin_logout(request: Request):
+@app.post("/admin/logout")
+async def admin_logout(
+    request: Request,
+    _: str = Depends(_auth_admin_mutation),
+):
     request.session.clear()
     return RedirectResponse("/admin/login", status_code=303)
 
@@ -1255,7 +1299,7 @@ def admin_logout(request: Request):
 @app.post("/admin/frontend/config")
 async def admin_frontend_config_atualizar(
     request: Request,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     db: Session = Depends(get_db),
 ):
     form = await request.form()
@@ -1270,7 +1314,7 @@ async def admin_frontend_config_atualizar(
 @app.post("/admin/site-imagem/{chave}")
 def admin_site_imagem_atualizar(
     chave: str,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     alt_texto: str = Form(""),
     imagem: UploadFile = File(None),
     db: Session = Depends(get_db),
@@ -1294,7 +1338,7 @@ def admin_site_imagem_atualizar(
 
 @app.post("/admin/categoria")
 def admin_categoria_novo(
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     slug: str = Form(""),
     nome: str = Form(...),
     nome_exibicao: str = Form(...),
@@ -1322,7 +1366,7 @@ def admin_categoria_novo(
 @app.put("/admin/categoria/{categoria_id}")
 def admin_categoria_atualizar(
     categoria_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     slug: str = Form(""),
     nome: str = Form(...),
     nome_exibicao: str = Form(...),
@@ -1358,7 +1402,7 @@ def admin_categoria_atualizar(
 @app.post("/admin/categoria/{categoria_id}")
 def admin_categoria_method_override(
     categoria_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     _method: Optional[str] = Form(None),
     slug: str = Form(""),
     nome: str = Form(None),
@@ -1390,7 +1434,7 @@ def admin_categoria_method_override(
 @app.delete("/admin/categoria/{categoria_id}")
 def admin_categoria_excluir(
     categoria_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     db: Session = Depends(get_db),
 ):
     if not crud.delete_categoria(db, categoria_id=categoria_id):
@@ -1400,7 +1444,7 @@ def admin_categoria_excluir(
 
 @app.post("/admin/subcategoria")
 def admin_subcategoria_novo(
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     categoria_slug: str = Form(...),
     slug: str = Form(""),
     nome: str = Form(...),
@@ -1429,7 +1473,7 @@ def admin_subcategoria_novo(
 @app.put("/admin/subcategoria/{subcategoria_id}")
 def admin_subcategoria_atualizar(
     subcategoria_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     categoria_slug: str = Form(...),
     slug: str = Form(""),
     nome: str = Form(...),
@@ -1466,7 +1510,7 @@ def admin_subcategoria_atualizar(
 @app.post("/admin/subcategoria/{subcategoria_id}")
 def admin_subcategoria_method_override(
     subcategoria_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     _method: Optional[str] = Form(None),
     categoria_slug: str = Form(None),
     slug: str = Form(""),
@@ -1498,7 +1542,7 @@ def admin_subcategoria_method_override(
 @app.delete("/admin/subcategoria/{subcategoria_id}")
 def admin_subcategoria_excluir(
     subcategoria_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     db: Session = Depends(get_db),
 ):
     if not crud.delete_subcategoria(db, subcategoria_id=subcategoria_id):
@@ -1508,7 +1552,7 @@ def admin_subcategoria_excluir(
 
 @app.post("/admin/quem-somos/imagem")
 def admin_quem_somos_imagem_nova(
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     alt_texto: str = Form(""),
     imagem: UploadFile = File(None),
     ordem_exibicao: Optional[int] = Form(None),
@@ -1530,7 +1574,7 @@ def admin_quem_somos_imagem_nova(
 @app.put("/admin/quem-somos/imagem/{imagem_id}")
 def admin_quem_somos_imagem_atualizar(
     imagem_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     alt_texto: str = Form(""),
     imagem: UploadFile = File(None),
     ordem_exibicao: Optional[int] = Form(None),
@@ -1554,7 +1598,7 @@ def admin_quem_somos_imagem_atualizar(
 @app.post("/admin/quem-somos/imagem/{imagem_id}")
 def admin_quem_somos_imagem_method_override(
     imagem_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     _method: Optional[str] = Form(None),
     alt_texto: str = Form(""),
     imagem: UploadFile = File(None),
@@ -1580,7 +1624,7 @@ def admin_quem_somos_imagem_method_override(
 @app.delete("/admin/quem-somos/imagem/{imagem_id}")
 def admin_quem_somos_imagem_excluir(
     imagem_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     db: Session = Depends(get_db),
 ):
     if not crud.delete_quem_somos_imagem(db, imagem_id=imagem_id):
@@ -1590,7 +1634,7 @@ def admin_quem_somos_imagem_excluir(
 
 @app.post("/admin/produto")
 def admin_produto_novo(
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     nome: str = Form(...),
     resumo_curto: str = Form(""),
     categoria_slug: str = Form(...),
@@ -1628,7 +1672,7 @@ def admin_produto_novo(
 @app.put("/admin/produto/{produto_id}")
 def admin_produto_atualizar(
     produto_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     nome: str = Form(None),
     resumo_curto: str = Form(None),
     categoria_slug: str = Form(None),
@@ -1675,7 +1719,7 @@ def admin_produto_atualizar(
 @app.post("/admin/produto/{produto_id}")
 def admin_produto_method_override(
     produto_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     _method: Optional[str] = Form(None),
     nome: str = Form(None),
     resumo_curto: str = Form(None),
@@ -1717,7 +1761,7 @@ def admin_produto_method_override(
 @app.delete("/admin/produto/{produto_id}")
 def admin_produto_excluir(
     produto_id: int,
-    _: str = Depends(_auth_admin),
+    _: str = Depends(_auth_admin_mutation),
     db: Session = Depends(get_db),
 ):
     if not crud.delete_produto(db, produto_id=produto_id):

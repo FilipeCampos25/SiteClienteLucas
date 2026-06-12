@@ -1,0 +1,4 @@
+-r requirements.txt
+
+httpx>=0.24,<0.25
+pytest>=8,<9

@@ -1,271 +1,47 @@
+from __future__ import annotations
+
 import logging
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from config import DATABASE_URL, IS_RENDER
+from config import DATABASE_URL
 
 logger = logging.getLogger(__name__)
 
-SQLITE_URL = "sqlite:///./local.db"
 
-
-def _create_sqlite_engine():
-    return create_engine(
-        SQLITE_URL,
-        connect_args={"check_same_thread": False},
-    )
-
-
-def _create_primary_engine():
-    if not DATABASE_URL:
-        if IS_RENDER:
-            raise RuntimeError("DATABASE_URL ausente no Render. Configure a URL interna do Postgres.")
-        logger.warning("DATABASE_URL ausente. Usando SQLite local em %s.", SQLITE_URL)
-        return _create_sqlite_engine()
-
-    database_url = DATABASE_URL
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
-
-    engine_kwargs = {
+def create_database_engine(database_url: str = DATABASE_URL):
+    engine_kwargs: dict[str, object] = {
         "pool_pre_ping": True,
-        "pool_recycle": 300,
-        "poolclass": NullPool,
     }
+
     if database_url.startswith("sqlite"):
         engine_kwargs["connect_args"] = {"check_same_thread": False}
     else:
-        engine_kwargs["connect_args"] = {"connect_timeout": 5}
-
-    primary_engine = create_engine(database_url, **engine_kwargs)
-
-    try:
-        with primary_engine.connect():
-            logger.info("Conexao com banco remoto estabelecida.")
-        return primary_engine
-    except SQLAlchemyError as exc:
-        if IS_RENDER:
-            raise RuntimeError("Falha ao conectar no banco remoto configurado em DATABASE_URL.") from exc
-        logger.warning(
-            "Falha ao conectar no banco remoto; usando SQLite local. Motivo: %s",
-            exc,
+        engine_kwargs.update(
+            {
+                "pool_recycle": 300,
+                "poolclass": NullPool,
+                "connect_args": {"connect_timeout": 5},
+            }
         )
-        return _create_sqlite_engine()
+
+    database_engine = create_engine(database_url, **engine_kwargs)
+    try:
+        with database_engine.connect():
+            logger.info("Conexao com banco de dados estabelecida.")
+    except SQLAlchemyError as exc:
+        database_engine.dispose()
+        raise RuntimeError(
+            "Falha ao conectar ao banco configurado em DATABASE_URL. "
+            "O fallback para SQLite so ocorre quando DATABASE_URL esta ausente."
+        ) from exc
+
+    return database_engine
 
 
-engine = _create_primary_engine()
-
+engine = create_database_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
-
-
-def _sync_table_columns(table_name: str, alteracoes: dict[str, str]) -> None:
-    inspector = inspect(engine)
-    if table_name not in inspector.get_table_names():
-        return
-
-    colunas = {c["name"] for c in inspector.get_columns(table_name)}
-    for coluna, ddl in alteracoes.items():
-        if coluna in colunas:
-            continue
-        with engine.begin() as conn:
-            conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {coluna} {ddl}"))
-
-
-def _sync_catalogo_tables() -> None:
-    blob_type = "BLOB" if engine.dialect.name == "sqlite" else "BYTEA"
-    alteracoes = {
-        "imagem_mime": "VARCHAR(64)",
-        "imagem_bytes": blob_type,
-        "imagem_sha256": "VARCHAR(64)",
-    }
-    _sync_table_columns("categorias", alteracoes)
-    _sync_table_columns("subcategorias", alteracoes)
-
-
-def _sqlite_rebuild_produtos(colunas_existentes: set[str]) -> None:
-    campos_copiados = [
-        "id",
-        "nome",
-        "resumo_curto",
-        "categoria_slug",
-        "subcategoria_slug",
-        "imagem_url",
-        "imagem_mime",
-        "imagem_bytes",
-        "imagem_sha256",
-        "imagem_medidas_mime",
-        "imagem_medidas_bytes",
-        "imagem_medidas_sha256",
-        "imagem_extra_mime",
-        "imagem_extra_bytes",
-        "imagem_extra_sha256",
-        "ordem_exibicao",
-        "criado_em",
-        "atualizado_em",
-    ]
-    select_campos = []
-    for campo in campos_copiados:
-        if campo in colunas_existentes:
-            select_campos.append(campo)
-        elif campo == "ordem_exibicao":
-            select_campos.append("0 AS ordem_exibicao")
-        else:
-            select_campos.append(f"NULL AS {campo}")
-
-    with engine.begin() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS produtos_new"))
-        conn.execute(
-            text(
-                """
-                CREATE TABLE IF NOT EXISTS produtos_new (
-                    id INTEGER NOT NULL PRIMARY KEY,
-                    nome VARCHAR(120) NOT NULL,
-                    resumo_curto TEXT,
-                    categoria_slug VARCHAR(80),
-                    subcategoria_slug VARCHAR(80),
-                    imagem_url VARCHAR,
-                    imagem_mime VARCHAR(64),
-                    imagem_bytes BLOB,
-                    imagem_sha256 VARCHAR(64),
-                    imagem_medidas_mime VARCHAR(64),
-                    imagem_medidas_bytes BLOB,
-                    imagem_medidas_sha256 VARCHAR(64),
-                    imagem_extra_mime VARCHAR(64),
-                    imagem_extra_bytes BLOB,
-                    imagem_extra_sha256 VARCHAR(64),
-                    ordem_exibicao INTEGER NOT NULL DEFAULT 0,
-                    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-                """
-            )
-        )
-        conn.execute(
-            text(
-                f"""
-                INSERT INTO produtos_new ({", ".join(campos_copiados)})
-                SELECT {", ".join(select_campos)}
-                FROM produtos
-                """
-            )
-        )
-        conn.execute(text("DROP TABLE produtos"))
-        conn.execute(text("ALTER TABLE produtos_new RENAME TO produtos"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_produtos_id ON produtos (id)"))
-
-
-def _postgres_sync_produtos(colunas_info: dict[str, dict[str, object]]) -> None:
-    colunas = set(colunas_info)
-    alteracoes = {
-        "resumo_curto": "TEXT",
-        "categoria_slug": "VARCHAR(80)",
-        "subcategoria_slug": "VARCHAR(80)",
-        "imagem_mime": "VARCHAR(64)",
-        "imagem_bytes": "BYTEA",
-        "imagem_sha256": "VARCHAR(64)",
-        "imagem_medidas_mime": "VARCHAR(64)",
-        "imagem_medidas_bytes": "BYTEA",
-        "imagem_medidas_sha256": "VARCHAR(64)",
-        "imagem_extra_mime": "VARCHAR(64)",
-        "imagem_extra_bytes": "BYTEA",
-        "imagem_extra_sha256": "VARCHAR(64)",
-        "ordem_exibicao": "INTEGER NOT NULL DEFAULT 0",
-        "atualizado_em": "TIMESTAMP DEFAULT NOW()",
-    }
-    for coluna, ddl in alteracoes.items():
-        if coluna in colunas:
-            continue
-        with engine.begin() as conn:
-            conn.execute(text(f"ALTER TABLE produtos ADD COLUMN {coluna} {ddl}"))
-
-    tipo_resumo_curto = str(colunas_info["resumo_curto"]["type"]).upper() if "resumo_curto" in colunas_info else None
-    if tipo_resumo_curto and tipo_resumo_curto != "TEXT":
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE produtos ALTER COLUMN resumo_curto TYPE TEXT"))
-
-    colunas_obsoletas = (
-        "catalogo_url",
-        "catalogo_nome_arquivo",
-        "catalogo_mime",
-        "catalogo_bytes",
-        "descricao",
-        "tipo",
-        "valor",
-        "ativo",
-        "destaque_home",
-    )
-    for coluna in colunas_obsoletas:
-        if coluna not in colunas:
-            continue
-        with engine.begin() as conn:
-            conn.execute(text(f"ALTER TABLE produtos DROP COLUMN IF EXISTS {coluna}"))
-
-
-def init_db() -> dict[str, bool]:
-    import models  # noqa: F401
-
-    inspector_pre = inspect(engine)
-    tabelas_existentes_antes = set(inspector_pre.get_table_names())
-    Base.metadata.create_all(bind=engine)
-
-    inspector = inspect(engine)
-    _sync_catalogo_tables()
-    if "produtos" not in inspector.get_table_names():
-        return {
-            "seed_catalogo": "categorias" not in tabelas_existentes_antes and "subcategorias" not in tabelas_existentes_antes,
-        }
-
-    colunas_info = {c["name"]: c for c in inspector.get_columns("produtos")}
-    colunas = set(colunas_info)
-    colunas_desejadas = {
-        "id",
-        "nome",
-        "resumo_curto",
-        "categoria_slug",
-        "subcategoria_slug",
-        "imagem_url",
-        "imagem_mime",
-        "imagem_bytes",
-        "imagem_sha256",
-        "imagem_medidas_mime",
-        "imagem_medidas_bytes",
-        "imagem_medidas_sha256",
-        "imagem_extra_mime",
-        "imagem_extra_bytes",
-        "imagem_extra_sha256",
-        "ordem_exibicao",
-        "criado_em",
-        "atualizado_em",
-    }
-    colunas_obsoletas = {
-        "catalogo_url",
-        "catalogo_nome_arquivo",
-        "catalogo_mime",
-        "catalogo_bytes",
-        "descricao",
-        "tipo",
-        "valor",
-        "ativo",
-        "destaque_home",
-    }
-
-    if engine.dialect.name == "sqlite":
-        if colunas != colunas_desejadas:
-            _sqlite_rebuild_produtos(colunas)
-        return {
-            "seed_catalogo": "categorias" not in tabelas_existentes_antes and "subcategorias" not in tabelas_existentes_antes,
-        }
-
-    tipo_resumo_curto = str(colunas_info["resumo_curto"]["type"]).upper() if "resumo_curto" in colunas_info else None
-    resumo_curto_precisa_sync = tipo_resumo_curto is not None and tipo_resumo_curto != "TEXT"
-
-    if (colunas_desejadas - colunas) or (colunas_obsoletas & colunas) or resumo_curto_precisa_sync:
-        _postgres_sync_produtos(colunas_info)
-
-    return {
-        "seed_catalogo": "categorias" not in tabelas_existentes_antes and "subcategorias" not in tabelas_existentes_antes,
-    }

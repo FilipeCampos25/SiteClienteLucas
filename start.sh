@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Inicializa o banco de dados (cria tabelas se não existirem)
-python -c "from main import init_db_and_admin; init_db_and_admin()"
+# Apply versioned database migrations before starting the web process.
+alembic upgrade head
 
-# Inicia o servidor Gunicorn
+# Start Gunicorn only after a successful migration.
 exec gunicorn main:app \
   --workers "${WEB_CONCURRENCY:-2}" \
   --worker-class uvicorn.workers.UvicornWorker \

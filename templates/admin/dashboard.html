@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% macro csrf_input() %}
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+{% endmacro %}
+
 {% macro admin_input(name, label, value, type='text', placeholder='') %}
 <div class="form-group">
   <label for="{{ name }}" class="form-label">{{ label }}</label>
@@ -60,6 +64,10 @@
         <span class="stat-text">Quem Somos</span>
       </div>
     </div>
+    <form method="post" action="/admin/logout">
+      {{ csrf_input() }}
+      <button type="submit" class="btn-cancel">Sair</button>
+    </form>
   </div>
 </section>
 
@@ -74,6 +82,7 @@
     </div>
 
     <form method="post" action="/admin/site-imagem/{{ home_banner_image.chave }}" class="admin-form" enctype="multipart/form-data">
+      {{ csrf_input() }}
       <div class="form-grid">
         <div class="form-group">
           <label for="home-banner-alt-texto" class="form-label">Texto alternativo</label>
@@ -169,6 +178,7 @@
     </div>
 
     <form method="post" action="/admin/frontend/config" class="admin-form">
+      {{ csrf_input() }}
       <h3 class="admin-form-title">Header e redes sociais</h3>
       <div class="form-grid">
         {{ admin_input('site_title', 'Titulo da aba do navegador', site_config.site_title) }}
@@ -251,6 +261,7 @@
       {% if field.chave != 'home_banner' %}
       {% set site_image = site_images[field.chave] %}
       <form method="post" action="/admin/site-imagem/{{ field.chave }}" class="admin-form admin-image-form" enctype="multipart/form-data">
+        {{ csrf_input() }}
         <h3 class="admin-form-title">{{ field.label }}</h3>
         <p class="admin-helper-text">{{ field.help }}</p>
 
@@ -313,6 +324,7 @@
     </div>
 
     <form method="post" action="/admin/quem-somos/imagem" class="admin-form" enctype="multipart/form-data">
+      {{ csrf_input() }}
       <div class="form-grid">
         <div class="form-group">
           <label for="quem-somos-alt-texto" class="form-label">Texto alternativo</label>
@@ -395,6 +407,7 @@
           <tr id="quem-somos-edit-row-{{ imagem.id }}" class="edit-row" style="display: none;">
             <td colspan="5">
               <form method="post" action="/admin/quem-somos/imagem/{{ imagem.id }}" class="edit-form" enctype="multipart/form-data">
+                {{ csrf_input() }}
                 <input type="hidden" name="_method" value="PUT">
                 <div class="form-grid">
                   <div class="form-group">
@@ -483,6 +496,7 @@
     </div>
 
     <form method="post" action="/admin/categoria" class="admin-form" enctype="multipart/form-data">
+      {{ csrf_input() }}
       <div class="form-grid">
         <div class="form-group">
           <label for="categoria-slug" class="form-label">Slug *</label>
@@ -599,6 +613,7 @@
           <tr id="categoria-edit-row-{{ c.id }}" class="edit-row" style="display: none;">
             <td colspan="5">
               <form method="post" action="/admin/categoria/{{ c.id }}" class="edit-form" enctype="multipart/form-data">
+                {{ csrf_input() }}
                 <input type="hidden" name="_method" value="PUT">
                 <div class="form-grid">
                   <div class="form-group">
@@ -720,6 +735,7 @@
     </div>
 
     <form method="post" action="/admin/subcategoria" class="admin-form" enctype="multipart/form-data">
+      {{ csrf_input() }}
       <div class="form-grid">
         <div class="form-group">
           <label for="subcategoria-categoria" class="form-label">Categoria *</label>
@@ -837,6 +853,7 @@
           <tr id="subcategoria-edit-row-{{ s.id }}" class="edit-row" style="display: none;">
             <td colspan="6">
               <form method="post" action="/admin/subcategoria/{{ s.id }}" class="edit-form" enctype="multipart/form-data">
+                {{ csrf_input() }}
                 <input type="hidden" name="_method" value="PUT">
                 <div class="form-grid">
                   <div class="form-group">
@@ -964,6 +981,7 @@
     </div>
 
     <form method="post" action="/admin/produto" class="admin-form" enctype="multipart/form-data">
+      {{ csrf_input() }}
       <div class="form-grid">
         <div class="form-group">
           <label for="nome" class="form-label">Nome do Produto *</label>
@@ -1136,6 +1154,7 @@
           <tr id="produto-edit-row-{{ p.id }}" class="edit-row" style="display: none;">
             <td colspan="5">
               <form method="post" action="/admin/produto/{{ p.id }}" class="edit-form" enctype="multipart/form-data">
+                {{ csrf_input() }}
                 <input type="hidden" name="_method" value="PUT">
                 <div class="form-grid">
                   <div class="form-group">
@@ -1337,6 +1356,7 @@
 
 <script>
 const SUBCATEGORIAS_POR_CATEGORIA = {{ subcategorias_por_categoria | tojson }};
+const CSRF_TOKEN = {{ csrf_token | tojson }};
 
 function toggleEditForm(prefix, id) {
   const editRow = document.getElementById(`${prefix}-edit-row-${id}`);
@@ -1379,7 +1399,12 @@ function syncExistingImageRemoveButtons(root) {
 function confirmDelete(url, message) {
   if (!confirm(message)) return;
 
-  fetch(url, { method: 'DELETE' })
+  fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-Token': CSRF_TOKEN
+    }
+  })
     .then((response) => {
       if (response.ok) {
         location.reload();

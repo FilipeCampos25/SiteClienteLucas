@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  {% set is_admin_route = request.url.path.startswith('/admin') %}
   <!-- ===== CABEÇALHO PREMIUM ===== -->
   <header class="site-header">
     <div class="container-header">
@@ -44,6 +45,7 @@
         </nav>
 
         <!-- Barra de busca premium -->
+        {% if not is_admin_route %}
         <div class="search-container">
           <div class="search-wrapper">
             <input 
@@ -73,6 +75,7 @@
             <span id="cartCount" class="cart-count">0</span>
           </button>
         </div>
+        {% endif %}
       </div>
     </div>
   </header>
@@ -85,12 +88,14 @@
   </main>
 
   <!-- ===== MODAL DE CARRINHO ===== -->
+  {% if not is_admin_route %}
   <div id="carrinhoModal" class="modal">
     <div class="modal-content">
       <span class="modal-close" onclick="fecharCarrinho()">&times;</span>
       <div id="carrinhoItens"></div>
     </div>
   </div>
+  {% endif %}
 
   <!-- ===== FOOTER PREMIUM ===== -->
   <footer class="footer">
