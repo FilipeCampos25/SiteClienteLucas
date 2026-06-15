@@ -10,8 +10,8 @@ from typing import Callable
 from fastapi import Request
 
 
-def client_ip(request: Request, *, trust_render_proxy: bool) -> str:
-    if trust_render_proxy:
+def client_ip(request: Request, *, trust_proxy_headers: bool) -> str:
+    if trust_proxy_headers:
         forwarded_for = request.headers.get("x-forwarded-for", "")
         for candidate in reversed(forwarded_for.split(",")):
             value = candidate.strip()

@@ -22,7 +22,7 @@ def migration_env(database_path: Path) -> dict[str, str]:
     env.update(
         {
             "APP_ENV": "development",
-            "RENDER": "false",
+            "TRUST_PROXY_HEADERS": "false",
             "DATABASE_URL": sqlite_url(database_path),
             "ADMIN_USER": "test-admin",
             "ADMIN_PASSWORD": "test-admin-password",
@@ -58,7 +58,7 @@ def app_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[obje
     env = migration_env(database_path)
     for key in {
         "APP_ENV",
-        "RENDER",
+        "TRUST_PROXY_HEADERS",
         "DATABASE_URL",
         "ADMIN_USER",
         "ADMIN_PASSWORD",

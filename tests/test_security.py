@@ -159,7 +159,7 @@ def test_rate_limit_reset_clears_failures() -> None:
     assert limiter.retry_after("127.0.0.1") == 0
 
 
-def test_render_proxy_ip_uses_last_valid_forwarded_address() -> None:
+def test_trusted_proxy_uses_last_valid_forwarded_address() -> None:
     request = Request(
         {
             "type": "http",
@@ -173,5 +173,5 @@ def test_render_proxy_ip_uses_last_valid_forwarded_address() -> None:
         }
     )
 
-    assert client_ip(request, trust_render_proxy=True) == "198.51.100.20"
-    assert client_ip(request, trust_render_proxy=False) == "127.0.0.1"
+    assert client_ip(request, trust_proxy_headers=True) == "198.51.100.20"
+    assert client_ip(request, trust_proxy_headers=False) == "127.0.0.1"

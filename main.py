@@ -28,11 +28,11 @@ from config import (
     FACEBOOK_URL,
     INSTAGRAM_URL,
     IS_PRODUCTION,
-    IS_RENDER,
     MAX_IMAGE_BYTES,
     SECRET_KEY,
     STORE_ADDRESS,
     STORE_CNPJ,
+    TRUST_PROXY_HEADERS,
     WHATSAPP_NUMERO,
 )
 from database import SessionLocal
@@ -1198,7 +1198,7 @@ def admin_login_post(
     username: str = Form(...),
     password: str = Form(...),
 ):
-    ip_address = client_ip(request, trust_render_proxy=IS_RENDER)
+    ip_address = client_ip(request, trust_proxy_headers=TRUST_PROXY_HEADERS)
     retry_after = login_rate_limiter.retry_after(ip_address)
     if retry_after:
         logger.warning("Tentativa de login admin bloqueada para o IP %s.", ip_address)

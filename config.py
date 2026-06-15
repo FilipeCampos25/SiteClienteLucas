@@ -54,9 +54,9 @@ _configured_app_env = (_clean_env("APP_ENV") or "development").lower()
 if _configured_app_env not in {"development", "production"}:
     raise RuntimeError("APP_ENV deve ser 'development' ou 'production'.")
 
-IS_RENDER = _env_is_true("RENDER")
-IS_PRODUCTION = _configured_app_env == "production" or IS_RENDER
+IS_PRODUCTION = _configured_app_env == "production"
 APP_ENV = "production" if IS_PRODUCTION else "development"
+TRUST_PROXY_HEADERS = _env_is_true("TRUST_PROXY_HEADERS")
 
 _raw_database_url = _clean_env("DATABASE_URL")
 _raw_admin_user = _clean_env("ADMIN_USER")
@@ -89,6 +89,11 @@ if IS_PRODUCTION:
     if config_errors:
         details = "\n- ".join(config_errors)
         raise RuntimeError(f"Configuracao de producao invalida:\n- {details}")
+    if not TRUST_PROXY_HEADERS:
+        logger.warning(
+            "TRUST_PROXY_HEADERS esta desabilitado em producao. "
+            "Habilite-o quando o app estiver atras de um proxy confiavel como o Nginx."
+        )
 else:
     configured_origins = [
         origin.strip()

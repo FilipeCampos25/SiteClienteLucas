@@ -36,9 +36,8 @@ pytest
 
 ## Configuracao de producao
 
-Producao e ativada por `APP_ENV=production` ou automaticamente por
-`RENDER=true`. O app falha antes de iniciar se qualquer item abaixo estiver
-ausente ou inseguro:
+Producao e ativada explicitamente por `APP_ENV=production`. O app falha antes
+de iniciar se qualquer item abaixo estiver ausente ou inseguro:
 
 - `DATABASE_URL`
 - `SECRET_KEY`
@@ -50,6 +49,11 @@ ausente ou inseguro:
 conter `*`. Gere `SECRET_KEY` e `ADMIN_PASSWORD` como valores longos e aleatorios.
 O alias legado `ADMIN_PASS` funciona somente em desenvolvimento e deve ser
 substituido por `ADMIN_PASSWORD`.
+
+Quando o app estiver atras de um proxy controlado, como o Nginx da VPS, configure
+`TRUST_PROXY_HEADERS=true`. Isso permite que o rate limit do login use o IP
+encaminhado pelo proxy. Nao habilite essa opcao quando clientes puderem acessar
+diretamente o processo Gunicorn.
 
 ## Adocao do Alembic
 
@@ -83,24 +87,40 @@ alembic current
 O downgrade automatico da revisao inicial nao e oferecido porque ela pode adotar
 objetos que ja existiam antes do Alembic.
 
-## Deploy no Render
+## Deploy na Hostinger VPS Ubuntu
 
-Configure as variaveis obrigatorias no painel do Render. O `start.sh` executa:
+O deploy recomendado usa Nginx, systemd, Gunicorn e PostgreSQL. Os arquivos
+prontos ficam em `deploy/hostinger/`:
+
+- `sitecliente.service`: servico systemd;
+- `sitecliente.nginx.conf`: proxy reverso Nginx;
+- `sitecliente.env.example`: variaveis de producao;
+- `README.md`: provisionamento completo, HTTPS, firewall, atualizacao e backup.
+
+Guia completo:
+
+```text
+deploy/hostinger/README.md
+```
+
+O `start.sh`, quando usado manualmente, executa:
 
 ```bash
 alembic upgrade head
 gunicorn main:app --workers "${WEB_CONCURRENCY:-2}" \
   --worker-class uvicorn.workers.UvicornWorker \
-  --bind "0.0.0.0:${PORT:-10000}"
+  --bind "${HOST:-127.0.0.1}:${PORT:-8000}"
 ```
 
-Fluxo recomendado para o primeiro deploy:
+Na VPS:
 
 1. Fazer backup do Postgres.
-2. Conferir se o banco e novo, compativel ou legado.
-3. Publicar com todas as variaveis de producao configuradas.
-4. Confirmar nos logs que `alembic upgrade head` concluiu antes do Gunicorn.
-5. Validar `/admin/login`, uma edicao do catalogo e uma pagina publica.
+2. Apontar o DNS do dominio para o IP da VPS.
+3. Instalar a aplicacao em `/opt/sitecliente`.
+4. Configurar `/etc/sitecliente/sitecliente.env`.
+5. Ativar o servico systemd e o site Nginx.
+6. Emitir o certificado HTTPS com Certbot.
+7. Validar `/admin/login`, uma edicao do catalogo e uma pagina publica.
 
 Com varios workers, o rate limit de login e mantido separadamente em memoria por
 processo. Redis ou outro armazenamento compartilhado permanece fora do escopo.
